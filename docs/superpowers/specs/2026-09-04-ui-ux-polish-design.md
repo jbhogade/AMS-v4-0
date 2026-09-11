@@ -1,4 +1,4 @@
-# AMS-Test UI/UX Polish — Design
+# AMS-v4-0 UI/UX Polish — Design
 
 Date: 2026-09-04
 

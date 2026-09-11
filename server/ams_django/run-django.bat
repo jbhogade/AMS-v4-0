@@ -1,6 +1,6 @@
 @echo off
 REM ============================================================
-REM  run-django.bat  -  start the AMS-Test Django backend
+REM  run-django.bat  -  start the AMS-v4-0 Django backend
 REM  Usage:  run-django.bat [host:port]
 REM    default host:port is 127.0.0.1:8000
 REM    for LAN/team testing:  run-django.bat 0.0.0.0:8000

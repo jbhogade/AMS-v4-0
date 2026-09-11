@@ -34,9 +34,9 @@
    ===========================================================================*/
 
 /* =============================================================================
-   DATABASE / API LAYER  (AMS-TEST)
+   DATABASE / API LAYER  (AMS-v4-0)
    -----------------------------------------------------------------------------
-   The AMS-Test portal is backed by the SQL Server database "AMS-TEST" reached
+   The AMS-v4-0 portal is backed by the SQL Server database "AMS-v4-0" reached
    through the ASP.NET Core API (server\AMS.API). Business data is stored as
    JSON documents in the dbo.ams_collections table; this layer loads every
    collection into the global arrays below at startup and PUTs a collection
@@ -97,7 +97,7 @@ async function amsApiFetch(path, opts) {
     try {
         res = await fetch(AMS_API_BASE + path, opts);
     } catch (e) {
-        throw new Error("Cannot reach the AMS-Test API. Start server\\AMS.API (dotnet run) and refresh.");
+        throw new Error("Cannot reach the AMS-v4-0 API. Start server\\AMS.API (dotnet run) and refresh.");
     }
     if (res.status === 401) {
         amsClearSession();
@@ -1018,22 +1018,10 @@ const DUMMY_MOBILES = [];
 /* Consumable Category Master - DB-backed (consumableCategories collection).
    Previously a hardcoded string list; now records with a description, managed
    from System Admin > Consumable Category Master. */
-const AMS_DUMMY_CONSUMABLE_CATEGORIES = [
-    { name: "Printer Supplies", description: "", active: true },
-    { name: "Cables",           description: "", active: true },
-    { name: "Peripherals",      description: "", active: true },
-    { name: "Stationery",       description: "", active: true },
-    { name: "IT Accessories",   description: "", active: true },
-];
+const AMS_DUMMY_CONSUMABLE_CATEGORIES = [];
 
 /* Unit of Measure Master - DB-backed (consumableUnits collection). */
-const AMS_DUMMY_CONSUMABLE_UNITS = [
-    { name: "Nos",   description: "Number of pieces", active: true },
-    { name: "Box",   description: "", active: true },
-    { name: "Pack",  description: "", active: true },
-    { name: "Ream",  description: "", active: true },
-    { name: "Meter", description: "", active: true },
-];
+const AMS_DUMMY_CONSUMABLE_UNITS = [];
 
 function amsGetActiveConsumableCategoryNames() {
     return AMS_DUMMY_CONSUMABLE_CATEGORIES.filter(c => c.active).map(c => c.name);
@@ -1072,11 +1060,7 @@ const AMS_DUMMY_CONSUMABLE_LOG = [];
 /* Spare Part Category Master - DB-backed (sparePartCategories collection).
    Previously a hardcoded string list; now records managed from System Admin >
    Spare Part Category Master. */
-const AMS_DUMMY_SPAREPART_CATEGORIES = [
-    { name: "Internal Component", description: "", active: true },
-    { name: "Toner / Ink",        description: "", active: true },
-    { name: "Mechanical Part",    description: "", active: true },
-];
+const AMS_DUMMY_SPAREPART_CATEGORIES = [];
 
 function amsGetActiveSparePartCategoryNames() {
     return AMS_DUMMY_SPAREPART_CATEGORIES.filter(c => c.active).map(c => c.name);
@@ -1113,21 +1097,11 @@ const AMS_SIM_STATUS_OPTIONS = ["In Store", "Issued", "Blocked", "Retired"];
    deactivated from the SIM Operator Master (System Admin > SIM Operator Master).
    The in-memory defaults below match the original hardcoded list so the form
    works even before the API is reachable; the DB is the source of truth. */
-const AMS_DUMMY_SIM_OPERATORS = [
-    { name: "Jio",           helpline: "198", website: "https://www.jio.com",  active: true },
-    { name: "Airtel",        helpline: "198", website: "https://www.airtel.in", active: true },
-    { name: "Vodafone Idea", helpline: "199", website: "https://www.myvi.in",  active: true },
-    { name: "BSNL",          helpline: "1503", website: "https://www.bsnl.co.in", active: true },
-    { name: "MTNL",          helpline: "1503", website: "https://www.mtnl.co.in", active: true },
-];
+const AMS_DUMMY_SIM_OPERATORS = [];
 
 /* SIM Plan Master - DB-backed (simPlans collection). Feeds the Plan datalist on
    the SIM Card form. */
-const AMS_DUMMY_SIM_PLANS = [
-    { name: "Prepaid",       planType: "Prepaid",  description: "", active: true },
-    { name: "Postpaid",      planType: "Postpaid", description: "", active: true },
-    { name: "Corporate Plan",planType: "Corporate",description: "", active: true },
-];
+const AMS_DUMMY_SIM_PLANS = [];
 
 const AMS_DUMMY_SIM_CARDS = [];
 
@@ -1403,13 +1377,7 @@ let AMS_VENDOR_SEQ = 12;
 /* Vendor Category Master - DB-backed (vendorCategories collection). Feeds the
    "Supplies" dropdown on the Vendor Master form. Previously a hardcoded string
    list; now managed from System Admin > Vendor Category Master. */
-const AMS_DUMMY_VENDOR_CATEGORIES = [
-    { name: "Assets",       description: "Supplies assets / capital equipment", active: true },
-    { name: "Consumables",  description: "Supplies consumable items",           active: true },
-    { name: "Spare Parts",  description: "Supplies spare / repair parts",       active: true },
-    { name: "Services",     description: "Provides services (AMC, repair, etc.)", active: true },
-    { name: "All",          description: "General supplier - multiple categories", active: true },
-];
+const AMS_DUMMY_VENDOR_CATEGORIES = [];
 
 function amsGetActiveVendorCategoryNames() {
     return AMS_DUMMY_VENDOR_CATEGORIES.filter(c => c.active).map(c => c.name);

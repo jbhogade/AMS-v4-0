@@ -61,7 +61,7 @@ app.UseExceptionHandler(errorApp =>
             context.Response.ContentType = "application/json; charset=utf-8";
             await context.Response.WriteAsJsonAsync(new
             {
-                error = "Database unavailable. Check that SQL Server is running and run database/Setup-AMS-TEST.bat, then restart the API.",
+                error = "Database unavailable. Check that SQL Server is running and run database/Setup-AMS-v4-0.bat, then restart the API.",
             });
         }
     });
@@ -77,13 +77,13 @@ using (var scope = app.Services.CreateScope())
     }
     catch (Exception ex)
     {
-        app.Logger.LogError("AMS-TEST database init failed. Run database/Setup-AMS-TEST.bat then retry. {Error}", ex.Message);
+        app.Logger.LogError("AMS-v4-0 database init failed. Run database/Setup-AMS-v4-0.bat then retry. {Error}", ex.Message);
     }
 }
 
-// ---- Serve the AMS-Test frontend from the project root ----------------------
-// The API project lives at <AMS-Test>/server/AMS.API and the web UI at the
-// AMS-Test root (index.html, pages/, css/, js/, assets/). Serve that folder so
+// ---- Serve the AMS-v4-0 frontend from the project root ----------------------
+// The API project lives at <AMS-v4-0>/server/AMS.API and the web UI at the
+// AMS-v4-0 root (index.html, pages/, css/, js/, assets/). Serve that folder so
 // the API and the UI are same-origin (no CORS, one URL to open).
 var webRoot = Path.GetFullPath(Path.Combine(app.Environment.ContentRootPath, "..", ".."));
 if (Directory.Exists(webRoot))
@@ -102,8 +102,8 @@ app.MapControllers();
 app.MapGet("/api/health", () => Results.Json(new
 {
     ok = true,
-    app = "AMS-Test API",
-    database = "AMS-TEST",
+    app = "AMS-v4-0 API",
+    database = "AMS-v4-0",
 }));
 
 app.Run();

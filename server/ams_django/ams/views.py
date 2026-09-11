@@ -1,4 +1,4 @@
-"""API + frontend views for the AMS-Test Django backend.
+"""API + frontend views for the AMS-v4-0 Django backend.
 
 Endpoint behavior (status codes, payloads, role gates, error messages) mirrors
 server/AMS.API/Controllers so the frontend is fully interchangeable between the
@@ -21,7 +21,7 @@ logger = logging.getLogger(__name__)
 
 DB_UNAVAILABLE_MSG = (
     "Database unavailable. Check that SQL Server is running and run "
-    "database/Setup-AMS-TEST.bat, then restart the API."
+    "database/Setup-AMS-v4-0.bat, then restart the API."
 )
 ROOT_ROLES = ("Super Root", "Supreme Root")
 MAX_COLLECTION_BYTES = 16_000_000
@@ -324,7 +324,7 @@ def collection(request, key):
 
 
 def health(request):
-    return JsonResponse({"ok": True, "app": "AMS-Test API", "database": "AMS-TEST"})
+    return JsonResponse({"ok": True, "app": "AMS-v4-0 API", "database": "AMS-v4-0"})
 
 
 # ---- frontend serving (same-origin, mirrors .NET UseStaticFiles) -------------

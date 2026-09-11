@@ -1,4 +1,4 @@
-# AMS-Test Appearance Style — Design
+# AMS-v4-0 Appearance Style — Design
 
 Date: 2026-09-09
 

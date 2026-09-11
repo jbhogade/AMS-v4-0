@@ -1,4 +1,4 @@
-# AMS-Test Asset Type by Category — Design
+# AMS-v4-0 Asset Type by Category — Design
 
 Date: 2026-09-08
 
@@ -38,7 +38,7 @@ pages/assets.html
 pages/mobiles.html            Category field before Type
 pages/accessories.html        Type + requires Category
 js/spare-parts.js             Type + requires Category
-database/AMS-TEST.sql
+database/AMS-v4-0.sql
 server/AMS.API/Data/AmsDb.cs
 server/ams_django/ams/db.py   category + used_on columns/indexes
 ```

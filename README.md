@@ -2,14 +2,14 @@
 
 A web portal for recording company **assets**, **consumables**, **spare parts** and **equipment accessories**.
 
-> **This is AMS-Test** - the live-testing copy backed by a **SQL Server database** through a C#/ASP.NET Core Web API. The original dummy-data version (all seed records + print fixes) is preserved unchanged in `../AMS-Backup/`. See `docs/MERGE_PLAN.md` Phase 15 for the full migration notes.
+> **This is AMS-v4-0** - the live portal backed by SQL Server database `AMS-v4-0`. Masters and business records start empty. Login accounts are seeded. Use **AMS-Test** (`AMS-TEST`) for testing and upgrades.
 
 ## Live Mode (SQL Server + ASP.NET Core API + Django Server)
 
 The portal is gated by `login.html`. On a Windows machine with SQL Server:
 
-1. **Setup DB** (once): double-click `database\Setup-AMS-TEST.bat` (or let the API auto-create the DB on first run).
-2. **Confirm connection**: `server\AMS.API\appsettings.json` -> `ConnectionStrings:Default` (default `Server=.\SQLEXPRESS;Database=AMS-TEST;Trusted_Connection=True;TrustServerCertificate=True;`).
+1. **Setup DB** (once): double-click `database\Setup-AMS-v4-0.bat` (or let the API auto-create the DB on first run).
+2. **Confirm connection**: `server\AMS.API\appsettings.json` -> `ConnectionStrings:Default` (default `Server=.\SQLEXPRESS;Database=AMS-v4-0;Trusted_Connection=True;TrustServerCertificate=True;`).
 3. **Run the API**:
    ```
    cd server\AMS.API
@@ -27,7 +27,7 @@ Account management: the **User Master** page (`pages/user-master.html`) now has 
 ## Folder Structure
 
 ```
-AMS-Test/                       <- live-testing project (SQL Server backed)
+AMS-v4-0/                       <- live portal (SQL Server database AMS-v4-0)
 ├── login.html                 <- sign-in gate (live session required everywhere)
 ├── index.html                 <- Dashboard page (main landing page)
 ├── pages/                     <- All other pages (added one-by-one)
@@ -53,8 +53,8 @@ AMS-Test/                       <- live-testing project (SQL Server backed)
 │   ├── Controllers/AuthController.cs
 │   ├── Controllers/CollectionsController.cs
 │   └── Data/AmsDb.cs          <- idempotent DB/schema/seed init + hashing
-├── database/AMS-TEST.sql      <- SSMS setup script (idempotent)
-├── database/Setup-AMS-TEST.bat<- sqlcmd setup script (Windows)
+├── database/AMS-v4-0.sql      <- SSMS setup script (idempotent)
+├── database/Setup-AMS-v4-0.bat<- sqlcmd setup script (Windows)
 ├── css/
 │   ├── themes.css          <- 11 color themes (the only file with colors)
 │   ├── main.css            <- shared layout & components (incl. font-size attr)

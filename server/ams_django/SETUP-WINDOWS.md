@@ -1,4 +1,4 @@
-# AMS-Test on Windows — Django + SQL Server
+# AMS-v4-0 on Windows — Django + SQL Server
 
 This guide sets up the **Django** backend (`server/ams_django`) on Windows. The
 frontend is unchanged and served by Django itself, so you only open one URL.
@@ -26,23 +26,23 @@ Python packages are installed automatically by `run-django.bat`
 ## 2. Clone the project
 
 ```bat
-git clone <your-AMS-Test-repo-url>
-cd AMS-Test
+git clone <your-AMS-v4-0-repo-url>
+cd AMS-v4-0
 ```
 
 ## 3. Create the database (optional — Django can do it automatically)
 
-The Django backend auto-creates the database, schema, seeded users
-(`operator.sys`, `testadmin`) and lookup data on first use, so this step is not
-strictly required. If you prefer to create it explicitly:
+The Django backend auto-creates the database, schema, and seeded login
+accounts (`operator.sys`, `testadmin`) on first use. Masters start empty.
+If you prefer to create the database explicitly:
 
 **Option A — batch file (Windows):**
 ```bat
 cd database
-Setup-AMS-TEST.bat
+Setup-AMS-v4-0.bat
 ```
 
-**Option B — SSMS:** open `database\AMS-TEST.sql`, press F5.
+**Option B — SSMS:** open `database\AMS-v4-0.sql`, press F5.
 
 ## 4. Configure the connection
 
@@ -117,10 +117,10 @@ SQL Server service is running.
 
 **"Login failed for user"** — your Windows/SQL login lacks access. Prefer the
 Windows login (leave `AMS_DB_USER` blank), or create a SQL login with
-`db_owner` on `AMS-TEST` in SSMS.
+`db_owner` on `AMS-v4-0` in SSMS.
 
-**Database shows but queries fail / tables missing** — run `Setup-AMS-TEST.bat`
-or execute `database\AMS-TEST.sql` in SSMS, then restart the server.
+**Database shows but queries fail / tables missing** — run `Setup-AMS-v4-0.bat`
+or execute `database\AMS-v4-0.sql` in SSMS, then restart the server.
 
 **". was unexpected at this time." when running a .bat** — the file was saved
 with Unix line endings. Re-clone, or open the .bat in an editor that saves with
@@ -130,7 +130,7 @@ CRLF (e.g. Notepad++ Edit → EOL Conversion → Windows).
 `run-django.bat 127.0.0.1:8080`.
 
 **"Database unavailable" (503) in the UI** — the app is up but SQL Server is
-not reachable. Read the `AMS-TEST database init failed. ...` line in the server
+not reachable. Read the `AMS-v4-0 database init failed. ...` line in the server
 console for the real cause (matches the items above).
 
 ---

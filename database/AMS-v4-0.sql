@@ -1,8 +1,8 @@
 /* =============================================================================
-   AMS-TEST DATABASE SCRIPT  (relational schema)
+   AMS-v4-0 DATABASE SCRIPT  (relational schema)
    -----------------------------------------------------------------------------
-   Creates the AMS-TEST database and the full relational schema used by the
-   Asset Management System test portal.
+   Creates the AMS-v4-0 database and the full relational schema used by the
+    Asset Management System live portal.
 
    DESIGN NOTES (v2 - per-entity tables)
    -----------------------------------------------------------------------------
@@ -35,11 +35,11 @@
 
    HOW TO RUN ON WINDOWS
    -----------------------------------------------------------------------------
-   Option 1 (recommended): double-click database\Setup-AMS-TEST.bat
+   Option 1 (recommended): double-click database\Setup-AMS-v4-0.bat
    Option 2 (manual, in SQL Server Management Studio):
        1. Open SSMS -> Connect to your SQL Server instance.
-       2. Open this file (AMS-TEST.sql).
-       3. Press F5 / Execute. (If AMS-TEST does not exist yet it is created.)
+       2. Open this file (AMS-v4-0.sql).
+       3. Press F5 / Execute. (If AMS-v4-0 does not exist yet it is created.)
 
    NOTE: The API (server\AMS.API) ALSO auto-creates the database, schema and
    seed data on first run, so this script is optional - it exists for manual
@@ -47,19 +47,19 @@
    =============================================================================*/
 
 /* ---- 1. Create the database (if missing) ----------------------------------- */
-IF DB_ID(N'AMS-TEST') IS NULL
+IF DB_ID(N'AMS-v4-0') IS NULL
 BEGIN
-    CREATE DATABASE [AMS-TEST];
+    CREATE DATABASE [AMS-v4-0];
 END
 GO
 
-IF DB_ID(N'AMS-TEST') IS NULL
+IF DB_ID(N'AMS-v4-0') IS NULL
 BEGIN
-    RAISERROR(N'AMS-TEST database could not be created. Either create it manually in SSMS (CREATE DATABASE [AMS-TEST]) or grant the current login the CREATE DATABASE permission, then re-run this script.', 16, 1);
+    RAISERROR(N'AMS-v4-0 database could not be created. Either create it manually in SSMS (CREATE DATABASE [AMS-v4-0]) or grant the current login the CREATE DATABASE permission, then re-run this script.', 16, 1);
 END
 GO
 
-USE [AMS-TEST];
+USE [AMS-v4-0];
 GO
 
 /* =============================================================================
@@ -1170,129 +1170,11 @@ END
 GO
 
 /* =============================================================================
-   6) SEED DATA  (lookup masters only - business entities start empty)
+   6) SEED DATA  (none - live blank)
    -----------------------------------------------------------------------------
-   These lookups were historically hardcoded in the frontend (and therefore
-   could not be extended). They are seeded here so they appear immediately, and
-   are now fully manageable from the System Administrator hub. Each insert is
-   guarded so re-running the script never duplicates rows.
+   Masters and business records start empty. Add them from the portal.
+   Login accounts are seeded in section 7.
    =========================================================================== */
-
-/* ---- SIM Operators ----------------------------------------------------------- */
-IF NOT EXISTS (SELECT 1 FROM dbo.ams_sim_operators WHERE record_key = N'Jio')
-    INSERT INTO dbo.ams_sim_operators (record_key, name, helpline, website, active, data_json)
-    VALUES (N'Jio', N'Jio', N'198', N'https://www.jio.com', 1, N'{"name":"Jio","helpline":"198","website":"https://www.jio.com","active":true}');
-GO
-IF NOT EXISTS (SELECT 1 FROM dbo.ams_sim_operators WHERE record_key = N'Airtel')
-    INSERT INTO dbo.ams_sim_operators (record_key, name, helpline, website, active, data_json)
-    VALUES (N'Airtel', N'Airtel', N'198', N'https://www.airtel.in', 1, N'{"name":"Airtel","helpline":"198","website":"https://www.airtel.in","active":true}');
-GO
-IF NOT EXISTS (SELECT 1 FROM dbo.ams_sim_operators WHERE record_key = N'Vodafone Idea')
-    INSERT INTO dbo.ams_sim_operators (record_key, name, helpline, website, active, data_json)
-    VALUES (N'Vodafone Idea', N'Vodafone Idea', N'199', N'https://www.myvi.in', 1, N'{"name":"Vodafone Idea","helpline":"199","website":"https://www.myvi.in","active":true}');
-GO
-IF NOT EXISTS (SELECT 1 FROM dbo.ams_sim_operators WHERE record_key = N'BSNL')
-    INSERT INTO dbo.ams_sim_operators (record_key, name, helpline, website, active, data_json)
-    VALUES (N'BSNL', N'BSNL', N'1503', N'https://www.bsnl.co.in', 1, N'{"name":"BSNL","helpline":"1503","website":"https://www.bsnl.co.in","active":true}');
-GO
-IF NOT EXISTS (SELECT 1 FROM dbo.ams_sim_operators WHERE record_key = N'MTNL')
-    INSERT INTO dbo.ams_sim_operators (record_key, name, helpline, website, active, data_json)
-    VALUES (N'MTNL', N'MTNL', N'1503', N'https://www.mtnl.co.in', 1, N'{"name":"MTNL","helpline":"1503","website":"https://www.mtnl.co.in","active":true}');
-GO
-
-/* ---- SIM Plans --------------------------------------------------------------- */
-IF NOT EXISTS (SELECT 1 FROM dbo.ams_sim_plans WHERE record_key = N'Prepaid')
-    INSERT INTO dbo.ams_sim_plans (record_key, name, plan_type, description, active, data_json)
-    VALUES (N'Prepaid', N'Prepaid', N'Prepaid', N'', 1, N'{"name":"Prepaid","planType":"Prepaid","description":"","active":true}');
-GO
-IF NOT EXISTS (SELECT 1 FROM dbo.ams_sim_plans WHERE record_key = N'Postpaid')
-    INSERT INTO dbo.ams_sim_plans (record_key, name, plan_type, description, active, data_json)
-    VALUES (N'Postpaid', N'Postpaid', N'Postpaid', N'', 1, N'{"name":"Postpaid","planType":"Postpaid","description":"","active":true}');
-GO
-IF NOT EXISTS (SELECT 1 FROM dbo.ams_sim_plans WHERE record_key = N'Corporate Plan')
-    INSERT INTO dbo.ams_sim_plans (record_key, name, plan_type, description, active, data_json)
-    VALUES (N'Corporate Plan', N'Corporate Plan', N'Corporate', N'', 1, N'{"name":"Corporate Plan","planType":"Corporate","description":"","active":true}');
-GO
-
-/* ---- Consumable Categories ---------------------------------------------------- */
-IF NOT EXISTS (SELECT 1 FROM dbo.ams_consumable_categories WHERE record_key = N'Printer Supplies')
-    INSERT INTO dbo.ams_consumable_categories (record_key, name, description, active, data_json)
-    VALUES (N'Printer Supplies', N'Printer Supplies', N'', 1, N'{"name":"Printer Supplies","description":"","active":true}');
-GO
-IF NOT EXISTS (SELECT 1 FROM dbo.ams_consumable_categories WHERE record_key = N'Cables')
-    INSERT INTO dbo.ams_consumable_categories (record_key, name, description, active, data_json)
-    VALUES (N'Cables', N'Cables', N'', 1, N'{"name":"Cables","description":"","active":true}');
-GO
-IF NOT EXISTS (SELECT 1 FROM dbo.ams_consumable_categories WHERE record_key = N'Peripherals')
-    INSERT INTO dbo.ams_consumable_categories (record_key, name, description, active, data_json)
-    VALUES (N'Peripherals', N'Peripherals', N'', 1, N'{"name":"Peripherals","description":"","active":true}');
-GO
-IF NOT EXISTS (SELECT 1 FROM dbo.ams_consumable_categories WHERE record_key = N'Stationery')
-    INSERT INTO dbo.ams_consumable_categories (record_key, name, description, active, data_json)
-    VALUES (N'Stationery', N'Stationery', N'', 1, N'{"name":"Stationery","description":"","active":true}');
-GO
-IF NOT EXISTS (SELECT 1 FROM dbo.ams_consumable_categories WHERE record_key = N'IT Accessories')
-    INSERT INTO dbo.ams_consumable_categories (record_key, name, description, active, data_json)
-    VALUES (N'IT Accessories', N'IT Accessories', N'', 1, N'{"name":"IT Accessories","description":"","active":true}');
-GO
-
-/* ---- Units of Measure ---------------------------------------------------------- */
-IF NOT EXISTS (SELECT 1 FROM dbo.ams_consumable_units WHERE record_key = N'Nos')
-    INSERT INTO dbo.ams_consumable_units (record_key, name, description, active, data_json)
-    VALUES (N'Nos', N'Nos', N'Number of pieces', 1, N'{"name":"Nos","description":"Number of pieces","active":true}');
-GO
-IF NOT EXISTS (SELECT 1 FROM dbo.ams_consumable_units WHERE record_key = N'Box')
-    INSERT INTO dbo.ams_consumable_units (record_key, name, description, active, data_json)
-    VALUES (N'Box', N'Box', N'', 1, N'{"name":"Box","description":"","active":true}');
-GO
-IF NOT EXISTS (SELECT 1 FROM dbo.ams_consumable_units WHERE record_key = N'Pack')
-    INSERT INTO dbo.ams_consumable_units (record_key, name, description, active, data_json)
-    VALUES (N'Pack', N'Pack', N'', 1, N'{"name":"Pack","description":"","active":true}');
-GO
-IF NOT EXISTS (SELECT 1 FROM dbo.ams_consumable_units WHERE record_key = N'Ream')
-    INSERT INTO dbo.ams_consumable_units (record_key, name, description, active, data_json)
-    VALUES (N'Ream', N'Ream', N'', 1, N'{"name":"Ream","description":"","active":true}');
-GO
-IF NOT EXISTS (SELECT 1 FROM dbo.ams_consumable_units WHERE record_key = N'Meter')
-    INSERT INTO dbo.ams_consumable_units (record_key, name, description, active, data_json)
-    VALUES (N'Meter', N'Meter', N'', 1, N'{"name":"Meter","description":"","active":true}');
-GO
-
-/* ---- Spare Part Categories ------------------------------------------------------ */
-IF NOT EXISTS (SELECT 1 FROM dbo.ams_spare_part_categories WHERE record_key = N'Internal Component')
-    INSERT INTO dbo.ams_spare_part_categories (record_key, name, description, active, data_json)
-    VALUES (N'Internal Component', N'Internal Component', N'', 1, N'{"name":"Internal Component","description":"","active":true}');
-GO
-IF NOT EXISTS (SELECT 1 FROM dbo.ams_spare_part_categories WHERE record_key = N'Toner / Ink')
-    INSERT INTO dbo.ams_spare_part_categories (record_key, name, description, active, data_json)
-    VALUES (N'Toner / Ink', N'Toner / Ink', N'', 1, N'{"name":"Toner / Ink","description":"","active":true}');
-GO
-IF NOT EXISTS (SELECT 1 FROM dbo.ams_spare_part_categories WHERE record_key = N'Mechanical Part')
-    INSERT INTO dbo.ams_spare_part_categories (record_key, name, description, active, data_json)
-    VALUES (N'Mechanical Part', N'Mechanical Part', N'', 1, N'{"name":"Mechanical Part","description":"","active":true}');
-GO
-
-/* ---- Vendor Categories ------------------------------------------------------------ */
-IF NOT EXISTS (SELECT 1 FROM dbo.ams_vendor_categories WHERE record_key = N'Assets')
-    INSERT INTO dbo.ams_vendor_categories (record_key, name, description, active, data_json)
-    VALUES (N'Assets', N'Assets', N'Supplies assets / capital equipment', 1, N'{"name":"Assets","description":"Supplies assets / capital equipment","active":true}');
-GO
-IF NOT EXISTS (SELECT 1 FROM dbo.ams_vendor_categories WHERE record_key = N'Consumables')
-    INSERT INTO dbo.ams_vendor_categories (record_key, name, description, active, data_json)
-    VALUES (N'Consumables', N'Consumables', N'Supplies consumable items', 1, N'{"name":"Consumables","description":"Supplies consumable items","active":true}');
-GO
-IF NOT EXISTS (SELECT 1 FROM dbo.ams_vendor_categories WHERE record_key = N'Spare Parts')
-    INSERT INTO dbo.ams_vendor_categories (record_key, name, description, active, data_json)
-    VALUES (N'Spare Parts', N'Spare Parts', N'Supplies spare / repair parts', 1, N'{"name":"Spare Parts","description":"Supplies spare / repair parts","active":true}');
-GO
-IF NOT EXISTS (SELECT 1 FROM dbo.ams_vendor_categories WHERE record_key = N'Services')
-    INSERT INTO dbo.ams_vendor_categories (record_key, name, description, active, data_json)
-    VALUES (N'Services', N'Services', N'Provides services (AMC, repair, etc.)', 1, N'{"name":"Services","description":"Provides services (AMC, repair, etc.)","active":true}');
-GO
-IF NOT EXISTS (SELECT 1 FROM dbo.ams_vendor_categories WHERE record_key = N'All')
-    INSERT INTO dbo.ams_vendor_categories (record_key, name, description, active, data_json)
-    VALUES (N'All', N'All', N'General supplier - multiple categories', 1, N'{"name":"All","description":"General supplier - multiple categories","active":true}');
-GO
 
 /* =============================================================================
    7) SEEDED LOGIN ACCOUNTS

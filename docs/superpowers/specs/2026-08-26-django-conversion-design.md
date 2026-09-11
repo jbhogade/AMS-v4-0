@@ -1,12 +1,12 @@
-# AMS-Test Django Backend — Design
+# AMS-v4-0 Django Backend — Design
 
 Date: 2026-08-26
 
 ## Goal
 
-Add a Django backend to AMS-Test that is a behavioral twin of the existing
+Add a Django backend to AMS-v4-0 that is a behavioral twin of the existing
 ASP.NET Core API (`server/AMS.API`), running **side-by-side** with it against
-the **same SQL Server `AMS-TEST` database**. The frontend is unchanged and is
+the **same SQL Server `AMS-v4-0` database**. The frontend is unchanged and is
 served same-origin by the Django backend. The .NET API stays in the repo and is
 not modified.
 
@@ -94,13 +94,13 @@ Port of `AmsDb.cs`:
 - `require_auth` decorator: parse `Authorization: Bearer`, 401 on missing/
   invalid/expired (frontend clears session and redirects on 401).
 - `pyodbc.Error` → **503** JSON: "Database unavailable. Check that SQL Server is
-  running and run database/Setup-AMS-TEST.bat, then restart the API." (matches
+  running and run database/Setup-AMS-v4-0.bat, then restart the API." (matches
   the .NET message).
 - 16 MB request body cap for collection PUTs.
 
 ## Frontend serving
 
-Django serves the AMS-Test root same-origin: `/` → `index.html`, `/pages/*.html`,
+Django serves the AMS-v4-0 root same-origin: `/` → `index.html`, `/pages/*.html`,
 `/js/*`, `/css/*`, `/assets/*` via a path-guarded file view (no traversal).
 `/api/*` and `/static/*` are excluded from the catch-all.
 
@@ -114,7 +114,7 @@ Django serves the AMS-Test root same-origin: `/` → `index.html`, `/pages/*.htm
 
 Env vars (with .NET-equivalent defaults):
 
-- `AMS_DB_SERVER` (default `localhost`), `AMS_DB_NAME` (`AMS-TEST`),
+- `AMS_DB_SERVER` (default `localhost`), `AMS_DB_NAME` (`AMS-v4-0`),
   `AMS_DB_USER` / `AMS_DB_PASSWORD` (SQL auth; if unset → trusted connection),
   `AMS_DB_DRIVER` (`ODBC Driver 18 for SQL Server`), `AMS_DB_TRUST_CERT` (`yes`).
 - `AMS_JWT_KEY` (default matches .NET), `AMS_JWT_ISSUER` (`AMS-API`),

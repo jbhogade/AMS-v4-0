@@ -1,4 +1,4 @@
-"""Raw-SQL engine for AMS-Test — a faithful Python port of
+"""Raw-SQL engine for AMS-v4-0 — a faithful Python port of
 server/AMS.API/Data/AmsDb.cs. Schema DDL, the collection registry, wholesale
 replace preserving row_id order, duplicate-key detection, seed users/lookups
 and legacy migration all behave identically to the .NET version, so the Django
@@ -894,46 +894,7 @@ SEED_USERS = [
     },
 ]
 
-SEED_LOOKUPS = {
-    "simOperators": """[
-        {"name":"Jio","helpline":"198","website":"https://www.jio.com","active":true},
-        {"name":"Airtel","helpline":"198","website":"https://www.airtel.in","active":true},
-        {"name":"Vodafone Idea","helpline":"199","website":"https://www.myvi.in","active":true},
-        {"name":"BSNL","helpline":"1503","website":"https://www.bsnl.co.in","active":true},
-        {"name":"MTNL","helpline":"1503","website":"https://www.mtnl.co.in","active":true}
-    ]""",
-    "simPlans": """[
-        {"name":"Prepaid","planType":"Prepaid","description":"","active":true},
-        {"name":"Postpaid","planType":"Postpaid","description":"","active":true},
-        {"name":"Corporate Plan","planType":"Corporate","description":"","active":true}
-    ]""",
-    "consumableCategories": """[
-        {"name":"Printer Supplies","description":"","active":true},
-        {"name":"Cables","description":"","active":true},
-        {"name":"Peripherals","description":"","active":true},
-        {"name":"Stationery","description":"","active":true},
-        {"name":"IT Accessories","description":"","active":true}
-    ]""",
-    "consumableUnits": """[
-        {"name":"Nos","description":"Number of pieces","active":true},
-        {"name":"Box","description":"","active":true},
-        {"name":"Pack","description":"","active":true},
-        {"name":"Ream","description":"","active":true},
-        {"name":"Meter","description":"","active":true}
-    ]""",
-    "sparePartCategories": """[
-        {"name":"Internal Component","description":"","active":true},
-        {"name":"Toner / Ink","description":"","active":true},
-        {"name":"Mechanical Part","description":"","active":true}
-    ]""",
-    "vendorCategories": """[
-        {"name":"Assets","description":"Supplies assets / capital equipment","active":true},
-        {"name":"Consumables","description":"Supplies consumable items","active":true},
-        {"name":"Spare Parts","description":"Supplies spare / repair parts","active":true},
-        {"name":"Services","description":"Provides services (AMC, repair, etc.)","active":true},
-        {"name":"All","description":"General supplier - multiple categories","active":true}
-    ]""",
-}
+SEED_LOOKUPS = {}
 
 
 # ---------------------------------------------------------------------------
@@ -1133,7 +1094,7 @@ class CollectionSaveError(Exception):
 class AmsDb:
     def __init__(self, conn_string):
         self.conn_string = conn_string
-        self.db_name = "AMS-TEST"
+        self.db_name = "AMS-v4-0"
         self.master_conn_string = re.sub(r"(?i)DATABASE=[^;]*", "DATABASE=master", conn_string)
 
     # ---- connection helpers -------------------------------------------------
@@ -1176,7 +1137,7 @@ class AmsDb:
                 conn.close()
         except pyodbc.Error:
             # Permission denied to create a database - the user should run
-            # Setup-AMS-TEST.bat (sqlcmd) as administrator. The schema step
+            # Setup-AMS-v4-0.bat (sqlcmd) as administrator. The schema step
             # below still runs against the existing database.
             pass
 

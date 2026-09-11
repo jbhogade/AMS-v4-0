@@ -1,4 +1,4 @@
-"""Integration tests against a live SQL Server AMS-TEST database.
+"""Integration tests against a live SQL Server AMS-v4-0 database.
 
 Skipped automatically when the database is unreachable (e.g. this build
 environment). Run with the DB up:  python3 -m unittest ams.tests.test_integration
@@ -12,7 +12,7 @@ from ams.db import AmsDb, CollectionSaveError
 DB = AmsDb(
     "DRIVER={ODBC Driver 18 for SQL Server};"
     f"SERVER={os.environ.get('AMS_DB_SERVER', 'localhost')};"
-    f"DATABASE={os.environ.get('AMS_DB_NAME', 'AMS-TEST')};"
+    f"DATABASE={os.environ.get('AMS_DB_NAME', 'AMS-v4-0')};"
     f"UID={os.environ.get('AMS_DB_USER', 'sa')};"
     f"PWD={os.environ.get('AMS_DB_PASSWORD', '')};"
     "TrustServerCertificate=yes;Connection Timeout=5"
@@ -28,7 +28,7 @@ def db_available():
         return False
 
 
-@unittest.skipUnless(db_available(), "AMS-TEST SQL Server database not reachable")
+@unittest.skipUnless(db_available(), "AMS-v4-0 SQL Server database not reachable")
 class CollectionIntegrationTests(unittest.TestCase):
     def test_save_and_get_round_trip(self):
         payload = '[{"name":"Jio"},{"name":"Airtel"}]'
@@ -48,7 +48,7 @@ class CollectionIntegrationTests(unittest.TestCase):
         self.assertEqual(DB.get_collection("simOperators"), "[]")
 
 
-@unittest.skipUnless(db_available(), "AMS-TEST SQL Server database not reachable")
+@unittest.skipUnless(db_available(), "AMS-v4-0 SQL Server database not reachable")
 class UserIntegrationTests(unittest.TestCase):
     TEST_USER = "django_it_user"
 

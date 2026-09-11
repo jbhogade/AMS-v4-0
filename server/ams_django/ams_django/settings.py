@@ -1,5 +1,5 @@
 """
-Django settings for the AMS-Test backend (side-by-side twin of server/AMS.API).
+Django settings for the AMS-v4-0 backend (side-by-side twin of server/AMS.API).
 
 Environment-driven configuration. Defaults mirror the .NET appsettings.json so
 the two backends behave identically out of the box.
@@ -16,7 +16,7 @@ except ImportError:
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-# The AMS-Test web root (index.html, pages/, js/, css/, assets/) that this
+# The AMS-v4-0 web root (index.html, pages/, js/, css/, assets/) that this
 # backend serves same-origin, exactly like the .NET API's UseStaticFiles.
 FRONTEND_ROOT = BASE_DIR.parent.parent
 
@@ -67,7 +67,7 @@ WSGI_APPLICATION = "ams_django.wsgi.application"
 # same way the .NET SqlConnectionStringBuilder produced it.
 def _build_connection_string() -> str:
     server = os.environ.get("AMS_DB_SERVER", "localhost")
-    name = os.environ.get("AMS_DB_NAME", "AMS-TEST")
+    name = os.environ.get("AMS_DB_NAME", "AMS-v4-0")
     user = os.environ.get("AMS_DB_USER", "")
     pwd = os.environ.get("AMS_DB_PASSWORD", "")
     driver = os.environ.get("AMS_DB_DRIVER", "ODBC Driver 18 for SQL Server")
@@ -91,7 +91,7 @@ def _build_connection_string() -> str:
 DATABASES = {
     "default": {
         "ENGINE": "mssql",
-        "NAME": os.environ.get("AMS_DB_NAME", "AMS-TEST"),
+        "NAME": os.environ.get("AMS_DB_NAME", "AMS-v4-0"),
         "OPTIONS": {"conn_string": _build_connection_string(),'extra_params': 'TrustServerCertificate=yes'},
     }
 }

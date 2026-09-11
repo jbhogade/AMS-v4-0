@@ -117,7 +117,7 @@
                a "wrong password" answer - say so instead of "API error 501". */
             const msg = (e && e.message) || "";
             status.textContent = (/^API error/.test(msg) || /Cannot reach/.test(msg))
-                ? "Password change requires the AMS-Test API and database to be reachable."
+                ? "Password change requires the AMS-v4-0 API and database to be reachable."
                 : (msg || "Password change failed.");
             status.style.color = "var(--danger)";
         }

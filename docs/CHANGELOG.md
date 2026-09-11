@@ -1,4 +1,10 @@
-# AMS-Test change log
+# AMS-v4-0 change log
+
+## 2026-09-11 — Live blank cut (AMS-v4-0)
+
+Live database is `AMS-v4-0`. Masters and business records start empty.
+Login accounts are kept: `operator.sys` / `Sr#Ops@2026` and
+`testadmin` / `Admin@#$12345`. AMS-Test stays on `AMS-TEST`.
 
 ## 2026-09-11 — Desktop sidebar hide (icon-only)
 
@@ -118,7 +124,7 @@ Categories tagged for that page.
   Assets/Mobiles until tagged.
 - Spec: `docs/superpowers/specs/2026-09-08-asset-type-by-category-design.md`.
 
-Restart the API or re-run `database/AMS-TEST.sql`, then hard-refresh
+Restart the API or re-run `database/AMS-v4-0.sql`, then hard-refresh
 (Ctrl+F5). Tag Categories (Used on) and Types (Category) before they
 appear on Add Asset / Add Mobile.
 

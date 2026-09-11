@@ -3,7 +3,7 @@ from django.core.management.base import BaseCommand
 
 class Command(BaseCommand):
     help = (
-        "Create/update the AMS-TEST database, schema, seed users, legacy "
+        "Create/update the AMS-v4-0 database, schema, seed users, legacy "
         "migration and seed lookups. Idempotent and safe to re-run."
     )
 
@@ -12,4 +12,4 @@ class Command(BaseCommand):
 
         db = get_db()
         db.initialize()
-        self.stdout.write(self.style.SUCCESS("AMS-TEST database initialized."))
+        self.stdout.write(self.style.SUCCESS("AMS-v4-0 database initialized."))

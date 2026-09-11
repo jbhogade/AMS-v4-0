@@ -621,10 +621,10 @@ Port fix applied after Phase 5 while reconciling the three print forms:
               By". test-reports-forms.js asserts both orders. Full regression
               21/21 suites green.
 
-## Phase 15 - SQL Server / ASP.NET Core migration (AMS-TEST)  (IN PROGRESS)
+## Phase 15 - SQL Server / ASP.NET Core migration (AMS-v4-0)  (IN PROGRESS)
 
-**Why AMS-Backup vs AMS-Test:** the whole v4-0 project (with every seed record
-and the 14A-14J2 print fixes) is preserved unchanged as `AMS-Backup`. `AMS-Test`
+**Why AMS-Backup vs AMS-v4-0:** the whole v4-0 project (with every seed record
+and the 14A-14J2 print fixes) is preserved unchanged as `AMS-Backup`. `AMS-v4-0`
 is the live-testing copy that now talks to a real SQL Server database through a
 C#/ASP.NET Core Web API, instead of serving from dummy arrays.
 
@@ -634,9 +634,9 @@ scope = everything at once** (all pages).
 
 ### 15.1 Architecture decisions
 - **Two projects** at the repo root: `AMS-Backup` (immutable reference, all
-  dummy data intact) and `AMS-Test` (the live app being migrated).
-- **API**: `AMS-Test/server/AMS.API` - ASP.NET Core (net8.0), JWT Bearer auth,
-  CORS enabled, and it ALSO serves the AMS-Test frontend from the project root
+  dummy data intact) and `AMS-v4-0` (the live app being migrated).
+- **API**: `AMS-v4-0/server/AMS.API` - ASP.NET Core (net8.0), JWT Bearer auth,
+  CORS enabled, and it ALSO serves the AMS-v4-0 frontend from the project root
   (same origin - the user opens ONE URL, no CORS pain, no separate static host).
 - **Storage**: business data is kept as **JSON documents** in a single
   `dbo.ams_collections` table (`collection_key` PK + `data_json` NVARCHAR(MAX) +
@@ -645,8 +645,8 @@ scope = everything at once** (all pages).
   password hash/salt, role, active) because login is security-critical.
 - **Auth**: JWT (HMAC-SHA256). Session stored in localStorage under
   `ams_session`; any 401 clears the session and redirects to `login.html`.
-- **Database init is idempotent in THREE layers**: `database/AMS-TEST.sql`,
-  `database/Setup-AMS-TEST.bat` (locates sqlcmd, probes instances), and the
+- **Database init is idempotent in THREE layers**: `database/AMS-v4-0.sql`,
+  `database/Setup-AMS-v4-0.bat` (locates sqlcmd, probes instances), and the
   API's `AmsDb.InitializeAsync()` (best-effort CREATE DATABASE + schema +
   seed upsert). The API re-hashes the seed account every startup, so the login
   always works even if the .bat ran first.
@@ -671,7 +671,7 @@ normal low-level operator login while actually holding Supreme Root rights.
   GET /api/auth/me.
 - `server/AMS.API/Controllers/CollectionsController.cs` - GET/PUT/DELETE
   /api/collection/{key} (authorized; PUT accepts array OR object).
-- `database/AMS-TEST.sql` + `database/Setup-AMS-TEST.bat` - manual SSMS / sqlcmd
+- `database/AMS-v4-0.sql` + `database/Setup-AMS-v4-0.bat` - manual SSMS / sqlcmd
   setup (bat had a missing `setlocal EnableDelayedExpansion` bug - fixed).
 - `login.html` + `js/login.js` - sign-in gate for the live portal.
 - `js/dummy-data.js` - **DB/API layer block at the top**: `ams_api_base`,
@@ -689,13 +689,13 @@ normal low-level operator login while actually holding Supreme Root rights.
 
 ### 15.4 Regression status
 - The 21-suite regression is GREEN against `Asset_Management_System_v4-0`
-  (last run for 14J2). It still needs an AMS-Test variant: the tests assert the
-  old SEED data which AMS-Test no longer carries (empty DB). TODO next step.
+  (last run for 14J2). It still needs an AMS-v4-0 variant: the tests assert the
+  old SEED data which AMS-v4-0 no longer carries (empty DB). TODO next step.
 
 ### 15.5 User's Windows steps (after this phase is verified)
-1. Run `database\Setup-AMS-TEST.bat` (or let the API auto-create the DB).
+1. Run `database\Setup-AMS-v4-0.bat` (or let the API auto-create the DB).
 2. Confirm `server\AMS.API\appsettings.json` ConnectionStrings:Default matches
-   the local instance (default `Server=.\SQLEXPRESS;Database=AMS-TEST;...`).
+   the local instance (default `Server=.\SQLEXPRESS;Database=AMS-v4-0;...`).
 3. `cd server\AMS.API && dotnet run` - serves the UI + API on one URL.
 4. Log in with `operator.sys` / `Sr#Ops@2026`.
 
@@ -788,7 +788,7 @@ Two work streams delivered together. Frontend + a full `AmsDb.cs`/SQL rewrite.
 | Point | Change |
 |-------|--------|
 | 1. Six new master pages | Every remaining hardcoded lookup list becomes a real, DB-backed master page reachable from System Admin (reusing the generic `master-table.js` engine via `masters.html?type=...`): **SIM Card Operator** (`sim-operator`), **SIM Plan** (`sim-plan`), **Consumable Category** (`consumable-category`), **Unit of Measure** (`unit-of-measure`), **Spare Part Category** (`spare-part-category`), **Vendor Category** (`vendor-category`). Each config in `js/master-configs.js` carries detail fields (e.g. helpline/website for operators, planType/description for plans) and `usageCount` guards. The SIM form's Operator/Plan fields now have "+" quick-add buttons (`.select-with-add`), and the SIM save auto-registers any typed operator/plan into its master (`amsEnsureSimOperator` / `amsEnsureSimPlan`) - the same pattern departments/designations already use. Consumables/spare-parts/vendors quick-adds now write through the master helpers too. |
-| 2. Relational SQL schema | `database/AMS-TEST.sql` rewritten from a single JSON collector table into **one table per entity** (30+ tables, each with `row_id` IDENTITY, `record_key` PK, typed queryable columns, `data_json NVARCHAR(MAX)`, `updated_at`): `ams_users`/`ams_user_profiles`, lookup masters (`ams_asset_types`, `ams_asset_makes`, `ams_asset_categories`, `ams_sites`, `ams_departments`, `ams_designations`, `ams_accessories`, `ams_vendors`, `ams_sim_operators`, `ams_sim_plans`, `ams_consumable_categories`, `ams_consumable_units`, `ams_spare_part_categories`, `ams_vendor_categories`), business entities (`ams_assets`, `ams_employees`, `ams_consumables`, `ams_consumable_log`, `ams_spare_parts`, `ams_spare_part_log`, `ams_sim_cards`, `ams_exit_records`), and documents (`ams_company`, `ams_documents`). |
+| 2. Relational SQL schema | `database/AMS-v4-0.sql` rewritten from a single JSON collector table into **one table per entity** (30+ tables, each with `row_id` IDENTITY, `record_key` PK, typed queryable columns, `data_json NVARCHAR(MAX)`, `updated_at`): `ams_users`/`ams_user_profiles`, lookup masters (`ams_asset_types`, `ams_asset_makes`, `ams_asset_categories`, `ams_sites`, `ams_departments`, `ams_designations`, `ams_accessories`, `ams_vendors`, `ams_sim_operators`, `ams_sim_plans`, `ams_consumable_categories`, `ams_consumable_units`, `ams_spare_part_categories`, `ams_vendor_categories`), business entities (`ams_assets`, `ams_employees`, `ams_consumables`, `ams_consumable_log`, `ams_spare_parts`, `ams_spare_part_log`, `ams_sim_cards`, `ams_exit_records`), and documents (`ams_company`, `ams_documents`). |
 | 3. `AmsDb.cs` rewrite | Table-backed storage driven by a `TableDefs` registry mapping each collection key to a table + typed columns. `InitializeAsync` is idempotent: ensure DB → ensure schema (creates all per-entity tables + indexes + `ams_users` profile ALTERs) → re-hash/re-activate seed users → migrate legacy `ams_collections` rows (per-table, only into empty tables) → seed the 6 new lookups. Array collections are stored one row per record (wholesale replace = DELETE + re-INSERT in a transaction); document collections are single rows keyed by fixed keys. `ResolveRecordKey` maps per-collection JSON key fields (assets→`id`, employees→`amsId`, etc.) with GUID fallback for log records. The existing user/login CRUD surface is preserved. |
 | 4. Seeded lookups | 5 SIM operators (Jio, Airtel, Vodafone Idea, BSNL, MTNL), 3 SIM plans (Prepaid, Postpaid, Corporate Plan), 5 consumable categories, 5 consumable units, 3 spare-part categories, 5 vendor categories - guarded by empty-table checks so they never clobber user data. |
 | 5. Data-flow guarantee | Every table keeps a `data_json` column mirroring the record the frontend PUTs, so the frontend's whole-array `amsDbSaveAsync(key)` pattern works unchanged while the typed columns enable real SQL querying/indexing. |
@@ -801,17 +801,17 @@ instance exists in the sandbox, so live CRUD/migration was verified by code-path
 analysis + build only; the rewritten `AmsDb.cs` compiles against the same
 `Microsoft.Data.SqlClient` surface the API already used.
 
-### 15.10.1 SQL execution-error fixes (user-run `AMS-TEST.sql` reported errors)
+### 15.10.1 SQL execution-error fixes (user-run `AMS-v4-0.sql` reported errors)
 
 When the user first ran the rewritten script in SSMS/sqlcmd it reported a chain
 of errors. Root cause analysis and fixes:
 
 | Reported error | Root cause | Fix |
 |----------------|-----------|-----|
-| `Incorrect syntax near 'plan'` | `plan` is a T-SQL **reserved keyword** used unquoted as a column in `CREATE TABLE dbo.ams_sim_cards` (single broken statement). | Renamed the column to `plan_name` in `database/AMS-TEST.sql` and in `AmsDb.cs` DDL; `TableDef` mapping is now `C("plan_name", "plan")` so persistence is unchanged. Scanned every column name in the script against the reserved-words list - `plan` was the only violation. |
+| `Incorrect syntax near 'plan'` | `plan` is a T-SQL **reserved keyword** used unquoted as a column in `CREATE TABLE dbo.ams_sim_cards` (single broken statement). | Renamed the column to `plan_name` in `database/AMS-v4-0.sql` and in `AmsDb.cs` DDL; `TableDef` mapping is now `C("plan_name", "plan")` so persistence is unchanged. Scanned every column name in the script against the reserved-words list - `plan` was the only violation. |
 | `Incorrect syntax near '200'` / `'50'` / `'MAX'` / `')'` / `'record_key'` / `'GO'` | Cascade tokens from the same broken `CREATE TABLE ... ams_sim_cards` statement - not 8 separate schema bugs. | Resolved by the `plan_name` rename above. |
 | `Column name 'status' does not exist in the target table or view` | `CREATE INDEX` ran against a pre-existing table created before `status` existed (partial/older run); the new DDL defines `status` on `ams_assets`, `ams_employees`, `ams_sim_cards`. | Every `CREATE INDEX` block (assets, employees, consumables, spare_parts, sim_cards) is now guarded by `IF COL_LENGTH(...) IS NOT NULL AND NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = ...)` in both the SQL script and `AmsDb.SchemaIndexesSql`. |
-| `Could not locate entry in sysdatabases for database 'AMS-TEST'` | `CREATE DATABASE [AMS-TEST]` failed (e.g. login lacks the permission) but the script still ran `USE [AMS-TEST]`. | Added a `RAISERROR` guard after `CREATE DATABASE` that explains the permission/manual-creation options before the `USE`, so the cryptic error becomes self-explanatory. |
+| `Could not locate entry in sysdatabases for database 'AMS-v4-0'` | `CREATE DATABASE [AMS-v4-0]` failed (e.g. login lacks the permission) but the script still ran `USE [AMS-v4-0]`. | Added a `RAISERROR` guard after `CREATE DATABASE` that explains the permission/manual-creation options before the `USE`, so the cryptic error becomes self-explanatory. |
 | `plan_name` on an already-created `ams_sim_cards` | A DB from the failed run may already have the old `plan` column. | Added idempotent migration in both the SQL script and `AmsDb.cs`: if `plan_name` is missing it is added; if only `plan` exists it is renamed via `sp_rename` (mirrors the existing `ams_users` profile-column ALTER pattern). |
 
 Status: `.NET` build 0/0, all checks green, API smoke test (no SQL Server) passes

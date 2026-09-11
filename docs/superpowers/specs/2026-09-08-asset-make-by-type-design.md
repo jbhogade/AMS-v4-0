@@ -1,4 +1,4 @@
-# AMS-Test Asset Make by Asset Type — Design
+# AMS-v4-0 Asset Make by Asset Type — Design
 
 Date: 2026-09-08
 
@@ -57,7 +57,7 @@ js/mobiles.js                 same as assets.js
 pages/assets.html             (only if Replace Make markup needs wiring;
                               no new fields on the Add Asset form)
 pages/mobiles.html            same
-database/AMS-TEST.sql         CREATE + ALTER make_code / asset_type;
+database/AMS-v4-0.sql         CREATE + ALTER make_code / asset_type;
                               index IX_ams_asset_makes_asset_type
 server/AMS.API/Data/AmsDb.cs  same schema + TableDef KeyField makeCode
 server/ams_django/ams/db.py   same
@@ -157,7 +157,7 @@ ALTER TABLE dbo.ams_asset_makes ADD asset_type NVARCHAR(200) NULL;
 IX_ams_asset_makes_asset_type ON dbo.ams_asset_makes(asset_type)
 ```
 
-Apply in `database/AMS-TEST.sql`, `server/AMS.API/Data/AmsDb.cs`, and
+Apply in `database/AMS-v4-0.sql`, `server/AMS.API/Data/AmsDb.cs`, and
 `server/ams_django/ams/db.py`.
 
 **TableDef** (`assetMakes` / `ams_asset_makes`):
@@ -218,7 +218,7 @@ Manual:
 - Edit an asset whose Make is untagged: saved Make still displays; new
   options are Type-filtered.
 - Delete a Make used by an asset of that Type: blocked.
-- Restart API or re-run `database/AMS-TEST.sql`; hard-refresh (Ctrl+F5).
+- Restart API or re-run `database/AMS-v4-0.sql`; hard-refresh (Ctrl+F5).
 
 Automated:
 

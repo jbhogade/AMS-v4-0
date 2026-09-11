@@ -6,7 +6,7 @@ using Microsoft.Data.SqlClient;
 namespace AMS.API.Data;
 
 /// <summary>
-/// Database access layer for the AMS-TEST database.
+/// Database access layer for the AMS-v4-0 database.
 ///
 /// Business data (assets, employees, masters, settings, ...) is stored in one
 /// per-entity table (ams_assets, ams_employees, ams_sim_operators, ...) instead
@@ -27,7 +27,7 @@ namespace AMS.API.Data;
 ///
 /// Schema creation, the per-entity tables, the migrated/seed data and the seeded
 /// login accounts are all idempotent and run automatically at startup, so the
-/// app works even if the AMS-TEST.sql script was never executed manually.
+/// app works even if the AMS-v4-0.sql script was never executed manually.
 /// </summary>
 public class AmsDb
 {
@@ -37,10 +37,10 @@ public class AmsDb
     public AmsDb(IConfiguration config)
     {
         _connectionString = config.GetConnectionString("Default") ?? "";
-        _dbName = "AMS-TEST";
+        _dbName = "AMS-v4-0";
     }
 
-    /// <summary>Connection string targeted at the AMS-TEST database.</summary>
+    /// <summary>Connection string targeted at the AMS-v4-0 database.</summary>
     public string ConnectionString => _connectionString;
 
     private string GetDbConnectionString()
@@ -60,7 +60,7 @@ public class AmsDb
     /// Ensures the database, schema, per-entity tables, migrated/seed data and
     /// the seeded login accounts exist. Each step is best-effort: if the caller
     /// lacks permission to create the database they will have run
-    /// Setup-AMS-TEST.bat (sqlcmd) instead, and the remaining steps still run
+    /// Setup-AMS-v4-0.bat (sqlcmd) instead, and the remaining steps still run
     /// against the existing database.
     /// </summary>
     public async Task InitializeAsync()
@@ -86,13 +86,13 @@ public class AmsDb
         catch
         {
             // Permission denied to create a database - the user should run the
-            // provided Setup-AMS-TEST.bat (sqlcmd) as an administrator. The
+            // provided Setup-AMS-v4-0.bat (sqlcmd) as an administrator. The
             // schema step below will still run if the database already exists.
         }
     }
 
     /* =========================================================================
-       PER-ENTITY TABLE DDL  (mirrors database/AMS-TEST.sql)
+       PER-ENTITY TABLE DDL  (mirrors database/AMS-v4-0.sql)
        Each table: row_id IDENTITY, record_key, typed columns, data_json,
        updated_at. Log tables (consumable_log / spare_part_log) are keyed on
        row_id because log entries have no natural key.
@@ -989,7 +989,7 @@ public class AmsDb
             if (exists > 0)
             {
                 // Keep the seeded account in sync (re-hash + re-activate). A row
-                // inserted by AMS-TEST.sql carries a placeholder hash until the
+                // inserted by AMS-v4-0.sql carries a placeholder hash until the
                 // API first runs, so this update guarantees a valid login.
                 var upd = new SqlCommand(@"
                     UPDATE dbo.ams_users
@@ -1334,50 +1334,10 @@ public class AmsDb
 
     /* =========================================================================
        LOOKUP SEEDS  (the 6 masters that were previously hardcoded in the UI)
-       Inserted only when the target table is empty (mirrors AMS-TEST.sql).
+       Inserted only when the target table is empty (mirrors AMS-v4-0.sql).
        ========================================================================= */
 
-    private static readonly (string Key, string Json)[] SeedLookups =
-    {
-        ("simOperators", @"[
-            {""name"":""Jio"",""helpline"":""198"",""website"":""https://www.jio.com"",""active"":true},
-            {""name"":""Airtel"",""helpline"":""198"",""website"":""https://www.airtel.in"",""active"":true},
-            {""name"":""Vodafone Idea"",""helpline"":""199"",""website"":""https://www.myvi.in"",""active"":true},
-            {""name"":""BSNL"",""helpline"":""1503"",""website"":""https://www.bsnl.co.in"",""active"":true},
-            {""name"":""MTNL"",""helpline"":""1503"",""website"":""https://www.mtnl.co.in"",""active"":true}
-        ]"),
-        ("simPlans", @"[
-            {""name"":""Prepaid"",""planType"":""Prepaid"",""description"":"""",""active"":true},
-            {""name"":""Postpaid"",""planType"":""Postpaid"",""description"":"""",""active"":true},
-            {""name"":""Corporate Plan"",""planType"":""Corporate"",""description"":"""",""active"":true}
-        ]"),
-        ("consumableCategories", @"[
-            {""name"":""Printer Supplies"",""description"":"""",""active"":true},
-            {""name"":""Cables"",""description"":"""",""active"":true},
-            {""name"":""Peripherals"",""description"":"""",""active"":true},
-            {""name"":""Stationery"",""description"":"""",""active"":true},
-            {""name"":""IT Accessories"",""description"":"""",""active"":true}
-        ]"),
-        ("consumableUnits", @"[
-            {""name"":""Nos"",""description"":""Number of pieces"",""active"":true},
-            {""name"":""Box"",""description"":"""",""active"":true},
-            {""name"":""Pack"",""description"":"""",""active"":true},
-            {""name"":""Ream"",""description"":"""",""active"":true},
-            {""name"":""Meter"",""description"":"""",""active"":true}
-        ]"),
-        ("sparePartCategories", @"[
-            {""name"":""Internal Component"",""description"":"""",""active"":true},
-            {""name"":""Toner / Ink"",""description"":"""",""active"":true},
-            {""name"":""Mechanical Part"",""description"":"""",""active"":true}
-        ]"),
-        ("vendorCategories", @"[
-            {""name"":""Assets"",""description"":""Supplies assets / capital equipment"",""active"":true},
-            {""name"":""Consumables"",""description"":""Supplies consumable items"",""active"":true},
-            {""name"":""Spare Parts"",""description"":""Supplies spare / repair parts"",""active"":true},
-            {""name"":""Services"",""description"":""Provides services (AMC, repair, etc.)"",""active"":true},
-            {""name"":""All"",""description"":""General supplier - multiple categories"",""active"":true}
-        ]"),
-    };
+    private static readonly (string Key, string Json)[] SeedLookups = Array.Empty<(string, string)>();
 
     private async Task EnsureSeedLookupsAsync()
     {

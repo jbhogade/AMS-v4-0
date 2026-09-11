@@ -1,4 +1,4 @@
-# AMS-Test Excel-style column filters — Design
+# AMS-v4-0 Excel-style column filters — Design
 
 Date: 2026-09-08
 

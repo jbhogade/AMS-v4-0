@@ -1,7 +1,7 @@
-"""URL configuration for the AMS-Test Django backend.
+"""URL configuration for the AMS-v4-0 Django backend.
 
 /api/* routes come first (mirroring the .NET controllers); everything else is
-the static frontend served same-origin from the AMS-Test root.
+the static frontend served same-origin from the AMS-v4-0 root.
 """
 
 from django.urls import include, path, re_path

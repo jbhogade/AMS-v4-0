@@ -13,7 +13,7 @@ from ams.db import (
 )
 
 DB = AmsDb(
-    "DRIVER={ODBC Driver 18 for SQL Server};SERVER=localhost;DATABASE=AMS-TEST;"
+    "DRIVER={ODBC Driver 18 for SQL Server};SERVER=localhost;DATABASE=AMS-v4-0;"
     "TrustServerCertificate=yes;Connection Timeout=3"
 )
 

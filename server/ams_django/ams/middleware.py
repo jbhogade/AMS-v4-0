@@ -28,7 +28,7 @@ class InitDbMiddleware:
             get_db().initialize()
         except Exception as ex:  # noqa: BLE001 - init must never block requests
             logger.error(
-                "AMS-TEST database init failed. Run database/Setup-AMS-TEST.bat then retry. %s", ex
+                "AMS-v4-0 database init failed. Run database/Setup-AMS-v4-0.bat then retry. %s", ex
             )
 
     def __call__(self, request):
