@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<!--
+#-------------- Start Code for : VENDOR MASTER PAGE (vendors.html) --------------
+#
+#  PURPOSE   : Manage suppliers / vendors referenced across the portal -
+#              Assets (purchase source), Consumables and Spare Parts
+#              (restock vendor) and Services. Every seeded vendor name comes
+#              from an existing record somewhere in the system, so the
+#              "Used By" column (assets + consumables + spare parts count)
+#              shows the true usage and blocks delete while still in use.
+#              Vendor Name is the unique key.
+#
+#              The live vendor list also feeds the vendor pickers (selects) on
+#              the Asset / Consumable / Spare Parts forms via the shared
+#              amsPopulateVendorSelects() / amsWireVendorQuickAdds() helpers in
+#              js/dummy-data.js, so a vendor added / renamed here shows up as a
+#              selectable option - or a quick-add (+) - right away.
+#
+#              This page is just a CONFIG + shared engine - all CRUD logic
+#              lives in js/master-table.js.
+#
+#  FILES USED :
+#    - css/themes.css, css/main.css, css/master-table.css
+#    - js/dummy-data.js, js/theme.js, js/app.js, js/layout.js,
+#      js/master-table.js
+#------------------------------------------------------------------------------
+-->
+<html lang="en" data-theme="dark-grey">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vendors | Asset Management System</title>
+
+    <link rel="stylesheet" href="../css/themes.css">
+    <link rel="stylesheet" href="../css/main.css">
+    <link rel="stylesheet" href="../css/ui-styles.css">
+    <link rel="stylesheet" href="../css/master-table.css">
+    <link rel="stylesheet" href="../css/embed-mode.css">
+</head>
+<body>
+    <script src="../js/embed-mode.js"></script>
+    <div class="app">
+        <aside class="sidebar" id="sidebar">
+            <div id="sidebar-mount"></div>
+        </aside>
+
+        <main class="app-main">
+            <header class="topbar" id="topbar-mount"></header>
+
+            <div class="app-content">
+                <!-- ==================== PAGE HEADING ==================== -->
+                <div class="page-heading flex items-center justify-between">
+                    <div>
+                        <h1 id="pageTitle">Vendor Master</h1>
+                        <p class="page-sub" id="pageSub"></p>
+                    </div>
+                </div>
+
+                <!-- ==================== TOOLBAR ==================== -->
+                <div class="toolbar">
+                    <input type="text" id="searchBox" class="search-input" placeholder="Search vendor name, city, category...">
+
+                    <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                        <button class="btn btn-primary" id="btnAddMaster">+ Add</button>
+                        <button class="btn" id="btnTemplate">Template</button>
+                        <button class="btn" id="btnExport">Export</button>
+                        <button class="btn" id="btnImport">Import</button>
+                        <input type="file" id="importFileInput" accept=".csv,.xlsx" style="display:none;">
+                    </div>
+                </div>
+
+                <!-- ==================== VENDOR TABLE ==================== -->
+                <div class="card">
+                    <div class="table-wrap">
+                        <table class="table" id="masterTable"></table>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- ====================================================================
+         MODAL : ADD / EDIT (fields built dynamically by master-table.js)
+         ==================================================================== -->
+    <div class="modal-overlay" id="modalForm">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 id="mtModalTitle">Add Vendor</h3>
+                <button class="modal-close" data-close="modalForm">&times;</button>
+            </div>
+            <form id="mtForm">
+                <div class="modal-body">
+                    <div id="mtFormFields"></div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn" data-close="modalForm">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script defer src="../js/dummy-data.js"></script>
+    <script defer src="../js/theme.js"></script>
+    <script defer src="../js/app.js"></script>
+    <script defer src="../js/layout.js"></script>
+    <script defer src="../js/sortable.js"></script>
+    <script defer src="../js/xlsx-helpers.js"></script>
+    <script defer src="../js/master-table.js"></script>
+
+    <!-- ====================================================================
+         THIS PAGE'S MASTER CONFIG (only part unique to Vendor Master)
+         ==================================================================== -->
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            window.AMS_MASTER_CONFIG = {
+                pageTitle: "Vendor Master",
+                pageSub: "Manage suppliers / vendors referenced across Assets, Consumables, Spare Parts and Services",
+                dataArray: AMS_DUMMY_VENDORS,
+                idKey: "name",
+                fields: [
+                    { key: "name", label: "Vendor Name", required: true },
+                    { key: "contactPerson", label: "Contact Person" },
+                    { key: "phone", label: "Phone" },
+                    { key: "email", label: "Email" },
+                    { key: "city", label: "City" },
+                    { key: "category", label: "Supplies", type: "select", includeBlank: true,
+                        optionsFrom: () => amsGetActiveVendorCategoryNames(),
+                        quickAdd: { fields: [{ key: "name", label: "New Category Name" }, { key: "description", label: "Description (optional)" }],
+                            onAdd: (v) => {
+                                if (!v.name) { alert("Enter a Category name."); return null; }
+                                const added = amsQuickAddVendorCategory(v.name, v.description);
+                                if (!added) { alert("This Category already exists."); return null; }
+                                return added;
+                            } } },
+                    { key: "gstin", label: "GSTIN", upper: true, maxLength: 15 },
+                    { key: "remarks", label: "Remarks", multiline: true },
+                ],
+                /* Blocks delete while any asset / consumable / spare part
+                   references this vendor name */
+                usageCount: (item) =>
+                    DUMMY_ASSETS.filter(a => (a.vendor || "").toLowerCase() === item.name.toLowerCase()).length +
+                    AMS_DUMMY_CONSUMABLES.filter(c => (c.vendor || "").toLowerCase() === item.name.toLowerCase()).length +
+                    AMS_DUMMY_SPARE_PARTS.filter(p => (p.vendor || "").toLowerCase() === item.name.toLowerCase()).length,
+            };
+            initLayout("vendors");
+        });
+    </script>
+</body>
+</html>
+<!--
+#-------------- End of the code : VENDOR MASTER PAGE ----------------------------
+#------------------------------------------------------------------------------
+-->

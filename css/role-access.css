@@ -1,0 +1,49 @@
+/*==============================================================================
+#-------------- Start Code for : ROLE ACCESS STYLES (role-access.css) ------------
+#
+#  PURPOSE   : Styles unique to Role Access Master - the Role x Page matrix
+#              table's checkbox cells. The viewing-as bar / locked card live
+#              in css/role-gate.css. Theme variables only.
+#------------------------------------------------------------------------------*/
+
+/*-------------- Start Code for ROLE x PAGE MATRIX ------------------------------*/
+#roleAccessTable th, #roleAccessTable td { text-align: center; }
+#roleAccessTable th:first-child, #roleAccessTable td:first-child { text-align: left; }
+
+#roleAccessTable td { vertical-align: middle; }
+
+.ram-page-label { display: flex; flex-direction: column; }
+
+.ram-page-note { font-size: 10.5px; color: var(--text-muted); margin-top: 2px; }
+
+.ram-locked-check { opacity: 0.45; cursor: not-allowed; }
+
+.ram-check { accent-color: var(--accent); width: 14px; height: 14px; cursor: pointer; }
+
+.ram-level {
+    width: 100%;
+    min-width: 72px;
+    max-width: 96px;
+    background: var(--bg-input);
+    color: var(--text-primary);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 4px 6px;
+    font-size: 12px;
+}
+
+.ram-level[value="none"],
+.ram-level option[value="none"] { color: var(--danger); }
+
+#roleAccessTable .ram-section-row {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-muted);
+    background: var(--bg-elevated);
+}
+/*-------------- End of the code ------------------------------------------------*/
+/*==============================================================================
+#-------------- End of the code : ROLE ACCESS STYLES -----------------------------
+#------------------------------------------------------------------------------*/

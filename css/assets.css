@@ -1,0 +1,379 @@
+/*==============================================================================
+#-------------- Start Code for : ASSET MASTER PAGE STYLES (assets.css) ---------
+#
+#  PURPOSE   : Styles unique to the Asset Master page - stock summary tiles,
+#              toolbar (search / status filter / super-root toggle / add),
+#              per-row actions dropdown, form grid + quick-add popovers,
+#              accessories checklist, and detail rows in the View modal.
+#
+#  PORT NOTE : Ported from v3-3 asset-master-v1-0.css. All colors come ONLY
+#              from the theme variables in css/themes.css - no hardcoded hex.
+#------------------------------------------------------------------------------*/
+
+/* =============================================================================
+   1) STOCK SUMMARY (Total Stock / In Stock / Used / Retired) + by-type table
+   ===========================================================================*/
+.stat-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 10px;
+    margin-bottom: 14px;
+}
+
+.stat-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 12px 14px;
+    box-shadow: var(--shadow);
+}
+
+.stat-card .stat-value {
+    font-size: 26px;
+    font-weight: 700;
+    color: var(--text-primary);
+    line-height: 1.1;
+}
+
+.stat-card .stat-label {
+    font-size: 12px;
+    color: var(--text-muted);
+    margin-top: 4px;
+}
+
+.stat-card.accent-success .stat-value { color: var(--success); }
+.stat-card.accent-warning .stat-value { color: var(--warning); }
+.stat-card.accent-danger  .stat-value { color: var(--danger); }
+
+/* ---- Stock by Asset Type: compact horizontal bar-chart table ---- */
+.card-compact .card-header { padding: 10px 14px; }
+.card-compact .card-header h3 { font-size: 13.5px; }
+
+#assetStockByTypeTable th,
+#assetStockByTypeTable td {
+    padding: 5px 10px;
+    font-size: 12.5px;
+}
+
+.stock-chart-cell { min-width: 150px; }
+
+.stock-bar {
+    display: flex;
+    height: 14px;
+    min-width: 130px;
+    border-radius: 4px;
+    overflow: hidden;
+    background: var(--bg-elevated);
+}
+
+.stock-bar-seg { height: 100%; }
+.stock-bar-seg.seg-in   { background: var(--success); opacity: 0.85; }
+.stock-bar-seg.seg-used { background: var(--warning); opacity: 0.85; }
+.stock-bar-seg.seg-off  { background: var(--danger);  opacity: 0.85; }
+
+.legend-dot {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 2px;
+    margin-right: 4px;
+    vertical-align: middle;
+}
+.legend-dot.in   { background: var(--success); }
+.legend-dot.used { background: var(--warning); }
+.legend-dot.off  { background: var(--danger); }
+
+/* ---- Asset list: shows EVERY matching row (no inner scroll frame) ----
+   The table grows with the page and the page itself scrolls - identical to
+   the Employees master. A nested max-height/overflow frame here caused a
+   second scrollbar and clipped the row Actions menus, so it is removed.
+   Only the horizontal overflow-x from .table-wrap remains. */
+
+.asset-table-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 10px 14px;
+    border-top: 1px solid var(--border);
+    font-size: 12.5px;
+    color: var(--text-secondary);
+}
+
+/* =============================================================================
+   2) TOOLBAR (search + status filter + super root toggle + add/import buttons)
+   Layout comes from .list-toolbar / .asset-toolbar in css/main.css.
+   ===========================================================================*/
+.asset-toolbar .search-input {
+    background: var(--bg-input);
+    border: 1px solid var(--border);
+    color: var(--text-primary);
+    border-radius: 8px;
+    padding: 8px 12px;
+    font-size: 13px;
+    width: 220px;
+}
+
+.asset-toolbar .search-input:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+.role-toggle {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: var(--text-muted);
+    cursor: pointer;
+    user-select: none;
+}
+
+.role-toggle input { accent-color: var(--accent); }
+
+.btn-secondary {
+    background: var(--bg-elevated);
+    color: var(--text-primary);
+    border: 1px solid var(--border);
+}
+
+.btn-secondary:hover { border-color: var(--accent); }
+
+/* Import summary banner shown after a bulk CSV import */
+.import-summary-banner {
+    display: none;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--accent);
+    border-radius: 8px;
+    padding: 10px 14px;
+    margin-bottom: 14px;
+    font-size: 12.5px;
+}
+
+/* =============================================================================
+   3) TRANSFER BADGE (auto-shown when Current Site != Purchase Site)
+   ===========================================================================*/
+.badge-transfer {
+    background: var(--accent-soft);
+    color: var(--accent);
+}
+
+/* =============================================================================
+   4) ACTIONS DROPDOWN (per table row - the vertical "..." menu)
+   ===========================================================================*/
+.actions-cell { position: relative; text-align: right; }
+
+.actions-trigger {
+    background: var(--bg-elevated);
+    border: 1px solid var(--border);
+    color: var(--text-primary);
+    border-radius: 6px;
+    padding: 5px 12px;
+    cursor: pointer;
+    font-size: 12.5px;
+    font-weight: 600;
+    line-height: 1;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    white-space: nowrap;
+}
+
+.actions-trigger:hover { border-color: var(--accent); }
+
+.actions-menu {
+    position: absolute;
+    right: 0;
+    top: 32px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    min-width: 200px;
+    box-shadow: var(--shadow);
+    z-index: 60;
+    display: none;
+    overflow: hidden;
+}
+
+.actions-menu.open { display: block; }
+
+.actions-menu button {
+    display: block;
+    width: 100%;
+    text-align: left;
+    padding: 8px 12px;
+    background: transparent;
+    border: none;
+    color: var(--text-primary);
+    font-size: 12.5px;
+    cursor: pointer;
+    font-family: inherit;
+}
+
+.actions-menu button:hover { background: var(--bg-elevated); }
+
+.actions-menu button:disabled { color: var(--text-muted); cursor: not-allowed; }
+
+.actions-menu button.danger-item { color: var(--danger); }
+.actions-menu button.danger-item:hover { background: rgba(239, 68, 68, 0.1); }
+
+.actions-menu .menu-divider { height: 1px; background: var(--border); margin: 4px 0; }
+
+/* =============================================================================
+   5) FORM GRID + FIELD EXTRAS (Add/Edit/Replace/Transfer modals)
+   ===========================================================================*/
+.form-hint {
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-top: 4px;
+}
+
+.ams-id-preview {
+    font-family: 'Consolas', 'Menlo', monospace;
+    background: var(--bg-input);
+    border: 1px dashed var(--border);
+    padding: 8px 10px;
+    border-radius: 8px;
+    font-size: 12.5px;
+    color: var(--accent);
+}
+
+/* =============================================================================
+   6) QUICK-ADD (+) BUTTON + POPOVER (add Type / Category / Make / Site inline)
+   ===========================================================================*/
+.select-with-add { position: relative; display: flex; gap: 6px; }
+.select-with-add select { flex: 1; }
+
+.btn-quickadd {
+    width: 34px;
+    flex-shrink: 0;
+    background: var(--bg-elevated);
+    border: 1px solid var(--border);
+    color: var(--accent);
+    font-size: 16px;
+    font-weight: 700;
+    border-radius: 8px;
+    cursor: pointer;
+}
+
+.btn-quickadd:hover { background: var(--accent); color: var(--accent-contrast); }
+
+.quickadd-popover {
+    position: absolute;
+    top: calc(100% + 6px);
+    right: 0;
+    width: 240px;
+    background: var(--bg-elevated);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px;
+    box-shadow: var(--shadow);
+    z-index: 220;
+    display: none;
+}
+
+.quickadd-popover.open { display: block; }
+
+.quickadd-popover .qa-label {
+    font-size: 11px;
+    color: var(--text-muted);
+    display: block;
+    margin-bottom: 4px;
+}
+
+.quickadd-popover .qa-label:not(:first-child) { margin-top: 8px; }
+
+.quickadd-popover input {
+    width: 100%;
+    margin-bottom: 8px;
+    background: var(--bg-input);
+    border: 1px solid var(--border);
+    color: var(--text-primary);
+    border-radius: 8px;
+    padding: 7px 9px;
+    font-size: 12.5px;
+}
+
+.quickadd-popover input:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+.quickadd-popover .qa-actions { display: flex; gap: 8px; justify-content: flex-end; }
+.quickadd-popover .qa-actions .btn { padding: 5px 10px; font-size: 11px; }
+
+/* =============================================================================
+   7) ACCESSORIES CHECKLIST (Assign / Reassign / Replace)
+   ===========================================================================*/
+.accessories-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 6px;
+}
+
+.accessories-header label { margin-bottom: 0; }
+.quickadd-inline { position: relative; }
+
+.accessories-checklist {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 6px 14px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 10px 12px;
+    background: var(--bg-input);
+}
+
+.accessories-checklist label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12.5px;
+    cursor: pointer;
+    min-width: 0;
+}
+
+.accessories-checklist label input { flex-shrink: 0; }
+
+.accessories-checklist input[type="checkbox"] {
+    width: 15px;
+    height: 15px;
+    padding: 0;
+    margin: 0;
+    accent-color: var(--accent);
+}
+
+.accessories-checklist .no-accessories {
+    color: var(--text-muted);
+    font-size: 12px;
+    grid-column: 1 / -1;
+}
+
+/* =============================================================================
+   8) VIEW MODAL DETAIL ROWS
+   ===========================================================================*/
+.detail-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 7px 0;
+    border-bottom: 1px solid var(--border);
+    font-size: 13px;
+    gap: 12px;
+}
+
+.detail-row .detail-label { color: var(--text-muted); flex-shrink: 0; }
+.detail-row .detail-value { text-align: right; word-break: break-word; }
+.detail-row:last-child { border-bottom: none; }
+
+/* =============================================================================
+   9) REPLACE MODAL - SELECTED ASSET SUMMARY
+   ===========================================================================*/
+.selected-asset-box {
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--accent);
+    border-radius: 6px;
+    padding: 8px 10px;
+    background: var(--bg-elevated);
+    font-size: 13px;
+}
+.selected-asset-box .form-hint { margin-top: 3px; font-size: 12px; }
+
+/* -----------------------------------------------------------------------------
+#-------------- End of the code : ASSET MASTER PAGE STYLES ----------------------
+#------------------------------------------------------------------------------*/

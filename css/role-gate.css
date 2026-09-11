@@ -1,0 +1,115 @@
+/*==============================================================================
+#-------------- Start Code for : ROLE-GATED PAGE STYLES (role-gate.css) ----------
+#
+#  PURPOSE   : Shared styles for the three role-gated pages ported from v3-3 -
+#              Access Rights Control Master, Role Access Master, and Log Report.
+#              Covers the "Viewing As" role-simulator bar, the Access Denied
+#              locked card, the Log Report visibility note + actor badges, and
+#              the Log Report filter row (same pattern as css/reports.css).
+#              All colors use the shared theme variables (var(--...)).
+#------------------------------------------------------------------------------*/
+
+/*-------------- Start Code for VIEWING AS BAR ----------------------------------*/
+.viewing-as-bar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-bottom: 18px;
+    padding: 10px 14px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--bg-elevated);
+    font-size: 12.5px;
+}
+
+.viewing-as-bar label { font-weight: 600; color: var(--text-secondary); }
+
+.viewing-as-bar select {
+    background: var(--bg-input);
+    border: 1px solid var(--border);
+    color: var(--text-primary);
+    border-radius: 8px;
+    padding: 7px 10px;
+    font-size: 12.5px;
+    font-family: inherit;
+}
+
+.viewing-as-bar .form-hint { margin: 0; font-size: 12px; }
+/*-------------- End of the code ------------------------------------------------*/
+
+/*-------------- Start Code for ACCESS DENIED CARD -------------------------------*/
+.access-denied-card {
+    border: 1px solid var(--danger);
+    border-radius: 10px;
+    padding: 28px 24px;
+    text-align: center;
+    background: color-mix(in srgb, var(--danger) 8%, transparent);
+}
+
+.access-denied-card .ad-title { font-size: 16px; font-weight: 700; color: var(--danger); margin-bottom: 8px; }
+.access-denied-card .ad-sub { font-size: 13px; color: var(--text-muted); }
+/*-------------- End of the code ------------------------------------------------*/
+
+/*-------------- Start Code for LOG REPORT VISIBILITY NOTE + ACTOR BADGES --------*/
+.visibility-note {
+    font-size: 12px;
+    color: var(--text-muted);
+    margin-bottom: 12px;
+    padding: 8px 12px;
+    border-left: 3px solid var(--accent);
+    background: var(--bg-elevated);
+    border-radius: 4px;
+}
+
+.actor-badge { font-size: 10.5px; font-weight: 700; padding: 2px 7px; border-radius: 10px; }
+.actor-badge.supreme { background: color-mix(in srgb, var(--danger) 20%, transparent); color: var(--danger); }
+.actor-badge.super   { background: color-mix(in srgb, var(--warning) 20%, transparent); color: var(--warning); }
+.actor-badge.other   { background: var(--bg-elevated); color: var(--text-muted); }
+/*-------------- End of the code ------------------------------------------------*/
+
+/*-------------- Start Code for LOG REPORT FILTER ROW (matches css/reports.css) ---*/
+.report-filters {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    gap: 12px;
+    margin-bottom: 16px;
+    padding: 14px;
+    background: var(--bg-elevated);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+}
+
+.report-filters .form-field { margin: 0; min-width: 150px; }
+.report-filters .form-field label { font-size: 11.5px; margin-bottom: 4px; }
+
+.report-filters .form-field input,
+.report-filters .form-field select,
+.report-filters .form-field textarea {
+    width: 100%;
+    background: var(--bg-input);
+    border: 1px solid var(--border);
+    color: var(--text-primary);
+    border-radius: 8px;
+    padding: 8px 10px;
+    font-size: 13px;
+    font-family: inherit;
+}
+
+.report-filters .form-field input:focus,
+.report-filters .form-field select:focus,
+.report-filters .form-field textarea:focus {
+    outline: 2px solid var(--accent);
+    outline-offset: 1px;
+    border-color: var(--accent);
+}
+
+.report-panel .mono {
+    font-family: 'Consolas', 'Menlo', monospace;
+    font-size: 12.5px;
+}
+/*-------------- End of the code ------------------------------------------------*/
+/*==============================================================================
+#-------------- End of the code : ROLE-GATED PAGE STYLES -------------------------
+#------------------------------------------------------------------------------*/

@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<!--
+#-------------- Start Code for : ACCESSORY MASTER PAGE (accessories.html) -------
+#
+#  PURPOSE   : Manage Common/Supportive Accessories (e.g. "Laptop Charger",
+#              "Wireless Mouse"), each linked to an Asset Type. This is the
+#              list that Asset Master's Assign/Reassign/Replace accessories
+#              checklist reads from (see amsGetAccessoryOptions() in
+#              js/dummy-data.js) - so anything added, edited, or deactivated
+#              here is reflected there right away.
+#
+#              Same "name isn't unique alone" situation as the Consumable and
+#              Spare Parts masters (the same accessory name can apply to more
+#              than one Asset Type, e.g. "Charger" for both Smartphone and
+#              Basic Keypad Phone) - so this page uses an auto-generated
+#              accCode as the real identifier, matched on import by Name +
+#              Asset Type.
+#
+#              This page is just a CONFIG + shared engine - all CRUD logic
+#              lives in js/master-table.js. Delete is blocked while any asset
+#              of that type currently has this accessory issued.
+#
+#  FILES USED :
+#    - css/themes.css, css/main.css, css/master-table.css
+#    - js/dummy-data.js, js/theme.js, js/app.js, js/layout.js,
+#      js/master-table.js
+#------------------------------------------------------------------------------
+-->
+<html lang="en" data-theme="dark-grey">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Accessories | Asset Management System</title>
+
+    <link rel="stylesheet" href="../css/themes.css">
+    <link rel="stylesheet" href="../css/main.css">
+    <link rel="stylesheet" href="../css/ui-styles.css">
+    <link rel="stylesheet" href="../css/master-table.css">
+    <link rel="stylesheet" href="../css/embed-mode.css">
+</head>
+<body>
+    <script src="../js/embed-mode.js"></script>
+    <div class="app">
+        <aside class="sidebar" id="sidebar">
+            <div id="sidebar-mount"></div>
+        </aside>
+
+        <main class="app-main">
+            <header class="topbar" id="topbar-mount"></header>
+
+            <div class="app-content">
+                <!-- ==================== PAGE HEADING ==================== -->
+                <div class="page-heading flex items-center justify-between">
+                    <div>
+                        <h1 id="pageTitle">Accessory Master</h1>
+                        <p class="page-sub" id="pageSub"></p>
+                    </div>
+                </div>
+
+                <!-- ==================== TOOLBAR ==================== -->
+                <div class="toolbar">
+                    <input type="text" id="searchBox" class="search-input" placeholder="Search accessory name, asset type, site...">
+
+                    <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                        <button class="btn btn-primary" id="btnAddMaster">+ Add</button>
+                        <button class="btn" id="btnTemplate">Template</button>
+                        <button class="btn" id="btnExport">Export</button>
+                        <button class="btn" id="btnImport">Import</button>
+                        <input type="file" id="importFileInput" accept=".csv,.xlsx" style="display:none;">
+                    </div>
+                </div>
+
+                <!-- ==================== ACCESSORY TABLE ==================== -->
+                <div class="card">
+                    <div class="table-wrap">
+                        <table class="table" id="masterTable"></table>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- ====================================================================
+         MODAL : ADD / EDIT (fields built dynamically by master-table.js)
+         ==================================================================== -->
+    <div class="modal-overlay" id="modalForm">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 id="mtModalTitle">Add Accessory</h3>
+                <button class="modal-close" data-close="modalForm">&times;</button>
+            </div>
+            <form id="mtForm">
+                <div class="modal-body">
+                    <div id="mtFormFields"></div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn" data-close="modalForm">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script defer src="../js/dummy-data.js"></script>
+    <script defer src="../js/theme.js"></script>
+    <script defer src="../js/app.js"></script>
+    <script defer src="../js/layout.js"></script>
+    <script defer src="../js/sortable.js"></script>
+    <script defer src="../js/xlsx-helpers.js"></script>
+    <script defer src="../js/master-table.js"></script>
+
+    <!-- ====================================================================
+         THIS PAGE'S MASTER CONFIG (only part unique to Accessory Master)
+         ==================================================================== -->
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            window.AMS_MASTER_CONFIG = {
+                pageTitle: "Accessory Master",
+                pageSub: "Manage Common/Supportive Accessories and which Asset Type each one applies to",
+                dataArray: AMS_DUMMY_ACCESSORIES,
+                idKey: "accCode",
+                /* Name alone isn't unique - the same accessory (e.g. "Charger")
+                   can apply to more than one Asset Type, so the real identifier
+                   is an auto-generated code, matched on import by Name + Asset Type. */
+                autoIdField: "accCode",
+                autoIdGenerate: () => { AMS_ACC_SEQ += 1; return `ACC-${String(AMS_ACC_SEQ).padStart(6, "0")}`; },
+                importMatchKeys: ["name", "assetType"],
+                fields: [
+                    { key: "name", label: "Accessory Name", required: true },
+                    { key: "assetType", label: "Asset Type", required: true, type: "select",
+                        optionsFrom: () => AMS_DUMMY_ASSET_TYPES.filter(t => t.active).map(t => t.name),
+                        quickAdd: { fields: [
+                            { key: "name", label: "New Asset Type Name" },
+                            { key: "shortform", label: "Shortform (for Asset ID)", upper: true, maxLength: 4 },
+                            { key: "category", label: "Asset Category", type: "select",
+                                optionsFrom: () => AMS_DUMMY_ASSET_CATEGORIES.filter(c => c.active).map(c => c.name) },
+                        ],
+                            onAdd: (v) => {
+                                const added = amsQuickAddAssetType(v.name, v.shortform, v.category);
+                                if (!added) { alert("Enter Asset Type Name, Shortform, and Category - or the Type already exists."); return null; }
+                                return added;
+                            } } },
+                    { key: "site", label: "Site", type: "select", includeBlank: true,
+                        optionsFrom: () => AMS_DUMMY_SITES.filter(s => s.active).map(s => s.name),
+                        quickAdd: { fields: [
+                            { key: "name", label: "New Site Name" },
+                            { key: "shortform", label: "Shortform (for Asset ID)", upper: true, maxLength: 4 },
+                        ],
+                            onAdd: (v) => {
+                                if (!v.name || !v.shortform) { alert("Enter both Site Name and Shortform."); return null; }
+                                if (AMS_DUMMY_SITES.some(s => s.name.toLowerCase() === v.name.toLowerCase())) { alert("This Site already exists."); return null; }
+                                AMS_DUMMY_SITES.push({ name: v.name, shortform: v.shortform.toUpperCase(), address: "", active: true });
+                                if (typeof amsDbSaveAsync === "function") amsDbSaveAsync("sites");
+                                return v.name;
+                            } } },
+                ],
+                /* Blocks delete while any asset of this type currently has this accessory issued */
+                usageCount: (item) => DUMMY_ASSETS.filter(a => a.type === item.assetType && (a.accessories || []).includes(item.name)).length,
+            };
+            initLayout("accessories");
+        });
+    </script>
+</body>
+</html>
+<!--
+#-------------- End of the code : ACCESSORY MASTER PAGE -------------------------
+#------------------------------------------------------------------------------
+-->

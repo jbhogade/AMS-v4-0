@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<!--
+#-------------- Start Code for : SETTINGS (settings.html) ----------------------
+#
+#  PURPOSE   : Portal preferences hub:
+#                1. Appearance   - theme gallery, style gallery, font size
+#                2. General      - portal name, default list page size, currency
+#                3. Notifications- toast toggle, clear bell / activity log
+#                4. Data         - "Viewing As" role shortcut, reset demo data
+#
+#  PERSISTENCE : all choices are localStorage-backed (see js/settings.js,
+#                js/dummy-data.js portal preferences, js/theme.js) so they
+#                apply on every page of the portal.
+#
+#  FILES USED :
+#    - css/themes.css, css/main.css, css/ui-styles.css, css/settings.css
+#    - js/dummy-data.js, js/theme.js, js/app.js, js/layout.js, js/settings.js
+#------------------------------------------------------------------------------
+-->
+<html lang="en" data-theme="dark-grey">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Settings | Asset Management System</title>
+
+    <link rel="stylesheet" href="../css/themes.css">
+    <link rel="stylesheet" href="../css/main.css">
+    <link rel="stylesheet" href="../css/ui-styles.css">
+    <link rel="stylesheet" href="../css/settings.css">
+</head>
+<body>
+    <div class="app">
+        <aside class="sidebar" id="sidebar">
+            <div id="sidebar-mount"></div>
+        </aside>
+
+        <main class="app-main">
+            <header class="topbar" id="topbar-mount"></header>
+
+            <div class="app-content">
+                <!-- ==================== PAGE HEADING ==================== -->
+                <div class="page-heading">
+                    <h1>Settings</h1>
+                    <p class="page-sub">Portal configuration - appearance, defaults, notifications and data</p>
+                </div>
+
+                <!-- ==================== TABS ==================== -->
+                <div class="settings-tabs" id="settingsTabs">
+                    <button class="settings-tab active" data-settings-tab="paneAppearance">Appearance</button>
+                    <button class="settings-tab" data-settings-tab="paneGeneral">General</button>
+                    <button class="settings-tab" data-settings-tab="paneNotifications">Notifications</button>
+                    <button class="settings-tab" data-settings-tab="paneData">Data</button>
+                </div>
+
+                <!-- ==================== APPEARANCE ==================== -->
+                <section class="settings-pane active" id="paneAppearance">
+                    <div class="card">
+                        <div class="card-header">
+                            <h3>Theme</h3>
+                        </div>
+                        <div class="card-body">
+                            <p class="form-hint" style="margin-bottom:14px;">
+                                Pick a color theme. The choice is remembered by your browser and applied on every page.
+                            </p>
+                            <div class="theme-grid" id="themeGallery"></div>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-header">
+                            <h3>Style</h3>
+                        </div>
+                        <div class="card-body">
+                            <p class="form-hint" style="margin-bottom:14px;">
+                                Surface look only. Combines with any color theme (for example Dark Grey + Glassmorphism).
+                            </p>
+                            <div class="style-grid" id="styleGallery"></div>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-header">
+                            <h3>Font Size</h3>
+                        </div>
+                        <div class="card-body">
+                            <p class="form-hint" style="margin-bottom:14px;">
+                                Adjust the base text size across the portal.
+                            </p>
+                            <div class="font-size-options">
+                                <button type="button" class="font-size-opt" data-font-size-opt="sm">Small</button>
+                                <button type="button" class="font-size-opt" data-font-size-opt="md">Medium</button>
+                                <button type="button" class="font-size-opt" data-font-size-opt="lg">Large</button>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- ==================== GENERAL ==================== -->
+                <section class="settings-pane" id="paneGeneral">
+                    <div class="card">
+                        <div class="card-header">
+                            <h3>Portal</h3>
+                        </div>
+                        <div class="card-body">
+                            <form id="settingsGeneralForm" class="settings-form">
+                                <div class="field field-full">
+                                    <label>Portal Name</label>
+                                    <input type="text" id="settingsPortalName" class="input" placeholder="Asset Manager" maxlength="60">
+                                    <div class="form-hint">Shown in the sidebar brand on every page.</div>
+                                </div>
+                                <div class="field field-full">
+                                    <label>Default List Page Size</label>
+                                    <select id="settingsPageSize" class="input">
+                                        <option value="10">10 rows</option>
+                                        <option value="20">20 rows</option>
+                                        <option value="50">50 rows</option>
+                                        <option value="100">100 rows</option>
+                                    </select>
+                                    <div class="form-hint">Applies to paginated lists such as the Asset Master table.</div>
+                                </div>
+                                <div class="field field-full">
+                                    <label>Currency</label>
+                                    <div class="form-hint">Displayed amounts use Indian Rupees (&#8377;). Example: <strong id="settingsCurrencyExample"></strong></div>
+                                </div>
+                                <div class="field field-full" style="margin-top:8px;">
+                                    <button type="submit" class="btn btn-primary">Save Settings</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- ==================== NOTIFICATIONS ==================== -->
+                <section class="settings-pane" id="paneNotifications">
+                    <div class="card">
+                        <div class="card-header">
+                            <h3>Popups &amp; History</h3>
+                        </div>
+                        <div class="card-body">
+                            <label class="form-checkbox" style="margin-bottom:18px;">
+                                <input type="checkbox" id="settingsToastEnabled">
+                                Show toast popup notifications
+                                <span class="form-hint">Off hides the popups only - notifications and the activity log still record everything.</span>
+                            </label>
+
+                            <div class="settings-stat-row">
+                                <div class="settings-stat">
+                                    <div class="settings-stat-value" id="settingsNotifCount">0</div>
+                                    <div class="settings-stat-label">Notifications in bell</div>
+                                </div>
+                                <div class="settings-stat">
+                                    <div class="settings-stat-value" id="settingsLogCount">0</div>
+                                    <div class="settings-stat-label">Activity log entries</div>
+                                </div>
+                            </div>
+
+                            <div class="settings-actions" style="margin-top:18px;">
+                                <button type="button" class="btn btn-secondary" id="btnClearNotifications">Clear Notifications</button>
+                                <button type="button" class="btn btn-secondary" id="btnClearActivityLog">Clear Activity Log</button>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- ==================== DATA ==================== -->
+                <section class="settings-pane" id="paneData">
+                    <div class="card">
+                        <div class="card-header">
+                            <h3>Signed-in Role</h3>
+                        </div>
+                        <div class="card-body">
+                            <div class="field field-full">
+                                <label>Current Role</label>
+                                <input class="input" id="settingsSignedInRole" disabled>
+                                <div class="form-hint">Your role comes from the account used to log in. Use the user menu (top right) to switch accounts.</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-header">
+                            <h3>Demo Data</h3>
+                        </div>
+                        <div class="card-body">
+                            <p class="form-hint" style="margin-bottom:14px;">
+                                This portal runs on dummy data. Reset clears every browser-saved preference and
+                                 change (theme, style, company details, notifications, activity log, portal settings, role
+                                 simulator) and restores the original demo data on the next page load.
+                            </p>
+                            <button type="button" class="btn btn-danger" id="btnResetDemoData">Reset Demo Data</button>
+                        </div>
+                    </div>
+                </section>
+            </div>
+        </main>
+    </div>
+
+    <script defer src="../js/dummy-data.js"></script>
+    <script defer src="../js/theme.js"></script>
+    <script defer src="../js/app.js"></script>
+    <script defer src="../js/layout.js"></script>
+    <script defer src="../js/settings.js"></script>
+</body>
+</html>
+<!--
+#-------------- End of the code : SETTINGS -------------------------------------
+#------------------------------------------------------------------------------
+-->

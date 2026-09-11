@@ -1,0 +1,61 @@
+/*==============================================================================
+#-------------- Start Code for : SYSTEM ADMIN STYLES (system-admin.css) ---------
+#
+#  PURPOSE   : Styles unique to System Administrator Master - the tab strip for
+#              switching between embedded sub-master pages, and the full-height
+#              iframe frame that shows each one's content.
+#------------------------------------------------------------------------------*/
+
+/*-------------- Start Code for ADMIN SUB-MASTER TABS --------------------------*/
+/* Tab strip styled to match the Report page (css/reports.css) - filled pill
+   tabs, active tab = accent background, so the hub reads the same way. */
+.admin-tabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 18px;
+}
+
+.admin-tab {
+    padding: 8px 14px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--bg-elevated);
+    color: var(--text-secondary);
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 600;
+    font-family: inherit;
+    transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+
+.admin-tab:hover { color: var(--text-primary); border-color: var(--accent); }
+
+.admin-tab.active {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: var(--accent-contrast);
+}
+/*-------------- End of the code ----------------------------------------------*/
+
+/*-------------- Start Code for EMBEDDED SUB-MASTER FRAME ----------------------*/
+.admin-frame-wrap {
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+    background: var(--bg-card);
+    height: calc(100vh - 240px);
+    min-height: 460px;
+}
+
+.admin-frame {
+    width: 100%;
+    height: 100%;
+    border: none;
+    display: block;
+    background: var(--bg-body);
+}
+/*-------------- End of the code ----------------------------------------------*/
+/*==============================================================================
+#-------------- End of the code : SYSTEM ADMIN STYLES ---------------------------
+#------------------------------------------------------------------------------*/

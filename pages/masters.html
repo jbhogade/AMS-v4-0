@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<!--
+#-------------- Start Code for : MASTER PAGE (masters.html) --------------------
+#
+#  PURPOSE   : ONE reusable page for every lookup master in the system.
+#              The "type" query parameter selects which master is shown,
+#              e.g. masters.html?type=asset-type  or  ?type=site.
+#              All CRUD logic lives in js/master-table.js; all master
+#              definitions live in js/master-configs.js. This page has
+#              almost no logic of its own - it just loads both.
+#
+#  SUPPORTED TYPES (see js/master-configs.js):
+#       asset-type, asset-make, asset-category, site, department, designation
+#
+#  FILES USED :
+#    - css/themes.css, css/main.css, css/master-table.css
+#    - js/dummy-data.js, js/theme.js, js/app.js, js/layout.js,
+#      js/master-configs.js, js/master-table.js
+#------------------------------------------------------------------------------
+-->
+<html lang="en" data-theme="dark-grey">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Master | Asset Management System</title>
+
+    <link rel="stylesheet" href="../css/themes.css">
+    <link rel="stylesheet" href="../css/main.css">
+    <link rel="stylesheet" href="../css/ui-styles.css">
+    <link rel="stylesheet" href="../css/master-table.css">
+    <link rel="stylesheet" href="../css/embed-mode.css">
+</head>
+<body>
+    <script src="../js/embed-mode.js"></script>
+    <div class="app">
+        <aside class="sidebar" id="sidebar">
+            <div id="sidebar-mount"></div>
+        </aside>
+
+        <main class="app-main">
+            <header class="topbar" id="topbar-mount"></header>
+
+            <div class="app-content">
+                <!-- ==================== PAGE HEADING ==================== -->
+                <div class="page-heading flex items-center justify-between">
+                    <div>
+                        <h1 id="pageTitle">Master</h1>
+                        <p class="page-sub" id="pageSub"></p>
+                    </div>
+                </div>
+
+                <!-- ==================== TOOLBAR ==================== -->
+                <div class="toolbar">
+                    <input type="text" id="searchBox" class="search-input" placeholder="Search records...">
+
+                    <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                        <button class="btn btn-primary" id="btnAddMaster">+ Add</button>
+                        <button class="btn" id="btnTemplate">Template</button>
+                        <button class="btn" id="btnExport">Export</button>
+                        <button class="btn" id="btnImport">Import</button>
+                        <input type="file" id="importFileInput" accept=".csv,.xlsx" style="display:none;">
+                    </div>
+                </div>
+
+                <!-- ==================== MASTER TABLE ==================== -->
+                <div class="card">
+                    <div class="table-wrap">
+                        <table class="table" id="masterTable"></table>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- ====================================================================
+         MODAL : ADD / EDIT (fields built dynamically by master-table.js)
+         ==================================================================== -->
+    <div class="modal-overlay" id="modalForm">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 id="mtModalTitle">Add Record</h3>
+                <button class="modal-close" data-close="modalForm">&times;</button>
+            </div>
+            <form id="mtForm">
+                <div class="modal-body">
+                    <div id="mtFormFields"></div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn" data-close="modalForm">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script defer src="../js/dummy-data.js"></script>
+    <script defer src="../js/theme.js"></script>
+    <script defer src="../js/app.js"></script>
+    <script defer src="../js/layout.js"></script>
+    <script defer src="../js/sortable.js"></script>
+    <script defer src="../js/xlsx-helpers.js"></script>
+    <script defer src="../js/master-configs.js"></script>
+    <script defer src="../js/master-table.js"></script>
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            const cfg = amsResolveMasterConfig();
+            window.AMS_MASTER_CONFIG = cfg;
+            initLayout("master-" + new URLSearchParams(location.search).get("type") || "asset-type");
+        });
+    </script>
+</body>
+</html>

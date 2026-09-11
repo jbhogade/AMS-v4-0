@@ -1,0 +1,161 @@
+/*==============================================================================
+#-------------- Start Code for : REPORTS PAGE STYLES (reports.css) --------------
+#
+#  PURPOSE   : Styles unique to Report Master - the report-type tab bar and the
+#              per-panel filter rows. Everything uses the shared theme variables
+#              (var(--...)) from css/themes.css - no hardcoded colors.
+#------------------------------------------------------------------------------*/
+
+/*-------------- Start Code for REPORT TYPE TABS --------------------------------*/
+.report-tabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 18px;
+}
+
+.report-tab {
+    padding: 8px 14px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--bg-elevated);
+    color: var(--text-secondary);
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 600;
+    transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+
+.report-tab:hover { color: var(--text-primary); border-color: var(--accent); }
+
+.report-tab.active {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: var(--accent-contrast);
+}
+/*-------------- End of the code ------------------------------------------------*/
+
+/*-------------- Start Code for REPORT PANELS + FILTER ROWS ---------------------*/
+.report-panel { display: none; }
+.report-panel.active { display: block; }
+
+.report-filters {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+.report-filters .form-field { margin: 0; min-width: 150px; }
+.report-filters .form-field label { font-size: 11.5px; margin-bottom: 4px; }
+
+/* Filter controls - styled like the shared .form-field inputs (css/master-table.css)
+   so the reports page stays self-contained and theme-aware without loading the
+   generic CRUD engine's stylesheet. */
+.report-filters .form-field input,
+.report-filters .form-field select,
+.report-filters .form-field textarea {
+    width: 100%;
+    background: var(--bg-input);
+    border: 1px solid var(--border);
+    color: var(--text-primary);
+    border-radius: 8px;
+    padding: 8px 10px;
+    font-size: 13px;
+    font-family: inherit;
+}
+
+.report-filters .form-field input:focus,
+.report-filters .form-field select:focus,
+.report-filters .form-field textarea:focus {
+    outline: 2px solid var(--accent);
+    outline-offset: 1px;
+    border-color: var(--accent);
+}
+
+/* Filter bar - contained panel like v3-3 so the controls read as one unit */
+.report-filters {
+    padding: 14px;
+    background: var(--bg-elevated);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+}
+
+/* Monospace cells (asset IDs / dates / emp codes) - not styled anywhere else
+   in the project, and the report tables rely on it for readability. */
+.report-panel .mono {
+    font-family: 'Consolas', 'Menlo', monospace;
+    font-size: 12.5px;
+}
+/*-------------- End of the code ------------------------------------------------*/
+
+/*-------------- Start Code for REPORT APPEARANCE (header editor) --------------*/
+.report-appearance {
+    display: none;
+    margin-bottom: 18px;
+    padding: 16px;
+    background: var(--bg-elevated);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+}
+
+.report-appearance.open { display: block; }
+
+.report-appearance-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 18px;
+}
+
+@media (max-width: 760px) {
+    .report-appearance-grid { grid-template-columns: 1fr; }
+}
+
+.report-appearance-col .report-appearance-title {
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    color: var(--text-secondary);
+    margin-bottom: 8px;
+}
+
+.report-appearance-col .form-checkbox {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    padding: 4px 0;
+    color: var(--text-primary);
+}
+
+.report-appearance-col .form-checkbox input { accent-color: var(--accent); }
+
+/* Live preview of the chosen letterhead header */
+.report-appearance-preview {
+    margin-top: 14px;
+    padding: 14px;
+    border: 1px dashed var(--border);
+    border-radius: 8px;
+    background: #fff;
+    min-height: 64px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+}
+
+.report-appearance-preview .rp-block { display: flex; align-items: center; gap: 12px; }
+.report-appearance-preview .rp-logo { width: 42px; height: 42px; object-fit: contain; }
+.report-appearance-preview .rp-name { font-size: 17px; font-weight: 800; color: #1a1a1a; letter-spacing: 0.3px; }
+.report-appearance-preview .rp-slogan { font-size: 12px; font-style: italic; color: #444; }
+.report-appearance-preview .rp-sub { font-size: 11px; color: #555; margin-top: 2px; }
+.report-appearance-preview .rp-banner { text-align: center; }
+.report-appearance-preview .rp-banner img { max-width: 100%; max-height: 90px; object-fit: contain; }
+.report-appearance-preview .rp-caption { text-align: center; }
+.report-appearance-preview .rp-empty { font-size: 12px; color: var(--text-secondary); font-style: italic; }
+/*-------------- End of the code ------------------------------------------------*/
+/*==============================================================================
+#-------------- End of the code : REPORTS PAGE STYLES ---------------------------
+#------------------------------------------------------------------------------*/

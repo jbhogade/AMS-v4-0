@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<!--
+#-------------- Start Code for : USER MASTER PAGE (user-master.html) ------------
+#
+#  PURPOSE   : Manage system login accounts (Username, Role, Password, optionally
+#              linked to an Employee record). Created/updated accounts are synced
+#              to the real ams_users table via the AMS-Test API, so new users can
+#              actually log in. Config-only page over the generic engine
+#              (js/master-table.js); the inline AMS_MASTER_CONFIG below is the
+#              only page-specific part.
+#
+#              ROLE GUARDS (resolved from the logged-in session role):
+#                - Assignable roles are limited to the session role and below
+#                  (Admin cannot pick Super Root / Supreme Root; Super Root
+#                  cannot pick Supreme Root).
+#                - Accounts above the session role are hidden (table + export).
+#                  Admin does not see Super Root+; Super Root does not see
+#                  Supreme Root. Only Supreme Root sees every row.
+#                - Supreme Root accounts can never be deleted from this screen.
+#                - Super Root accounts can only be deleted while the session role
+#                  is Supreme Root.
+#
+#  FILES USED :
+#    - css/themes.css, css/main.css, css/master-table.css
+#    - js/dummy-data.js, js/theme.js, js/app.js, js/layout.js,
+#      js/master-table.js
+#------------------------------------------------------------------------------
+-->
+<html lang="en" data-theme="dark-grey">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>User Master | Asset Management System</title>
+
+    <link rel="stylesheet" href="../css/themes.css">
+    <link rel="stylesheet" href="../css/main.css">
+    <link rel="stylesheet" href="../css/ui-styles.css">
+    <link rel="stylesheet" href="../css/master-table.css">
+</head>
+<body>
+    <div class="app">
+        <aside class="sidebar" id="sidebar">
+            <div id="sidebar-mount"></div>
+        </aside>
+
+        <main class="app-main">
+            <header class="topbar" id="topbar-mount"></header>
+
+            <div class="app-content">
+                <!-- ==================== PAGE HEADING ==================== -->
+                <div class="page-heading flex items-center justify-between">
+                    <div>
+                        <h1 id="pageTitle">User Master</h1>
+                        <p class="page-sub" id="pageSub"></p>
+                    </div>
+                </div>
+
+                <!-- ==================== ROLE HINT BAR ==================== -->
+                <div class="card" style="padding:12px 16px; margin-bottom:16px;">
+                    <p class="form-hint" id="userRoleHint" style="margin:0; font-size:12.5px;"></p>
+                </div>
+
+                <!-- ==================== TOOLBAR ==================== -->
+                <div class="toolbar">
+                    <input type="text" id="searchBox" class="search-input" placeholder="Search username, role, email...">
+
+                    <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                        <button class="btn btn-primary" id="btnAddMaster">+ Add</button>
+                        <button class="btn" id="btnTemplate">Template</button>
+                        <button class="btn" id="btnExport">Export</button>
+                        <button class="btn" id="btnImport">Import</button>
+                        <input type="file" id="importFileInput" accept=".csv,.xlsx" style="display:none;">
+                    </div>
+                </div>
+
+                <!-- ==================== USER TABLE ==================== -->
+                <div class="card">
+                    <div class="table-wrap">
+                        <table class="table" id="masterTable"></table>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- ====================================================================
+         MODAL : ADD / EDIT (fields built dynamically by master-table.js)
+         ==================================================================== -->
+    <div class="modal-overlay" id="modalForm">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 id="mtModalTitle">Add User</h3>
+                <button class="modal-close" data-close="modalForm">&times;</button>
+            </div>
+            <form id="mtForm">
+                <div class="modal-body">
+                    <div id="mtFormFields"></div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn" data-close="modalForm">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script defer src="../js/dummy-data.js"></script>
+    <script defer src="../js/theme.js"></script>
+    <script defer src="../js/app.js"></script>
+    <script defer src="../js/layout.js"></script>
+    <script defer src="../js/sortable.js"></script>
+    <script defer src="../js/xlsx-helpers.js"></script>
+    <script defer src="../js/master-table.js"></script>
+
+    <!-- ====================================================================
+         THIS PAGE'S MASTER CONFIG + ROLE GUARDS (only part unique to User Master)
+         ==================================================================== -->
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            /* Role rank: you may assign / see your own level and below. */
+            const AMS_USER_ROLE_RANK = {
+                "Standard User": 0,
+                "Viewer (Read-Only)": 1,
+                "Admin": 2,
+                "Super Root": 3,
+                "Supreme Root": 4,
+            };
+            function amsUserRoleRank(role) {
+                const n = AMS_USER_ROLE_RANK[role];
+                return typeof n === "number" ? n : -1;
+            }
+            function amsSessionRoleRank() {
+                return amsUserRoleRank(amsGetViewingAsRole());
+            }
+
+            /* Assignable roles stop at the signed-in role (Admin cannot pick
+               Super Root+; Super Root cannot pick Supreme Root). */
+            function amsGetAllowedRoleOptions() {
+                const cap = amsSessionRoleRank();
+                return AMS_USER_ROLES.filter(r => amsUserRoleRank(r) <= cap);
+            }
+            window.amsGetAllowedRoleOptions = amsGetAllowedRoleOptions;
+
+            /* Hide accounts strictly above the session role (Admin hides Super
+               Root+; Super Root hides Supreme Root). */
+            function amsIsUserMasterRowVisible(item) {
+                if (!item) return true;
+                return amsUserRoleRank(item.role) <= amsSessionRoleRank();
+            }
+
+            window.AMS_MASTER_CONFIG = {
+                pageTitle: "User Master",
+                pageSub: "Manage system login accounts and roles. A password is required for new accounts so they can log in.",
+                dataArray: AMS_DUMMY_USERS,
+                idKey: "username",
+                rowFilter: amsIsUserMasterRowVisible,
+                fields: [
+                    { key: "username",       label: "Username",         required: true },
+                    { key: "linkedEmployee", label: "Linked Employee",  type: "select",
+                        optionsFrom: () => [
+                            { value: "", label: "None (service/admin account)" },
+                            ...DUMMY_EMPLOYEES.filter(e => e.status === "Active")
+                                .map(e => ({ value: e.empId, label: `${getEmployeeFullName(e)} (${e.empId})` })),
+                        ],
+                        format: (empId) => {
+                            if (!empId) return "-";
+                            const emp = DUMMY_EMPLOYEES.find(e => e.empId === empId);
+                            return emp ? `${amsEsc(getEmployeeFullName(emp))} (${amsEsc(empId)})` : amsEsc(empId);
+                        } },
+                    { key: "role",           label: "Role",             required: true, type: "select",
+                        optionsFrom: () => amsGetAllowedRoleOptions(),
+                        format: (role) => {
+                            const cls = role === "Supreme Root" || role === "Super Root" ? "badge-red"
+                                : role === "Admin" ? "badge-amber" : "badge-grey";
+                            return `<span class="badge ${cls}">${amsEsc(role)}</span>`;
+                        } },
+                    { key: "password",       label: "Password",         type: "password", required: true, editOnly: true, hideInTable: true },
+                    { key: "email",          label: "Email",            type: "text" },
+                    { key: "remarks",        label: "Remarks",          multiline: true },
+                ],
+                deleteGuard: (item) => {
+                    if (item.role === "Supreme Root") return { allowed: false, reason: "Supreme Root accounts cannot be deleted from this screen." };
+                    if (amsUserRoleRank(item.role) > amsSessionRoleRank()) return { allowed: false, reason: "You cannot delete an account above your own role." };
+                    if (item.role === "Super Root" && amsGetViewingAsRole() !== "Supreme Root") return { allowed: false, reason: "Only a Supreme Root user can delete a Super Root account." };
+                    return { allowed: true };
+                },
+                writeGuard: (values, existing) => {
+                    if (existing && amsUserRoleRank(existing.role) > amsSessionRoleRank()) {
+                        return { allowed: false, reason: "You cannot edit an account above your own role." };
+                    }
+                    if (values && amsUserRoleRank(values.role) > amsSessionRoleRank()) {
+                        return { allowed: false, reason: "You cannot create or assign a role above your own." };
+                    }
+                    return { allowed: true };
+                },
+                /* Sync login accounts to the real ams_users table via the API so
+                   new accounts can actually log in. Skipped silently when the
+                   API is unreachable so the screen still works offline. */
+                onBeforeSave: async (values, editingKey) => {
+                    if (amsUserRoleRank(values.role) > amsSessionRoleRank()) {
+                        throw new Error("You cannot create or assign a role above your own.");
+                    }
+                    if (editingKey) {
+                        const existing = (typeof AMS_DUMMY_USERS !== "undefined")
+                            ? AMS_DUMMY_USERS.find(u => u.username === editingKey)
+                            : null;
+                        if (existing && amsUserRoleRank(existing.role) > amsSessionRoleRank()) {
+                            throw new Error("You cannot edit an account above your own role.");
+                        }
+                    }
+                    const sess = amsGetSession();
+                    if (!sess || !sess.token) return; // not logged in / no API
+                    const payload = {
+                        role: values.role,
+                        linkedEmployee: values.linkedEmployee || null,
+                        email: values.email || null,
+                        remarks: values.remarks || null,
+                        active: values.active !== false,
+                    };
+                    if (editingKey) {
+                        if (values.password) payload.password = values.password;
+                        await amsApiFetch(`/api/auth/users/${encodeURIComponent(editingKey)}`, { method: "PUT", body: payload });
+                    } else {
+                        if (!values.password) throw new Error("A password is required to create a login account.");
+                        payload.username = values.username;
+                        payload.password = values.password;
+                        await amsApiFetch("/api/auth/users", { method: "POST", body: payload });
+                    }
+                },
+                onBeforeToggle: async (item, newActive) => {
+                    if (amsUserRoleRank(item.role) > amsSessionRoleRank()) {
+                        throw new Error("You cannot change an account above your own role.");
+                    }
+                    const sess = amsGetSession();
+                    if (!sess || !sess.token) return;
+                    await amsApiFetch(`/api/auth/users/${encodeURIComponent(item.username)}`, { method: "PUT", body: { active: newActive } });
+                },
+                onBeforeDelete: async (item) => {
+                    const sess = amsGetSession();
+                    if (!sess || !sess.token) return;
+                    await amsApiFetch(`/api/auth/users/${encodeURIComponent(item.username)}`, { method: "DELETE" });
+                },
+            };
+
+            function amsUpdateUserRoleHint() {
+                const sessionRole = amsGetViewingAsRole();
+                const hint = document.getElementById("userRoleHint");
+                if (sessionRole === "Supreme Root") {
+                    hint.innerHTML = `Signed in as <strong>Supreme Root</strong> - full control: can create Supreme Root accounts and delete Super Root accounts.`;
+                } else if (sessionRole === "Super Root") {
+                    hint.textContent = "Signed in as Super Root - Supreme Root accounts are hidden. Cannot create Supreme Root accounts or delete Super Root accounts. Access Rights Control Master, Role Access Master, and Supreme Root's Log Report records are hidden from this role.";
+                } else if (sessionRole === "Admin") {
+                    hint.textContent = "Signed in as Admin - Super Root and Supreme Root accounts are hidden. Cannot create or assign Super Root or Supreme Root roles.";
+                } else {
+                    hint.textContent = "Signed in as a limited role - Super Root and Supreme Root accounts are hidden. Some actions may be restricted by access rights.";
+                }
+            }
+
+            function initUserMaster() {
+                initLayout("user-master");
+                amsUpdateUserRoleHint();
+            }
+
+            initUserMaster();
+        });
+    </script>
+</body>
+</html>
+<!--
+#-------------- End of the code : USER MASTER PAGE ------------------------------
+#------------------------------------------------------------------------------
+-->

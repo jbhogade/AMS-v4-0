@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<!--
+#-------------- Start Code for : LOG REPORT (log-report.html) -------------------
+#
+#  PURPOSE   : Permanent audit trail of activity across the whole project -
+#              every amsNotify(...) call anywhere in the app already writes
+#              here automatically (see js/app.js), enriched with the simulated
+#              role active at the time and which page it happened on. No page
+#              needed to change to support this. Ported from v3-3
+#              log-report-v1-0.html to the v4-0 layout/data layer.
+#
+#  VISIBILITY RULES (simulated via the shared "Viewing As" role, same
+#  mechanism User Master / Access Rights Control Master / Role Access Master
+#  use - see amsGetViewingAsRole() in js/dummy-data.js):
+#    - Anyone else (Standard User / Viewer / Admin): Access Denied.
+#    - Super Root: sees every record EXCEPT ones logged while "Viewing As"
+#      was Supreme Root - those are hidden from them.
+#    - Supreme Root: sees everything, including Super Root's own records and
+#      their own.
+#
+#  NAV: reachable only via System Administrator Master's tabs
+#  (system-admin.html), embedded via ?embed=1 - it is not linked from the main
+#  sidebar since its access model (role-gated content, not just "not linked
+#  from elsewhere") differs from the other hub children. Works standalone too.
+#
+#  DATA SOURCE: amsGetActivityLog() - a separate, larger, append-only
+#  localStorage store from the bell's own notification list (AMS_LOG_STORAGE_KEY
+#  vs the bell's AMS_NOTIF_*), so the bell's "Clear All" (which anyone can
+#  click) never erases this. Clearing the log here is Supreme-Root-only.
+#
+#  FILES USED :
+#    - css/themes.css, css/main.css, css/embed-mode.css, css/role-gate.css
+#      (log-report needs no page-specific css - role-gate.css covers its
+#      viewing-as bar / access-denied card / filters / actor badges)
+#    - js/dummy-data.js, js/theme.js, js/app.js, js/layout.js,
+#      js/embed-mode.js, js/log-report.js
+#------------------------------------------------------------------------------
+-->
+<html lang="en" data-theme="dark-grey">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Log Report | Asset Management System</title>
+
+    <link rel="stylesheet" href="../css/themes.css">
+    <link rel="stylesheet" href="../css/main.css">
+    <link rel="stylesheet" href="../css/ui-styles.css">
+    <link rel="stylesheet" href="../css/embed-mode.css">
+    <link rel="stylesheet" href="../css/role-gate.css">
+</head>
+<body>
+    <script src="../js/embed-mode.js"></script>
+    <div class="app">
+        <aside class="sidebar" id="sidebar">
+            <div id="sidebar-mount"></div>
+        </aside>
+
+        <main class="app-main">
+            <header class="topbar" id="topbar-mount"></header>
+
+            <div class="app-content">
+                <!-- ==================== PAGE HEADING ==================== -->
+                <div class="page-heading flex items-center justify-between">
+                    <div>
+                        <h1>Log Report</h1>
+                        <p class="page-sub">Permanent record of activity across the project - visible to Super Root and Supreme Root only</p>
+                    </div>
+                </div>
+
+                <!-- ==================== SIGNED-IN ROLE BAR ==================== -->
+                <div class="viewing-as-bar">
+                    <label for="viewingAsRole">Signed-in Role:</label>
+                    <input id="viewingAsRole" class="input" disabled style="width:auto; max-width:220px;">
+                    <span class="form-hint" id="viewingAsHint"></span>
+                </div>
+
+                <!-- ==================== ACCESS DENIED ==================== -->
+                <div id="accessDeniedCard" class="access-denied-card" style="display:none;">
+                    <div class="ad-title">Access Denied</div>
+                    <div class="ad-sub">Log Report is only visible to Super Root and Supreme Root. Sign in with a Super Root or Supreme Root account to see it.</div>
+                </div>
+
+                <!-- ==================== LOG CONTENT (Super Root / Supreme Root) ==================== -->
+                <div id="logReportContent" style="display:none;">
+                    <div class="visibility-note" id="visibilityNote"></div>
+
+                    <div class="report-filters">
+                        <div class="form-field">
+                            <label>Search</label>
+                            <input type="text" id="logSearch" placeholder="Message, page...">
+                        </div>
+                        <div class="form-field">
+                            <label>Actor Role</label>
+                            <select id="logActorRole"><option value="">All</option></select>
+                        </div>
+                        <div class="form-field">
+                            <label>Page</label>
+                            <select id="logPage"><option value="">All</option></select>
+                        </div>
+                        <div class="form-field">
+                            <label>From Date</label>
+                            <input type="date" id="logFromDate">
+                        </div>
+                        <div class="form-field">
+                            <label>To Date</label>
+                            <input type="date" id="logToDate">
+                        </div>
+                        <button class="btn" id="btnLogFilter">Apply</button>
+                        <button type="button" class="btn btn-secondary btn-clear-filters" id="btnLogClearFilters" title="Clear column filters">Clear filters</button>
+                        <button class="btn" id="btnLogCsv">Export CSV</button>
+                        <button class="btn" id="btnLogClear" style="display:none;">Clear Log</button>
+                    </div>
+
+                    <div class="card">
+                        <div class="table-wrap">
+                            <table class="table" id="logTable"></table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script defer src="../js/dummy-data.js"></script>
+    <script defer src="../js/theme.js"></script>
+    <script defer src="../js/app.js"></script>
+    <script defer src="../js/layout.js"></script>
+    <script defer src="../js/sortable.js"></script>
+    <script defer src="../js/log-report.js"></script>
+</body>
+</html>
+<!--
+#-------------- End of the code : LOG REPORT ------------------------------------
+#------------------------------------------------------------------------------
+-->

@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<!--
+#-------------- Start Code for : COMPANY MASTER PAGE (company.html) --------------
+#
+#  PURPOSE   : Store the Company/Small Business's own details - Name (required),
+#              Address, Logo, and two contact numbers (HR/Admin, and the Main
+#              In-Charge/Head - e.g. Plant In-Charge or Vice President; the
+#              title itself is free-text since it varies per company).
+#              This is a SINGLE record, not a list, so unlike every other
+#              "Master" page there's no table/Add/Edit/Delete - just one form
+#              with a Save button.
+#              Once saved, Company Name/Logo/Address fill the print-form
+#              letterhead on Asset Issue / Asset Handover forms (read via
+#              amsGetCompanyDetails() in js/dummy-data.js).
+#              Reached via the System Administrator Master hub tab, and embedded
+#              with ?embed=1 to hide this page's own sidebar/topbar.
+#
+#  FILES USED :
+#    - css/themes.css, css/main.css, css/company.css, css/embed-mode.css
+#    - js/dummy-data.js, js/theme.js, js/app.js, js/layout.js,
+#      js/embed-mode.js, js/company.js
+#------------------------------------------------------------------------------
+-->
+<html lang="en" data-theme="dark-grey">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Company Master | Asset Management System</title>
+
+    <link rel="stylesheet" href="../css/themes.css">
+    <link rel="stylesheet" href="../css/main.css">
+    <link rel="stylesheet" href="../css/ui-styles.css">
+    <link rel="stylesheet" href="../css/company.css">
+    <link rel="stylesheet" href="../css/embed-mode.css">
+</head>
+<body>
+    <script src="../js/embed-mode.js"></script>
+
+    <div class="app">
+        <aside class="sidebar" id="sidebar">
+            <div id="sidebar-mount"></div>
+        </aside>
+
+        <main class="app-main">
+            <header class="topbar" id="topbar-mount"></header>
+
+            <div class="app-content">
+                <!-- ==================== PAGE HEADING ==================== -->
+                <div class="page-heading flex items-center justify-between">
+                    <div>
+                        <h1>Company Master</h1>
+                        <p class="page-sub">Your company/small business details - used on Asset Issue &amp; Handover Form letterheads</p>
+                    </div>
+                </div>
+
+                <!-- ==================== COMPANY FORM ==================== -->
+                <div class="card company-form-card">
+                    <form id="companyForm">
+                        <div class="form-grid">
+                            <div class="field field-full">
+                                <label>Company Name <span class="req">*</span></label>
+                                <input type="text" id="cName" class="input" placeholder="e.g. Acme Traders Pvt. Ltd." required>
+                            </div>
+
+                            <div class="field field-full">
+                                <label>Address</label>
+                                <textarea id="cAddress" class="textarea" rows="3" placeholder="Optional"></textarea>
+                            </div>
+
+                            <div class="field field-full">
+                                <label>Company Slogan / Tagline</label>
+                                <input type="text" id="cSlogan" class="input" maxlength="200" placeholder="e.g. Delivering quality, every day (optional)">
+                                <div class="form-hint">Optional. Shown on printed report letterheads when "Show Slogan" is enabled in Report Appearance.</div>
+                            </div>
+
+                            <div class="field field-full">
+                                <label>Company Logo</label>
+                                <div class="logo-upload-row">
+                                    <div class="logo-preview" id="logoPreview">No logo set</div>
+                                    <div class="logo-upload-actions">
+                                        <button type="button" class="btn btn-secondary" id="btnChooseLogo">Choose Image</button>
+                                        <button type="button" class="btn btn-secondary" id="btnRemoveLogo">Remove</button>
+                                        <input type="file" id="logoFileInput" accept="image/*" style="display:none;">
+                                        <div class="form-hint">Optional. Shows next to the Company Name on printed Asset Issue/Handover Forms.</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="field field-full">
+                                <label>Company Banner (Rectangular Image)</label>
+                                <div class="logo-upload-row">
+                                    <div class="banner-preview" id="bannerPreview">No banner set</div>
+                                    <div class="logo-upload-actions">
+                                        <button type="button" class="btn btn-secondary" id="btnChooseBanner">Choose Image</button>
+                                        <button type="button" class="btn btn-secondary" id="btnRemoveBanner">Remove</button>
+                                        <input type="file" id="bannerFileInput" accept="image/*" style="display:none;">
+                                        <div class="form-hint">Optional. A wide rectangular image (e.g. logo + company name + slogan combined). Used as the full-width letterhead on printed reports/forms when Report Appearance is set to "Banner image".</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="field">
+                                <label>HR / Admin Contact No.</label>
+                                <input type="tel" id="cHrAdminContact" class="input" placeholder="Optional">
+                            </div>
+                            <div class="field"></div>
+
+                            <div class="field">
+                                <label>Main In-Charge / Head - Title</label>
+                                <input type="text" id="cHeadTitle" class="input" placeholder="e.g. Plant In-Charge, Vice President (optional)">
+                            </div>
+                            <div class="field">
+                                <label>Main In-Charge / Head - Contact No.</label>
+                                <input type="tel" id="cHeadContact" class="input" placeholder="Optional">
+                            </div>
+                        </div>
+
+                        <div style="display:flex; justify-content:flex-end;">
+                            <button type="submit" class="btn btn-primary" id="btnSaveCompany">Save Company Details</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script defer src="../js/dummy-data.js"></script>
+    <script defer src="../js/theme.js"></script>
+    <script defer src="../js/app.js"></script>
+    <script defer src="../js/layout.js"></script>
+    <script defer src="../js/company.js"></script>
+</body>
+</html>
+<!--
+#-------------- End of the code : COMPANY MASTER PAGE ---------------------------
+#------------------------------------------------------------------------------
+-->

@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<!--
+#-------------- Start Code for : SPARE PARTS MASTER PAGE (spare-parts.html) -----
+#
+#  PURPOSE   : Spare Parts Master - per-site stock rows for spare/repair parts
+#              (RAM, SSD, toner, printer blades, ...). CRUD/search/import/export
+#              come from the generic engine (js/master-table.js) driven by the
+#              AMS_MASTER_CONFIG in js/spare-parts.js. This page only adds:
+#                - Restock modal        (add stock to one row)
+#                - Used / Assign modal  (record usage against one row, optionally
+#                                       linked to the asset the part was fitted on)
+#                - Stock Report modal   (movement log scoped to one row)
+#              Both stock actions write to AMS_DUMMY_SPAREPART_LOG.
+#
+#  FILES USED :
+#    - css/themes.css, css/main.css, css/master-table.css
+#    - js/dummy-data.js, js/theme.js, js/app.js, js/layout.js,
+#      js/master-table.js, js/spare-parts.js
+#------------------------------------------------------------------------------
+-->
+<html lang="en" data-theme="dark-grey">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Spare Parts | Asset Management System</title>
+
+    <link rel="stylesheet" href="../css/themes.css">
+    <link rel="stylesheet" href="../css/main.css">
+    <link rel="stylesheet" href="../css/ui-styles.css">
+    <link rel="stylesheet" href="../css/master-table.css">
+    <link rel="stylesheet" href="../css/embed-mode.css">
+</head>
+<body>
+    <script src="../js/embed-mode.js"></script>
+    <div class="app">
+        <aside class="sidebar" id="sidebar">
+            <div id="sidebar-mount"></div>
+        </aside>
+
+        <main class="app-main">
+            <header class="topbar" id="topbar-mount"></header>
+
+            <div class="app-content">
+                <!-- ==================== PAGE HEADING ==================== -->
+                <div class="page-heading flex items-center justify-between">
+                    <div>
+                        <h1 id="pageTitle">Spare Parts Master</h1>
+                        <p class="page-sub" id="pageSub"></p>
+                    </div>
+                </div>
+
+                <!-- ==================== TOOLBAR ==================== -->
+                <div class="toolbar">
+                    <input type="text" id="searchBox" class="search-input" placeholder="Search part, asset type, category, site...">
+
+                    <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                        <button class="btn btn-primary" id="btnAddMaster">+ Add</button>
+                        <button class="btn" id="btnTemplate">Template</button>
+                        <button class="btn" id="btnExport">Export</button>
+                        <button class="btn" id="btnImport">Import</button>
+                        <input type="file" id="importFileInput" accept=".csv,.xlsx" style="display:none;">
+                    </div>
+                </div>
+
+                <!-- ==================== SPARE PART TABLE ==================== -->
+                <div class="card">
+                    <div class="table-wrap">
+                        <table class="table" id="masterTable"></table>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- ====================================================================
+         MODAL : ADD / EDIT (fields built dynamically by master-table.js)
+         ==================================================================== -->
+    <div class="modal-overlay" id="modalForm">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 id="mtModalTitle">Add Spare Part</h3>
+                <button class="modal-close" data-close="modalForm">&times;</button>
+            </div>
+            <form id="mtForm">
+                <div class="modal-body">
+                    <div id="mtFormFields"></div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn" data-close="modalForm">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ====================================================================
+         MODAL : RESTOCK  (add stock to ONE specific spare part row)
+         ==================================================================== -->
+    <div class="modal-overlay" id="modalRestock">
+        <div class="modal">
+            <div class="modal-header">
+                <h3>Restock Spare Part</h3>
+                <button class="modal-close" data-close="modalRestock">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p class="form-hint" id="restockItemLabel" style="margin-bottom:12px;"></p>
+                <div class="field field-full">
+                    <label>Quantity Added <span class="req">*</span></label>
+                    <input type="number" id="restockQty" class="input" min="1" placeholder="e.g. 10">
+                </div>
+                <div class="field field-full">
+                    <label>Restock / Purchase Date <span class="req">*</span></label>
+                    <input type="date" id="restockDate" class="input">
+                </div>
+                <div class="field field-full">
+                    <label>Vendor</label>
+                    <div class="select-with-add">
+                        <select id="restockVendor" class="input ams-vendor-select"><option value="">(None - optional)</option></select>
+                        <button type="button" class="btn-quickadd" data-quickadd-vendor="restockVendor" title="Add new Vendor">+</button>
+                    </div>
+                </div>
+                <div class="field field-full">
+                    <label>Remarks</label>
+                    <textarea id="restockRemarks" class="textarea" rows="2" placeholder="e.g. Reorder raised against delivery"></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-close="modalRestock">Cancel</button>
+                <button type="button" class="btn btn-primary" id="btnConfirmRestock">Confirm Restock</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ====================================================================
+         MODAL : USED / ASSIGN  (record usage against ONE row, optionally
+         linked to the asset the part was fitted on)
+         ==================================================================== -->
+    <div class="modal-overlay" id="modalUsed">
+        <div class="modal">
+            <div class="modal-header">
+                <h3>Used / Assign</h3>
+                <button class="modal-close" data-close="modalUsed">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p class="form-hint" id="usedItemLabel" style="margin-bottom:12px;"></p>
+                <div class="field field-full">
+                    <label>Employee</label>
+                    <select id="usedEmployee" class="select"></select>
+                    <div class="form-hint">Optional - the employee the part was assigned to</div>
+                </div>
+                <div class="field field-full">
+                    <label>Department</label>
+                    <select id="usedDepartment" class="select"></select>
+                    <div class="form-hint">Optional - use when issued at department level</div>
+                </div>
+                <div class="field field-full">
+                    <label>Used For Asset</label>
+                    <select id="usedForAsset" class="select"></select>
+                    <div class="form-hint">Optional - compatible assets for this part type are listed first</div>
+                </div>
+                <div class="field field-full">
+                    <label>Quantity Used <span class="req">*</span></label>
+                    <input type="number" id="usedQty" class="input" min="1" placeholder="e.g. 2">
+                </div>
+                <div class="field field-full">
+                    <label>Date <span class="req">*</span></label>
+                    <input type="date" id="usedDate" class="input">
+                </div>
+                <div class="field field-full">
+                    <label>Remarks</label>
+                    <textarea id="usedRemarks" class="textarea" rows="2" placeholder="e.g. Fitted during AMC repair"></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-close="modalUsed">Cancel</button>
+                <button type="button" class="btn btn-primary" id="btnConfirmUsed">Confirm Used</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ====================================================================
+         MODAL : RESTOCK / ASSIGN-USED REPORT  (movement log for one row)
+         ==================================================================== -->
+    <div class="modal-overlay" id="modalStockReport">
+        <div class="modal modal-lg">
+            <div class="modal-header">
+                <h3 id="stockReportTitle">Stock Report</h3>
+                <button class="modal-close" data-close="modalStockReport">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="table-wrap">
+                    <table class="table" id="stockReportBody"></table>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-close="modalStockReport">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <script defer src="../js/dummy-data.js"></script>
+    <script defer src="../js/theme.js"></script>
+    <script defer src="../js/app.js"></script>
+    <script defer src="../js/layout.js"></script>
+    <script defer src="../js/sortable.js"></script>
+    <script defer src="../js/xlsx-helpers.js"></script>
+    <script defer src="../js/master-table.js"></script>
+    <script defer src="../js/spare-parts.js"></script>
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            amsPopulateVendorSelects();
+            amsWireVendorQuickAdds();
+        });
+    </script>
+</body>
+</html>
+<!--
+#-------------- End of the code : SPARE PARTS MASTER PAGE ----------------------
+#------------------------------------------------------------------------------
+-->

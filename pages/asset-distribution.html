@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<!--
+#-------------- Start Code for : ASSET DISTRIBUTION PAGE (asset-distribution.html) ----------
+#
+#  PURPOSE   : Per-employee breakdown of asset distribution - how many assets
+#              each employee holds DIRECTLY (personally assigned) vs under their
+#              TEAM (assets their subordinates hold, plus assets whose actual
+#              user is a subordinate/team member recorded on the asset).
+#
+#  RULES     : An asset is DIRECT (Owned) when the employee is the custodian and
+#              no subordinate/team holder is recorded. An asset counts under the
+#              employee's TEAM when a direct subordinate holds it OR the asset
+#              records a subordinate/team actual user (assignedToSubordinate /
+#              assignedSubText). Same classification as the Asset Issue Form.
+#
+#  FILES USED :
+#    - css/themes.css, css/main.css, css/assets.css
+#    - js/dummy-data.js, js/theme.js, js/app.js, js/layout.js,
+#      js/sortable.js, js/xlsx-helpers.js, js/asset-distribution.js
+#------------------------------------------------------------------------------
+-->
+<html lang="en" data-theme="dark-grey">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Asset Distribution | Asset Management System</title>
+
+    <link rel="stylesheet" href="../css/themes.css">
+    <link rel="stylesheet" href="../css/main.css">
+    <link rel="stylesheet" href="../css/ui-styles.css">
+    <link rel="stylesheet" href="../css/assets.css">
+</head>
+<body>
+    <div class="app">
+        <aside class="sidebar" id="sidebar">
+            <div id="sidebar-mount"></div>
+        </aside>
+
+        <main class="app-main">
+            <header class="topbar" id="topbar-mount"></header>
+
+            <div class="app-content">
+                <!-- ==================== PAGE HEADING ==================== -->
+                <div class="page-heading flex items-center justify-between">
+                    <div>
+                        <h1>Asset Distribution</h1>
+                        <p>Per-employee asset holdings - direct (personal) vs team / subordinate use.</p>
+                    </div>
+                </div>
+
+                <!-- ==================== STOCK SUMMARY ==================== -->
+                <section class="stat-grid" id="distStockSummary">
+                    <!-- Filled by asset-distribution.js -> renderDistSummary() -->
+                </section>
+
+                <!-- ==================== TOOLBAR ==================== -->
+                <div class="asset-toolbar">
+                    <div class="asset-toolbar-left">
+                        <input type="search" id="distSearch" class="search-input" placeholder="Search employee name, ID, department...">
+                        <label class="form-checkbox" style="white-space:nowrap;">
+                            <input type="checkbox" id="distOnlyWithAssets"> Only employees with assets
+                        </label>
+                        <button type="button" class="btn btn-secondary btn-clear-filters" id="btnDistClearFilters" title="Clear column filters">Clear filters</button>
+                    </div>
+                    <div class="flex items-center gap-8">
+                        <button class="btn btn-secondary" id="btnDistCsv">Export CSV</button>
+                        <button class="btn btn-secondary" id="btnDistXlsx">Export Excel</button>
+                    </div>
+                </div>
+
+                <!-- ==================== DISTRIBUTION TABLE ==================== -->
+                <div class="card">
+                    <div class="table-wrap">
+                        <table class="table" id="distTable"></table>
+                    </div>
+                    <div class="asset-table-footer" id="distTableFooter"></div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- ====================================================================
+         MODAL : PER-EMPLOYEE ASSET DETAIL
+         ==================================================================== -->
+    <div class="modal-overlay" id="modalDistDetail">
+        <div class="modal modal-lg">
+            <div class="modal-header">
+                <h3 id="distDetailTitle">Employee Assets</h3>
+                <button class="modal-close" data-close="modalDistDetail">&times;</button>
+            </div>
+            <div class="modal-body" id="distDetailBody"></div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" id="btnDistDetailCsv" title="Download this employee's asset detail as a CSV report">Download Report</button>
+                <button type="button" class="btn btn-secondary" data-close="modalDistDetail">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <script defer src="../js/dummy-data.js"></script>
+    <script defer src="../js/theme.js"></script>
+    <script defer src="../js/app.js"></script>
+    <script defer src="../js/layout.js"></script>
+    <script defer src="../js/sortable.js"></script>
+    <script defer src="../js/xlsx-helpers.js"></script>
+    <script defer src="../js/asset-distribution.js"></script>
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            initLayout("asset-distribution");
+            initAssetDistribution();
+        });
+    </script>
+</body>
+</html>
+<!--
+#-------------- End of the code : ASSET DISTRIBUTION PAGE ---------------------
+#------------------------------------------------------------------------------
+-->

@@ -1,0 +1,1319 @@
+/*==============================================================================
+#-------------- Start Code for : MAIN LAYOUT & COMPONENTS (main.css) ----------
+#
+#  PURPOSE   : Core styling shared by EVERY page in the portal.
+#              This file reads colors ONLY from CSS variables (themes.css),
+#              so it never needs to change when you switch themes.
+#
+#  FILE MAP  :
+#    1. Reset & Base           - normalize spacing, fonts, colors
+#    2. App Shell Layout       - sidebar + header + content grid
+#    3. Sidebar                - navigation panel on the left
+#    4. Top Header Bar         - page title, theme switcher, user chip
+#    5. Cards & KPI Cards      - content panels and statistic tiles
+#    6. Tables                 - data grids (assets, logs, etc.)
+#    7. Buttons & Forms        - actions, inputs, dropdowns
+#    8. Badges & Alerts        - status pills, notifications
+#    9. Charts & Progress      - pure CSS/SVG bars and progress bars
+#   10. Utilities & Responsive - spacing helpers, mobile behaviour
+#------------------------------------------------------------------------------*/
+
+/* =============================================================================
+   1) RESET & BASE
+   ===========================================================================*/
+*, *::before, *::after {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+html {
+    font-size: 16px;
+    -webkit-text-size-adjust: 100%;
+}
+
+/* Settings > Appearance font size (md = default above, sm/lg override).
+   Most dimensions in the portal use rem, so this scales everything together. */
+html[data-font-size="sm"] { font-size: 14px; }
+html[data-font-size="lg"] { font-size: 18px; }
+
+/* Body uses the theme variables so every theme "just works" */
+body {
+    font-family: 'Segoe UI', system-ui, -apple-system, Roboto, 'Helvetica Neue', Arial, sans-serif;
+    background-color: var(--bg-body);
+    color: var(--text-primary);
+    line-height: 1.5;
+    min-height: 100vh;
+    transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* Smooth theme change for common elements */
+a { color: var(--accent); text-decoration: none; }
+a:hover { color: var(--accent-hover); text-decoration: underline; }
+
+h1, h2, h3, h4, h5, h6 { font-weight: 600; line-height: 1.25; }
+
+/* Scrollbars tinted to match the theme */
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: var(--bg-body); }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 5px; }
+::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
+
+/* =============================================================================
+   2) APP SHELL LAYOUT  (sidebar + header + content)
+   ===========================================================================*/
+/* Sidebar is fixed to the left; content sits next to it */
+.app {
+    display: flex;
+    min-height: 100vh;
+}
+
+.app-main {
+    flex: 1;
+    margin-left: 260px;               /* width of the sidebar            */
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    transition: margin-left 0.2s ease;
+}
+
+.app-content {
+    padding: 24px 28px 48px;
+    max-width: 1600px;
+    width: 100%;
+}
+
+/* =============================================================================
+   3) SIDEBAR  (left navigation)
+   ===========================================================================*/
+.sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    width: 260px;
+    background-color: var(--bg-sidebar);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    z-index: 100;
+    transition: transform 0.25s ease, width 0.2s ease;
+    overflow: hidden;
+}
+
+/* Brand / nav / footer live inside #sidebar-mount, so that wrapper must be
+   a column flex child that fills the sidebar. Otherwise overflow-y on
+   .sidebar-nav never kicks in and low-resolution screens clip the last links. */
+#sidebar-mount {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    height: 100%;
+    min-height: 0;
+    overflow: hidden;
+}
+
+/* Sidebar brand / logo area at the top */
+.sidebar-brand {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 20px 20px 16px;
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+}
+
+.sidebar-logo {
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    background: var(--accent);
+    color: var(--accent-contrast);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 18px;
+    flex-shrink: 0;
+}
+
+.sidebar-brand-name {
+    font-size: 15px;
+    font-weight: 700;
+    line-height: 1.2;
+}
+
+.sidebar-brand-sub {
+    font-size: 11px;
+    color: var(--text-muted);
+}
+
+/* Navigation list */
+.sidebar-nav {
+    flex: 1;
+    min-height: 0;                 /* allows the list to shrink so it scrolls */
+    overflow-y: auto;
+    overflow-x: hidden;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+    padding: 14px 12px;
+}
+
+.sidebar-nav::-webkit-scrollbar { width: 8px; }
+.sidebar-nav::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+.sidebar-nav-label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-muted);
+    padding: 12px 10px 6px;
+}
+
+/* Individual navigation link */
+.sidebar-link {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 12px;
+    margin: 2px 0;
+    border-radius: 8px;
+    color: var(--text-secondary);
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.sidebar-link:hover {
+    background-color: var(--bg-elevated);
+    color: var(--text-primary);
+    text-decoration: none;
+}
+
+/* Active navigation link highlight */
+.sidebar-link.active {
+    background-color: var(--accent-soft);
+    color: var(--accent);
+}
+
+.sidebar-link .icon {
+    width: 20px;
+    height: 20px;
+    flex-shrink: 0;
+    opacity: 0.9;
+}
+
+.sidebar-link .badge {
+    margin-left: auto;
+}
+
+/* Sidebar footer (user info / build version) */
+.sidebar-footer {
+    padding: 14px 20px;
+    border-top: 1px solid var(--border);
+    font-size: 12px;
+    color: var(--text-muted);
+    flex-shrink: 0;
+}
+
+/* Overlay behind the sidebar when opened on small screens */
+.sidebar-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 99;
+}
+
+.sidebar-overlay.show { display: block; }
+
+/* Desktop hide: icon-only rail. Peek overlay shows names without moving content.
+   Pin Show (body.sidebar-pinned) keeps the full 260px bar. */
+.sidebar-desk-toggle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: none;
+    border: 1px solid var(--border);
+    color: var(--text-primary);
+    cursor: pointer;
+    padding: 6px;
+    line-height: 0;
+    border-radius: 8px;
+    flex-shrink: 0;
+}
+.sidebar-desk-toggle:hover {
+    background-color: var(--bg-elevated);
+}
+.sidebar-desk-toggle .ui-icon { width: 18px; height: 18px; }
+
+.sidebar-link-label {
+    white-space: nowrap;
+    overflow: hidden;
+}
+.sidebar-brand-text {
+    min-width: 0;
+    overflow: hidden;
+}
+
+body.sidebar-collapsed .sidebar {
+    width: 64px;
+}
+body.sidebar-collapsed .app-main {
+    margin-left: 64px;
+}
+body.sidebar-collapsed .sidebar-brand {
+    justify-content: center;
+    padding: 16px 12px;
+    gap: 0;
+}
+body.sidebar-collapsed .sidebar-brand-text,
+body.sidebar-collapsed .sidebar-link-label,
+body.sidebar-collapsed .sidebar-footer {
+    display: none;
+}
+body.sidebar-collapsed .sidebar-nav {
+    padding: 10px 8px;
+}
+body.sidebar-collapsed .sidebar-link {
+    justify-content: flex-start;
+    padding: 10px 14px;
+    gap: 12px;
+}
+/* Keep Main / People / Inventory / Admin as a short line so icons stay put. */
+body.sidebar-collapsed .sidebar-nav-label {
+    font-size: 0;
+    line-height: 0;
+    color: transparent;
+    letter-spacing: 0;
+    padding: 14px 8px;
+    height: 29px;
+    overflow: hidden;
+}
+body.sidebar-collapsed .sidebar-nav-label::after {
+    content: "";
+    display: block;
+    width: 20px;
+    height: 1px;
+    margin: 0 auto;
+    background: var(--border);
+}
+
+body.sidebar-collapsed.sidebar-peek .sidebar {
+    width: 260px;
+    box-shadow: var(--shadow);
+    z-index: 110;
+}
+body.sidebar-collapsed.sidebar-peek .app-main {
+    margin-left: 64px;
+}
+body.sidebar-collapsed.sidebar-peek .sidebar-brand {
+    justify-content: center;
+    padding: 16px 12px;
+    gap: 0;
+}
+body.sidebar-collapsed.sidebar-peek .sidebar-link-label {
+    display: revert;
+}
+body.sidebar-collapsed.sidebar-peek .sidebar-nav {
+    padding: 10px 8px;
+}
+body.sidebar-collapsed.sidebar-peek .sidebar-link {
+    justify-content: flex-start;
+    padding: 10px 14px;
+    gap: 12px;
+}
+body.sidebar-collapsed.sidebar-peek .sidebar-nav-label::after {
+    margin: 0;
+}
+
+/* =============================================================================
+   4) TOP HEADER BAR
+   ===========================================================================*/
+.topbar {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 14px 28px;
+    background-color: var(--bg-card);
+    border-bottom: 1px solid var(--border);
+    position: sticky;
+    top: 0;
+    z-index: 50;
+}
+
+/* Hamburger button - visible only on small screens */
+.topbar-toggle {
+    display: none;
+    background: none;
+    border: none;
+    color: var(--text-primary);
+    font-size: 20px;
+    cursor: pointer;
+    padding: 4px;
+    line-height: 0;
+}
+
+.ui-icon {
+    width: 18px;
+    height: 18px;
+    display: inline-block;
+    vertical-align: middle;
+    flex-shrink: 0;
+}
+.ui-icon-sm { width: 14px; height: 14px; }
+.ui-icon-lg { width: 32px; height: 32px; }
+.kpi-icon .ui-icon { width: 22px; height: 22px; }
+.activity-icon .ui-icon { width: 16px; height: 16px; }
+.actions-trigger .ui-icon,
+.actions-btn .ui-icon,
+.user-chip-caret .ui-icon { width: 12px; height: 12px; margin-left: 2px; }
+.topbar-toggle .ui-icon { width: 20px; height: 20px; }
+.notif-bell-trigger .ui-icon { width: 16px; height: 16px; }
+.access-denied-icon { color: var(--text-muted); margin-bottom: 10px; }
+.access-denied-icon .ui-icon { width: 32px; height: 32px; }
+
+.skeleton-card {
+    min-height: 72px;
+    background: linear-gradient(90deg, var(--bg-card) 0%, var(--bg-elevated) 50%, var(--bg-card) 100%);
+    background-size: 200% 100%;
+    animation: ams-skel 1.2s ease-in-out infinite;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+}
+@keyframes ams-skel {
+    0% { background-position: 100% 0; }
+    100% { background-position: -100% 0; }
+}
+
+.topbar-title {
+    font-size: 18px;
+    font-weight: 700;
+}
+
+.topbar-breadcrumb {
+    font-size: 12px;
+    color: var(--text-muted);
+}
+
+/* Push controls to the right side */
+.topbar-spacer { flex: 1; }
+
+/* User chip on the right of the header */
+.user-chip {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 6px 12px;
+    border-radius: 8px;
+    background: var(--bg-input);
+    border: 1px solid var(--border);
+    font-size: 13px;
+    cursor: pointer;
+    user-select: none;
+}
+
+.user-chip-wrap { position: relative; }
+
+.user-chip-caret {
+    font-size: 9px;
+    color: var(--text-muted);
+    margin-left: 2px;
+    display: inline-flex;
+    align-items: center;
+}
+
+.user-chip-menu {
+    position: absolute;
+    right: 0;
+    top: calc(100% + 6px);
+    min-width: 170px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    box-shadow: var(--shadow);
+    z-index: 200;
+    padding: 4px;
+    display: none;
+}
+
+.user-chip-menu.open { display: block; }
+
+.user-chip-menu-item {
+    display: block;
+    width: 100%;
+    text-align: left;
+    padding: 9px 12px;
+    border: none;
+    border-radius: 6px;
+    background: transparent;
+    color: var(--text-primary);
+    font-size: 13px;
+    cursor: pointer;
+    text-decoration: none;
+    box-sizing: border-box;
+}
+
+.user-chip-menu-item:hover { background: var(--bg-elevated); }
+.user-chip-menu-item:first-child { border-bottom: 1px solid var(--border); border-radius: 6px 6px 0 0; }
+
+.user-avatar {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    background: var(--accent);
+    color: var(--accent-contrast);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    font-weight: 700;
+}
+
+/* =============================================================================
+   4b) NOTIFICATION BELL (topbar) - created by renderTopbar() in layout.js
+   ===========================================================================*/
+.notif-bell-wrap { position: relative; }
+.notif-bell-trigger {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text-muted);
+    border-radius: 6px;
+    width: 30px;
+    height: 30px;
+    cursor: pointer;
+    font-size: 14px;
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    line-height: 0;
+}
+.notif-bell-trigger:hover { color: var(--text-primary); border-color: var(--accent); }
+.notif-bell-badge {
+    display: none;
+    position: absolute;
+    top: -6px;
+    right: -6px;
+    background: var(--danger);
+    color: #fff;
+    font-size: 9.5px;
+    font-weight: 700;
+    border-radius: 10px;
+    min-width: 16px;
+    height: 16px;
+    align-items: center;
+    justify-content: center;
+    padding: 0 3px;
+}
+.notif-bell-panel {
+    display: none;
+    position: absolute;
+    top: calc(100% + 8px);
+    right: 0;
+    width: 300px;
+    max-height: 380px;
+    overflow-y: auto;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    box-shadow: var(--shadow);
+    z-index: 300;
+}
+.notif-bell-panel.open { display: block; }
+.notif-bell-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--border);
+    font-size: 12px;
+    font-weight: 600;
+}
+.notif-bell-header button { background: none; border: none; color: var(--accent); font-size: 11px; cursor: pointer; }
+.notif-item { display: flex; gap: 9px; padding: 9px 12px; border-bottom: 1px solid var(--border); }
+.notif-item:last-child { border-bottom: none; }
+.notif-dot { width: 8px; height: 8px; border-radius: 50%; margin-top: 4px; flex-shrink: 0; }
+.notif-success { background: var(--success); }
+.notif-info { background: var(--accent); }
+.notif-warning { background: var(--warning); }
+.notif-danger { background: var(--danger); }
+.notif-msg { font-size: 12px; color: var(--text-primary); line-height: 1.4; }
+.notif-time { font-size: 10.5px; color: var(--text-muted); margin-top: 2px; }
+.notif-empty { padding: 20px 12px; text-align: center; color: var(--text-muted); font-size: 12px; }
+
+/* =============================================================================
+   5) CARDS & KPI CARDS
+   ===========================================================================*/
+.card {
+    background-color: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    box-shadow: var(--shadow);
+}
+
+.card-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--border);
+}
+
+.card-header h3 {
+    font-size: 15px;
+    font-weight: 600;
+}
+
+.card-header .card-action {
+    margin-left: auto;
+}
+
+.card-body {
+    padding: 20px;
+}
+
+/* KPI / statistic tile used on the dashboard */
+.kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+.kpi-card {
+    background-color: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 14px 16px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    box-shadow: var(--shadow);
+    transition: transform 0.15s ease, border-color 0.15s ease;
+}
+
+.kpi-card:hover {
+    transform: translateY(-2px);
+    border-color: var(--accent);
+}
+
+/* Colored icon box at the left of a KPI tile */
+.kpi-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+    flex-shrink: 0;
+}
+
+.kpi-icon.blue   { background: var(--accent-soft); color: var(--accent); }
+.kpi-icon.green  { background: rgba(34,197,94,0.12); color: var(--success); }
+.kpi-icon.amber  { background: rgba(245,158,11,0.12); color: var(--warning); }
+.kpi-icon.red    { background: rgba(239,68,68,0.12); color: var(--danger); }
+.kpi-icon.cyan   { background: rgba(6,182,212,0.12); color: var(--info); }
+
+.kpi-value {
+    font-size: 26px;
+    font-weight: 700;
+    line-height: 1.1;
+}
+
+.kpi-label {
+    font-size: 13px;
+    color: var(--text-secondary);
+}
+
+.kpi-trend {
+    font-size: 12px;
+    font-weight: 600;
+    margin-top: 2px;
+}
+
+.kpi-trend.up   { color: var(--success); }
+.kpi-trend.down { color: var(--danger); }
+
+/* Two-column responsive grid used by many pages */
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+
+/* =============================================================================
+   6) TABLES
+   ===========================================================================*/
+.table-wrap {
+    overflow-x: auto;
+}
+
+.table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13.5px;
+}
+
+.table thead th {
+    text-align: left;
+    padding: 12px 16px;
+    color: var(--text-muted);
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg-elevated);
+    white-space: nowrap;
+}
+
+.table tbody td {
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border);
+    vertical-align: middle;
+}
+
+.table tbody tr {
+    transition: background-color 0.12s ease;
+}
+
+.table tbody tr:hover {
+    background-color: var(--bg-elevated);
+}
+
+.table .num { text-align: right; font-variant-numeric: tabular-nums; }
+.table .muted { color: var(--text-muted); }
+
+/* Monospace utility for codes/IDs/dates in tables (report-panel overrides it
+   with a tighter size where relevant). */
+.mono { font-family: 'Consolas', 'Menlo', 'Courier New', monospace; font-size: 12.5px; }
+.mono-cell { font-family: 'Consolas', 'Menlo', 'Courier New', monospace; font-size: 12.5px; }
+
+/* Clickable code/ID links inside tables (e.g. opening an asset/SIM from any
+   master list). */
+.clickable-id {
+    color: var(--accent);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+    cursor: pointer;
+    font-family: inherit;
+    background: none;
+    border: none;
+    padding: 0;
+}
+
+/* Form helper text + checkbox rows (used on Settings/Profile and master pages;
+   kept here so every page that uses them renders consistently without needing
+   css/master-table.css). */
+.form-hint { font-size: 11px; color: var(--text-muted); margin-top: 4px; }
+.form-checkbox { display: flex; align-items: center; gap: 8px; font-size: 13px; cursor: pointer; }
+.form-checkbox input { accent-color: var(--accent); }
+
+/* Title bar inside a card (e.g. "Spare Parts Used on This Asset"). */
+.card-title {
+    font-size: 13px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--text-secondary);
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border);
+}
+
+/* Empty-state row/note used across Asset, SIM and Employee tables. */
+.empty-note { color: var(--text-muted); font-size: 13px; font-style: italic; }
+
+/* =============================================================================
+   7) BUTTONS & FORMS
+   ===========================================================================*/
+.btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: var(--bg-elevated);
+    color: var(--text-primary);
+    font-size: 13.5px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.15s ease, border-color 0.15s ease, transform 0.1s ease;
+}
+
+.btn:hover { border-color: var(--accent); text-decoration: none; }
+.btn:active { transform: scale(0.98); }
+
+.btn-primary {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: var(--accent-contrast);
+}
+
+.btn-primary:hover {
+    background: var(--accent-hover);
+    border-color: var(--accent-hover);
+    color: var(--accent-contrast);
+}
+
+.btn-sm { padding: 5px 10px; font-size: 12px; }
+
+/* Form controls */
+.field { margin-bottom: 16px; }
+
+/* "Pick a value + quick-add (+)" row used by the Vendor fields */
+.select-with-add { position: relative; display: flex; gap: 6px; }
+.select-with-add select { flex: 1; }
+
+.btn-quickadd {
+    width: 34px;
+    flex-shrink: 0;
+    background: var(--bg-elevated);
+    border: 1px solid var(--border);
+    color: var(--accent);
+    font-size: 16px;
+    font-weight: 700;
+    border-radius: 8px;
+    cursor: pointer;
+}
+
+.btn-quickadd:hover { background: var(--accent); color: var(--accent-contrast); }
+
+.quickadd-popover {
+    position: absolute;
+    top: calc(100% + 6px);
+    right: 0;
+    width: 240px;
+    background: var(--bg-elevated);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px;
+    box-shadow: var(--shadow);
+    z-index: 220;
+    display: none;
+}
+
+.quickadd-popover.open { display: block; }
+
+.quickadd-popover .qa-label {
+    font-size: 11px;
+    color: var(--text-muted);
+    display: block;
+    margin-bottom: 4px;
+}
+
+.quickadd-popover .qa-label:not(:first-child) { margin-top: 8px; }
+
+.quickadd-popover .input { margin-bottom: 2px; }
+
+.field label {
+    display: block;
+    font-size: 13px;
+    font-weight: 600;
+    margin-bottom: 6px;
+    color: var(--text-secondary);
+}
+
+.input, .select, .textarea {
+    width: 100%;
+    background-color: var(--bg-input);
+    border: 1px solid var(--border);
+    color: var(--text-primary);
+    border-radius: 8px;
+    padding: 9px 12px;
+    font-size: 14px;
+    font-family: inherit;
+    outline: none;
+    transition: border-color 0.15s ease;
+}
+
+.input:focus, .select:focus, .textarea:focus {
+    border-color: var(--accent);
+}
+
+.textarea { resize: vertical; min-height: 90px; }
+
+/* =============================================================================
+   8) BADGES & ALERTS
+   ===========================================================================*/
+.badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 3px 10px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.badge-green  { background: rgba(34,197,94,0.15); color: var(--success); }
+.badge-amber  { background: rgba(245,158,11,0.15); color: var(--warning); }
+.badge-red    { background: rgba(239,68,68,0.15);  color: var(--danger); }
+.badge-grey   { background: var(--bg-elevated);    color: var(--text-secondary); }
+.badge-blue   { background: var(--accent-soft);    color: var(--accent); }
+
+/* Dot used in status badges */
+.badge-dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+
+/* Full-width alert strip */
+.alert {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 16px;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    font-size: 14px;
+    margin-bottom: 18px;
+}
+
+.alert-warning { background: rgba(245,158,11,0.1);  border-color: var(--warning); color: var(--warning); }
+.alert-info    { background: var(--accent-soft);     border-color: var(--accent);  color: var(--text-primary); }
+.alert-danger  { background: rgba(239,68,68,0.1);   border-color: var(--danger);   color: var(--danger); }
+
+/* Toast notifications (created by amsToast in dummy-data.js) */
+.ams-toast-container {
+    position: fixed;
+    top: 18px;
+    right: 18px;
+    z-index: 2000;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    max-width: 340px;
+}
+
+.ams-toast {
+    padding: 12px 16px;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    background: var(--bg-card);
+    color: var(--text-primary);
+    font-size: 14px;
+    box-shadow: var(--shadow);
+    opacity: 0;
+    transform: translateX(12px);
+    transition: opacity 0.25s ease, transform 0.25s ease;
+    cursor: pointer;
+}
+
+.ams-toast.show { opacity: 1; transform: translateX(0); }
+
+.ams-toast-success { border-left: 4px solid var(--success); }
+.ams-toast-warning { border-left: 4px solid var(--warning); }
+.ams-toast-danger  { border-left: 4px solid var(--danger); }
+.ams-toast-info    { border-left: 4px solid var(--accent); }
+
+/* =============================================================================
+   9) CHARTS & PROGRESS  (pure CSS/SVG - no external libraries needed)
+   ===========================================================================*/
+/* Horizontal bar chart built from divs */
+.chart-bars { display: flex; flex-direction: column; gap: 14px; }
+
+.chart-bar-row { display: grid; grid-template-columns: 130px 1fr 50px; align-items: center; gap: 12px; }
+
+.chart-bar-label { font-size: 13px; color: var(--text-secondary); text-align: right; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+.chart-bar-track {
+    height: 18px;
+    background: var(--bg-elevated);
+    border-radius: 6px;
+    overflow: hidden;
+}
+
+.chart-bar-fill {
+    height: 100%;
+    border-radius: 6px;
+    background: var(--accent);
+    transition: width 0.6s ease;
+}
+
+.chart-bar-value { font-size: 13px; font-weight: 600; font-variant-numeric: tabular-nums; }
+
+/* Donut / ring chart drawn with SVG */
+.ring-wrap { display: flex; align-items: center; gap: 24px; justify-content: center; }
+
+.ring {
+    position: relative;
+    width: 170px;
+    height: 170px;
+    flex-shrink: 0;
+}
+
+.ring svg { transform: rotate(-90deg); }
+
+.ring .ring-center {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+}
+
+.ring .ring-center strong { font-size: 26px; font-weight: 700; }
+.ring .ring-center span { font-size: 12px; color: var(--text-muted); }
+
+/* Simple progress bar */
+.progress {
+    height: 8px;
+    background: var(--bg-elevated);
+    border-radius: 999px;
+    overflow: hidden;
+}
+
+.progress-fill { height: 100%; border-radius: 999px; background: var(--accent); }
+
+/* =============================================================================
+   10) UTILITIES & RESPONSIVE
+   ===========================================================================*/
+.flex { display: flex; }
+.items-center { align-items: center; }
+.justify-between { justify-content: space-between; }
+.gap-8 { gap: 8px; }
+.gap-12 { gap: 12px; }
+.mt-16 { margin-top: 16px; }
+.mt-24 { margin-top: 24px; }
+.mb-16 { margin-bottom: 16px; }
+.mb-24 { margin-bottom: 24px; }
+.text-muted { color: var(--text-muted); }
+.text-secondary { color: var(--text-secondary); }
+.text-right { text-align: right; }
+
+/* Page heading shown at the top of each page's content.
+   List pages drop the in-page h1 (topbar already shows PAGE_TITLES);
+   the subtitle is a single muted line so stats + toolbar sit higher. */
+.page-heading { margin: 0 0 12px; }
+.page-heading h1 { font-size: 22px; font-weight: 700; }
+.page-heading p { color: var(--text-secondary); font-size: 14px; margin-top: 0; }
+
+/* Shared list-page toolbar: filters left, actions right.
+   .asset-toolbar / .emp-toolbar keep their class names and inherit these. */
+.list-toolbar,
+.asset-toolbar,
+.emp-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 12px;
+    flex-wrap: wrap;
+}
+
+.list-toolbar-left,
+.asset-toolbar-left,
+.emp-toolbar-left {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.stock-by-type {
+    margin-bottom: 16px;
+}
+
+.stock-by-type > summary {
+    cursor: pointer;
+    font-size: 13.5px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    padding: 8px 0;
+    list-style: none;
+}
+
+.stock-by-type > summary::-webkit-details-marker { display: none; }
+
+.stock-by-type > summary::before {
+    content: "\25B6";
+    display: inline-block;
+    margin-right: 8px;
+    font-size: 10px;
+    color: var(--text-muted);
+}
+
+.stock-by-type[open] > summary::before { content: "\25BC"; }
+
+/* Quick action buttons row */
+.quick-actions { display: flex; flex-wrap: wrap; gap: 12px; }
+
+/* =============================================================================
+   11) MODALS & DIALOG BOXES  (used by every page)
+   ===========================================================================*/
+/* Dark overlay that covers the whole screen */
+.modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.6);
+    z-index: 200;
+    align-items: flex-start;
+    justify-content: center;
+    padding: 40px 16px;
+    overflow-y: auto;
+}
+
+.modal-overlay.open { display: flex; }
+
+/* The dialog panel itself. No max-height cap: the modal grows to fit its
+   content and the overlay scrolls, so forms never show an inner scrollbar
+   (matching the Employees page/forms). */
+.modal {
+    background-color: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    box-shadow: var(--shadow);
+    width: 100%;
+    max-width: 560px;
+    display: flex;
+    flex-direction: column;
+}
+
+.modal.modal-lg { max-width: 760px; }
+
+.modal-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--border);
+}
+
+.modal-header h3 { font-size: 16px; font-weight: 700; }
+
+/* Close (x) button in the modal corner */
+.modal-close {
+    margin-left: auto;
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    font-size: 22px;
+    line-height: 1;
+    cursor: pointer;
+    padding: 2px 8px;
+    border-radius: 6px;
+}
+
+.modal-close:hover { color: var(--text-primary); background: var(--bg-elevated); }
+
+.modal-body {
+    padding: 20px;
+}
+
+.modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    padding: 14px 20px;
+    border-top: 1px solid var(--border);
+}
+
+/* Mark required form labels with a red asterisk */
+.req { color: var(--danger); }
+
+/* Section heading inside a long form */
+.form-section {
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--accent);
+    padding-bottom: 6px;
+    margin: 20px 0 12px;
+    border-bottom: 1px dashed var(--border);
+}
+
+.form-section:first-of-type { margin-top: 0; }
+
+/* Two-column responsive form grid */
+.form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px 16px;
+}
+
+.form-grid .field-full { grid-column: 1 / -1; }
+
+/* A friendly validation error message under the form */
+.form-error {
+    display: none;
+    color: var(--danger);
+    font-size: 13px;
+    padding: 8px 12px;
+    border-radius: 8px;
+    background: rgba(239, 68, 68, 0.1);
+    border: 1px solid var(--danger);
+    margin-bottom: 12px;
+}
+
+.form-error.show { display: block; }
+
+/* =============================================================================
+   RESPONSIVE: tablet / mobile behaviour
+   ===========================================================================*/
+@media (max-width: 900px) {
+    .sidebar { transform: translateX(-100%); width: 260px; }
+    .sidebar.open { transform: translateX(0); box-shadow: var(--shadow); }
+    .app-main { margin-left: 0; }
+    .topbar-toggle { display: inline-block; }
+    .sidebar-desk-toggle { display: none; }
+    body.sidebar-collapsed .sidebar,
+    body.sidebar-collapsed.sidebar-peek .sidebar {
+        width: 260px;
+    }
+    body.sidebar-collapsed .app-main,
+    body.sidebar-collapsed.sidebar-peek .app-main {
+        margin-left: 0;
+    }
+    body.sidebar-collapsed .sidebar-brand,
+    body.sidebar-collapsed.sidebar-peek .sidebar-brand {
+        justify-content: flex-start;
+        padding: 20px 20px 16px;
+        gap: 12px;
+    }
+    body.sidebar-collapsed .sidebar-brand-text,
+    body.sidebar-collapsed .sidebar-link-label,
+    body.sidebar-collapsed .sidebar-nav-label,
+    body.sidebar-collapsed .sidebar-footer,
+    body.sidebar-collapsed.sidebar-peek .sidebar-brand-text,
+    body.sidebar-collapsed.sidebar-peek .sidebar-link-label,
+    body.sidebar-collapsed.sidebar-peek .sidebar-nav-label,
+    body.sidebar-collapsed.sidebar-peek .sidebar-footer {
+        display: block;
+        font-size: 11px;
+        line-height: normal;
+        color: var(--text-muted);
+        letter-spacing: 0.08em;
+        padding: 12px 10px 6px;
+        height: auto;
+        overflow: visible;
+    }
+    body.sidebar-collapsed .sidebar-brand-text,
+    body.sidebar-collapsed.sidebar-peek .sidebar-brand-text {
+        font-size: inherit;
+        line-height: inherit;
+        color: inherit;
+        letter-spacing: inherit;
+        padding: 0;
+        height: auto;
+    }
+    body.sidebar-collapsed .sidebar-link-label,
+    body.sidebar-collapsed.sidebar-peek .sidebar-link-label {
+        font-size: inherit;
+        line-height: inherit;
+        color: inherit;
+        letter-spacing: inherit;
+        padding: 0;
+        height: auto;
+        overflow: hidden;
+    }
+    body.sidebar-collapsed .sidebar-footer,
+    body.sidebar-collapsed.sidebar-peek .sidebar-footer {
+        font-size: 12px;
+        line-height: inherit;
+        letter-spacing: normal;
+        padding: 14px 20px;
+        height: auto;
+        overflow: visible;
+    }
+    body.sidebar-collapsed .sidebar-nav-label::after,
+    body.sidebar-collapsed.sidebar-peek .sidebar-nav-label::after {
+        display: none;
+    }
+    body.sidebar-collapsed .sidebar-nav,
+    body.sidebar-collapsed.sidebar-peek .sidebar-nav {
+        padding: 14px 12px;
+    }
+    body.sidebar-collapsed .sidebar-link,
+    body.sidebar-collapsed.sidebar-peek .sidebar-link {
+        justify-content: flex-start;
+        padding: 10px 12px;
+        gap: 12px;
+    }
+    .grid-2 { grid-template-columns: 1fr; }
+    .topbar-breadcrumb { display: none; }
+    .app-content { padding: 18px 16px 40px; }
+}
+
+@media (max-width: 600px) {
+    .user-chip .user-chip-name { display: none; }
+    .kpi-grid { grid-template-columns: 1fr; }
+    .chart-bar-row { grid-template-columns: 90px 1fr 40px; }
+    .form-grid { grid-template-columns: 1fr; }
+    .modal-overlay { padding: 16px 12px; }
+    .list-toolbar .search-input,
+    .asset-toolbar .search-input,
+    .emp-toolbar .emp-search { width: 100%; min-width: 0; }
+}
+
+/* Short / landscape-ish viewports: trim vertical chrome so tables, dashboards
+   and forms fit above the fold instead of pushing content below it. */
+@media (max-height: 720px) {
+    .topbar { padding: 8px 20px; }
+    .sidebar-brand { padding: 12px 20px 8px; }
+    .sidebar-logo { height: 32px; }
+    .sidebar-nav { padding: 8px 12px; }
+    .sidebar-link { padding: 7px 12px; }
+    .sidebar-footer { padding: 10px 20px; }
+    .app-content { padding: 16px 24px 28px; }
+}
+
+/* Landscape / wide monitors: give content the full width it needs. */
+@media (min-width: 1800px) {
+    .app-content { max-width: 1920px; }
+}
+
+body.ams-view-only .btn-primary,
+body.ams-view-only [id^="btnAdd"],
+body.ams-view-only [id$="-add-btn"],
+body.ams-view-only [id$="Import"],
+body.ams-view-only [id$="-import-btn"],
+body.ams-view-only #btnAddMaster,
+body.ams-view-only #btnImport {
+    pointer-events: none;
+    opacity: 0.45;
+}
+
+/*------------------------------------------------------------------------------
+#  SORTABLE COLUMN HEADERS (js/sortable.js)
+#------------------------------------------------------------------------------
+th.sortable {
+    cursor: pointer;
+    user-select: none;
+    white-space: nowrap;
+}
+th.sortable:hover { color: var(--accent, #4da3ff); }
+th.sort-active { color: var(--accent, #4da3ff); }
+.sort-arrow { font-size: 11px; margin-left: 4px; opacity: 0.7; }
+
+.col-filter-row th.col-filter-cell {
+    padding: 6px 8px;
+    background: var(--bg-card);
+    border-bottom: 1px solid var(--border);
+    font-weight: 400;
+    text-transform: none;
+    letter-spacing: 0;
+}
+
+.col-filter-input {
+    width: 100%;
+    min-width: 64px;
+    padding: 5px 7px;
+    font-size: 12px;
+    font-weight: 400;
+    -webkit-appearance: none;
+    appearance: none;
+}
+
+.col-filter-input:focus {
+    outline: none;
+    border-color: var(--accent);
+}
+
+.btn-clear-filters { white-space: nowrap; }
+
+/*------------------------------------------------------------------------------
+#-------------- End of the code : MAIN LAYOUT & COMPONENTS --------------------
+#------------------------------------------------------------------------------*/

@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<!--
+#-------------- Start Code for : SYSTEM ADMINISTRATOR MASTER (system-admin.html) -
+#
+#  PURPOSE   : Central hub for the "lookup style" master pages that a system
+#              administrator maintains but that day-to-day users don't need
+#              direct sidebar access to: Company Master, Asset Type Master,
+#              Asset Category Master, Asset Make Master, Site Master,
+#              Department Master, Designation Master, Accessory Master.
+#              Everything else (Asset Master, Employee Master, Consumable
+#              Master, Spare Parts Master, User Master) stays directly in the
+#              main sidebar alongside Dashboard.
+#              HOW IT WORKS: each tab loads its page in an iframe with ?embed=1,
+#              which hides that page's own sidebar/topbar (see js/embed-mode.js
+#              + css/embed-mode.css) so only its content area shows.
+#              DATA SOURCE: each embedded page still reads/writes its own data
+#              exactly as it does standalone - nothing here duplicates their
+#              CRUD logic.
+#
+#  FILES USED :
+#    - css/themes.css, css/main.css, css/system-admin.css
+#    - js/dummy-data.js, js/theme.js, js/app.js, js/layout.js,
+#      js/system-admin.js
+#------------------------------------------------------------------------------
+-->
+<html lang="en" data-theme="dark-grey">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>System Administrator | Asset Management System</title>
+
+    <link rel="stylesheet" href="../css/themes.css">
+    <link rel="stylesheet" href="../css/main.css">
+    <link rel="stylesheet" href="../css/ui-styles.css">
+    <link rel="stylesheet" href="../css/system-admin.css">
+</head>
+<body>
+    <div class="app">
+        <aside class="sidebar" id="sidebar">
+            <div id="sidebar-mount"></div>
+        </aside>
+
+        <main class="app-main">
+            <header class="topbar" id="topbar-mount"></header>
+
+            <div class="app-content">
+                <!-- ==================== PAGE HEADING ==================== -->
+                <div class="page-heading flex items-center justify-between">
+                    <div>
+                        <h1>System Administrator Master</h1>
+                        <p class="page-sub">Manage the lookup masters behind Asset &amp; Employee Master - Company, Asset Type, Category, Make, Site, Department, Designation, Accessory, Vendor</p>
+                    </div>
+                </div>
+
+                <!-- ==================== TABS + EMBEDDED FRAME ==================== -->
+                <div class="admin-tabs" id="adminTabs">
+                    <button class="admin-tab" data-admin-tab="company">Company Master</button>
+                    <button class="admin-tab" data-admin-tab="assetType">Asset Type Master</button>
+                    <button class="admin-tab" data-admin-tab="assetCategory">Asset Category Master</button>
+                    <button class="admin-tab" data-admin-tab="assetMake">Asset Make Master</button>
+                    <button class="admin-tab" data-admin-tab="site">Site Master</button>
+                    <button class="admin-tab" data-admin-tab="department">Department Master</button>
+                    <button class="admin-tab" data-admin-tab="designation">Designation Master</button>
+                    <button class="admin-tab" data-admin-tab="accessory">Accessory Master</button>
+                    <button class="admin-tab" data-admin-tab="vendors">Vendor Master</button>
+                    <button class="admin-tab" data-admin-tab="simOperator">SIM Operator Master</button>
+                    <button class="admin-tab" data-admin-tab="simPlan">SIM Plan Master</button>
+                    <button class="admin-tab" data-admin-tab="consumableCategory">Consumable Category Master</button>
+                    <button class="admin-tab" data-admin-tab="unitOfMeasure">Unit of Measure Master</button>
+                    <button class="admin-tab" data-admin-tab="sparePartCategory">Spare Part Category Master</button>
+                    <button class="admin-tab" data-admin-tab="vendorCategory">Vendor Category Master</button>
+                    <button class="admin-tab" data-admin-tab="accessRights">Access Rights Control Master</button>
+                    <button class="admin-tab" data-admin-tab="roleAccess">Role Access Master</button>
+                    <button class="admin-tab" data-admin-tab="log">Log Report</button>
+                </div>
+
+                <div class="admin-frame-wrap">
+                    <iframe class="admin-frame" id="adminFrame" title="Embedded master page"></iframe>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script defer src="../js/dummy-data.js"></script>
+    <script defer src="../js/theme.js"></script>
+    <script defer src="../js/app.js"></script>
+    <script defer src="../js/layout.js"></script>
+    <script defer src="../js/system-admin.js"></script>
+</body>
+</html>
+<!--
+#-------------- End of the code : SYSTEM ADMINISTRATOR MASTER ------------------
+#------------------------------------------------------------------------------
+-->

@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<!--
+#-------------- Start Code for : DASHBOARD PAGE (index.html) ------------------
+#
+#  PURPOSE   : Home / landing page of the Asset Management System.
+#              Shows key statistics, charts and recent activity.
+#
+#  NOTE      : This is a FRONT-END ONLY page. All numbers shown come from
+#              js/dummy-data.js. No database is connected yet.
+#
+#  FILES USED BY THIS PAGE :
+#    - css/themes.css   (color themes)
+#    - css/main.css     (layout & components)
+#    - css/dashboard.css(page-specific styles)
+#    - js/dummy-data.js (dummy data - replace with SQL Server later)
+#    - js/theme.js      (theme switcher)
+#    - js/app.js        (shared helpers)
+#    - js/layout.js     (renders sidebar + header)
+#    - js/dashboard.js  (renders this page's content)
+#
+#  TO EDIT THE DASHBOARD :
+#    - Numbers / data  -> js/dummy-data.js
+#    - Layout / blocks -> the <main> section below
+#    - Colors / themes -> css/themes.css
+#------------------------------------------------------------------------------
+-->
+<html lang="en" data-theme="dark-grey">
+<head>
+    <!-- Meta settings for responsive design -->
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard | Asset Management System</title>
+
+    <!-- Stylesheets -->
+    <link rel="stylesheet" href="css/themes.css">
+    <link rel="stylesheet" href="css/main.css">
+    <link rel="stylesheet" href="css/ui-styles.css">
+    <link rel="stylesheet" href="css/dashboard.css">
+</head>
+<body>
+    <!-- The sidebar and top header are rendered here by js/layout.js -->
+    <div class="app">
+        <aside class="sidebar" id="sidebar">
+            <div id="sidebar-mount"></div>
+        </aside>
+
+        <main class="app-main">
+            <header class="topbar" id="topbar-mount"></header>
+
+            <div class="app-content">
+                <!-- ==================== PAGE HEADING ==================== -->
+                <div class="page-heading">
+                    <div>
+                        <h1 id="welcome-greeting">Welcome back</h1>
+                        <p>Here is the current status of your company inventory.</p>
+                    </div>
+                </div>
+
+                <!-- ==================== KPI CARDS ==================== -->
+                <section class="kpi-grid" id="kpi-grid">
+                    <div class="skeleton-card"></div>
+                    <div class="skeleton-card"></div>
+                    <div class="skeleton-card"></div>
+                    <div class="skeleton-card"></div>
+                </section>
+
+                <!-- ==================== MAIN CONTENT ROW ==================== -->
+                <div class="dashboard-cols">
+                    <!-- LEFT COLUMN : category chart + recent assets table -->
+                    <div class="flex flex-column" style="gap:18px;display:flex;flex-direction:column;">
+                        <div class="card">
+                            <div class="card-header">
+                                <h3>Assets by Type</h3>
+                            </div>
+                            <div class="card-body">
+                                <div class="chart-bars" id="category-chart"></div>
+                            </div>
+                        </div>
+
+                        <div class="card dashboard-table">
+                            <div class="card-header">
+                                <h3>Recent Assets</h3>
+                            </div>
+                            <div class="table-wrap">
+                                <table class="table">
+                                    <thead>
+                                        <tr>
+                                            <th>ID</th>
+                                            <th>Name</th>
+                                            <th>Type</th>
+                                            <th>Location</th>
+                                            <th>Status</th>
+                                            <th class="num">Value</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="recent-assets"></tbody>
+                                </table>
+                            </div>
+                            <a href="pages/assets.html" class="card-footer-link" title="Full list in Assets page">View all assets &rsaquo;</a>
+                        </div>
+                    </div>
+
+                    <!-- RIGHT COLUMN : status ring + low stock + activity -->
+                    <div class="dashboard-right">
+                        <div class="card">
+                            <div class="card-header">
+                                <h3>Asset Status</h3>
+                            </div>
+                            <div class="card-body" id="status-ring"></div>
+                        </div>
+
+                        <div class="card">
+                            <div class="card-header">
+                                <h3>Low Stock Alerts</h3>
+                                <span class="card-action badge badge-amber">Action needed</span>
+                            </div>
+                            <div class="card-body" id="low-stock-list"></div>
+                        </div>
+
+                        <div class="card">
+                            <div class="card-header">
+                                <h3>Recent Activity</h3>
+                            </div>
+                            <div class="card-body">
+                                <ul class="activity-list" id="activity-list"></ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Scripts: theme first, then shared helpers, then page logic -->
+    <script defer src="js/dummy-data.js"></script>
+    <script defer src="js/theme.js"></script>
+    <script defer src="js/app.js"></script>
+    <script defer src="js/layout.js"></script>
+    <script defer src="js/dashboard.js"></script>
+
+    <!-- Boot the page -->
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            initLayout("dashboard");
+            initDashboard();
+        });
+    </script>
+</body>
+</html>
+<!--
+#-------------- End of the code : DASHBOARD PAGE (index.html) -----------------
+#------------------------------------------------------------------------------
+-->

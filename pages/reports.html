@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<!--
+#-------------- Start Code for : REPORT MASTER PAGE (reports.html) --------------
+#
+#  PURPOSE   : Central hub for every report in the system (ported from v3-3
+#              reports-master-v1-0.html and adapted to the v4-0 data model):
+#                - Asset Lifecycle        (every event across all assets)
+#                - Asset Issue Form       (active employees + held assets, click to print AIF)
+#                - Asset Handover Form    (exited employees + held assets, click to print AHF)
+#                - Consumable Restock / Used   (all items, not one row at a time)
+#                - Spare Parts Restock / Used  (all items, not one row at a time)
+#              Print/Export for every panel: company-letterhead print via the
+#              shared print engine (js/print-docs.js) + CSV + Excel.
+#
+#  DATA SOURCE: reads DUMMY_ASSETS[].history[], DUMMY_EMPLOYEES,
+#               AMS_DUMMY_CONSUMABLE_LOG, AMS_DUMMY_SPAREPART_LOG - the same
+#               seed data every other page starts from. As elsewhere in v4-0
+#               (no shared backend yet), edits made during a separate page's
+#               session live only in that page's memory; the report reflects
+#               the seed data. Resolves naturally with SQL Server later.
+#
+#  FILES USED :
+#    - css/themes.css, css/main.css, css/reports.css
+#    - js/dummy-data.js, js/theme.js, js/app.js, js/layout.js,
+#      js/print-docs.js, js/print-forms.js, js/reports.js
+#------------------------------------------------------------------------------
+-->
+<html lang="en" data-theme="dark-grey">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reports | Asset Management System</title>
+
+    <link rel="stylesheet" href="../css/themes.css">
+    <link rel="stylesheet" href="../css/main.css">
+    <link rel="stylesheet" href="../css/ui-styles.css">
+    <link rel="stylesheet" href="../css/reports.css">
+</head>
+<body>
+    <div class="app">
+        <aside class="sidebar" id="sidebar">
+            <div id="sidebar-mount"></div>
+        </aside>
+
+        <main class="app-main">
+            <header class="topbar" id="topbar-mount"></header>
+
+            <div class="app-content">
+                <!-- ==================== PAGE HEADING ==================== -->
+                <div class="page-heading flex items-center justify-between">
+                    <div>
+                        <h1 id="pageTitle">Reports</h1>
+                        <p class="page-sub" id="pageSub">All reports in one place - view, filter, and print</p>
+                    </div>
+                </div>
+
+                <!-- ==================== REPORT APPEARANCE (header editor) ==================== -->
+                <button type="button" class="btn btn-secondary" id="btnReportAppearance" style="margin-bottom:12px;">Report Appearance</button>
+                <div class="report-appearance" id="reportAppearancePanel">
+                    <div class="report-appearance-grid">
+                        <div class="report-appearance-col">
+                            <div class="report-appearance-title">Header Style</div>
+                            <label class="form-checkbox">
+                                <input type="radio" name="rpStyle" value="classic"> Logo + Company Name
+                            </label>
+                            <label class="form-checkbox">
+                                <input type="radio" name="rpStyle" value="banner"> Banner Image (full width)
+                            </label>
+                            <p class="form-hint" style="margin-top:6px;">Banner uses the rectangular image saved in Company Master. If none is uploaded, the classic header is used.</p>
+                        </div>
+                        <div class="report-appearance-col">
+                            <div class="report-appearance-title">Show on Print Header</div>
+                            <label class="form-checkbox"><input type="checkbox" id="rpShowName"> Company Name</label>
+                            <label class="form-checkbox"><input type="checkbox" id="rpShowSlogan"> Slogan / Tagline</label>
+                            <label class="form-checkbox"><input type="checkbox" id="rpShowAddress"> Address</label>
+                            <label class="form-checkbox"><input type="checkbox" id="rpShowLogo"> Logo</label>
+                            <p class="form-hint" style="margin-top:6px;">Applies to every printed report and the Asset Issue/Handover Forms. Remembered in this browser.</p>
+                        </div>
+                    </div>
+                    <div class="report-appearance-preview" id="reportHeaderPreview"></div>
+                </div>
+
+                <!-- ==================== REPORT TYPE TABS ==================== -->
+                <div class="report-tabs" id="reportTabs">
+                    <button class="report-tab active" data-report="assetLifecycle">Asset Lifecycle</button>
+                    <button class="report-tab" data-report="assetIssue">Asset Issue Form</button>
+                    <button class="report-tab" data-report="assetHandover">Asset Handover Form</button>
+                    <button class="report-tab" data-report="consumableRestock">Consumable Restock</button>
+                    <button class="report-tab" data-report="consumableUsed">Consumable Used</button>
+                    <button class="report-tab" data-report="sparePartsRestock">Spare Parts Restock</button>
+                    <button class="report-tab" data-report="sparePartsUsed">Spare Parts Used</button>
+                    <button class="report-tab" data-report="assetDistribution">Asset Distribution</button>
+                </div>
+
+                <!-- ==================== ASSET LIFECYCLE PANEL ==================== -->
+                <div class="report-panel active" id="panel-assetLifecycle">
+                    <div class="report-filters">
+                        <div class="form-field">
+                            <label>Event Type</label>
+                            <select id="alEventType">
+                                <option value="">All</option>
+                                <option value="Assign">Assign</option>
+                                <option value="Reassign">Reassign</option>
+                                <option value="Return">Return</option>
+                                <option value="Transfer">Transfer</option>
+                                <option value="Replace">Replace</option>
+                                <option value="Retire">Retire</option>
+                                <option value="Fault">Not Working</option>
+                            </select>
+                        </div>
+                        <div class="form-field">
+                            <label>Site</label>
+                            <select id="alSite"><option value="">All</option></select>
+                        </div>
+                        <div class="form-field">
+                            <label>From Date</label>
+                            <input type="date" id="alFromDate">
+                        </div>
+                        <div class="form-field">
+                            <label>To Date</label>
+                            <input type="date" id="alToDate">
+                        </div>
+                        <button class="btn btn-primary" id="btnAlFilter">Apply</button>
+                        <button type="button" class="btn btn-secondary btn-clear-filters" data-clear-filters="alTable" title="Clear column filters">Clear filters</button>
+                        <button class="btn" id="btnAlPrint">Print</button>
+                        <button class="btn" id="btnAlCsv">Export CSV</button>
+                        <button class="btn" id="btnAlXls">Export Excel</button>
+                    </div>
+                    <div class="card">
+                        <div class="table-wrap">
+                            <table class="table" id="alTable"></table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ==================== ASSET ISSUE FORM PANEL ==================== -->
+                <div class="report-panel" id="panel-assetIssue">
+                    <div class="report-filters">
+                        <div class="form-field">
+                            <label>Search</label>
+                            <input type="text" id="issueSearch" placeholder="Employee name, code, asset ID...">
+                        </div>
+                        <div class="form-field">
+                            <label>Site</label>
+                            <select id="issueSite"><option value="">All</option></select>
+                        </div>
+                        <div class="form-field">
+                            <label>Department</label>
+                            <select id="issueDept"><option value="">All</option></select>
+                        </div>
+                        <div class="form-field">
+                            <label>Asset Type</label>
+                            <select id="issueAssetType"><option value="">All</option></select>
+                        </div>
+                        <div class="form-field">
+                            <label>From Date</label>
+                            <input type="date" id="issueFromDate">
+                        </div>
+                        <div class="form-field">
+                            <label>To Date</label>
+                            <input type="date" id="issueToDate">
+                        </div>
+                        <button class="btn btn-primary" id="btnIssueFilter">Apply</button>
+                        <button type="button" class="btn btn-secondary btn-clear-filters" data-clear-filters="issueTable" title="Clear column filters">Clear filters</button>
+                        <button class="btn" id="btnIssuePrint">Print All</button>
+                        <button class="btn" id="btnIssueCsv">Export CSV</button>
+                        <button class="btn" id="btnIssueXls">Export Excel</button>
+                    </div>
+                    <p class="form-hint" style="margin-bottom:10px;">Click an Employee Name or Asset ID to generate and print that employee's Asset Issue Form. Date filters go by when that asset was last issued/reassigned. Department filters by the employee's own department.</p>
+                    <div class="card">
+                        <div class="table-wrap">
+                            <table class="table" id="issueTable"></table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ==================== ASSET HANDOVER FORM PANEL ==================== -->
+                <div class="report-panel" id="panel-assetHandover">
+                    <div class="report-filters">
+                        <div class="form-field">
+                            <label>Search</label>
+                            <input type="text" id="handoverSearch" placeholder="Employee name, code, asset ID...">
+                        </div>
+                        <div class="form-field">
+                            <label>Site</label>
+                            <select id="handoverSite"><option value="">All</option></select>
+                        </div>
+                        <div class="form-field">
+                            <label>Department</label>
+                            <select id="handoverDept"><option value="">All</option></select>
+                        </div>
+                        <div class="form-field">
+                            <label>Asset Type</label>
+                            <select id="handoverAssetType"><option value="">All</option></select>
+                        </div>
+                        <div class="form-field">
+                            <label>From Date</label>
+                            <input type="date" id="handoverFromDate">
+                        </div>
+                        <div class="form-field">
+                            <label>To Date</label>
+                            <input type="date" id="handoverToDate">
+                        </div>
+                        <button class="btn btn-primary" id="btnHandoverFilter">Apply</button>
+                        <button type="button" class="btn btn-secondary btn-clear-filters" data-clear-filters="handoverTable" title="Clear column filters">Clear filters</button>
+                        <button class="btn" id="btnHandoverPrint">Print All</button>
+                        <button class="btn" id="btnHandoverCsv">Export CSV</button>
+                        <button class="btn" id="btnHandoverXls">Export Excel</button>
+                    </div>
+                    <p class="form-hint" style="margin-bottom:10px;">Click an Employee Name or Asset ID to generate and print that employee's Asset Handover Form. Date filters go by that asset's last recorded activity date. Department filters by the employee's own department.</p>
+                    <div class="card">
+                        <div class="table-wrap">
+                            <table class="table" id="handoverTable"></table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ==================== CONSUMABLE RESTOCK / USED PANELS ==================== -->
+                <div class="report-panel" id="panel-consumableRestock">
+                    <div class="report-filters">
+                        <div class="form-field"><label>Site</label><select id="crSite"><option value="">All</option></select></div>
+                        <div class="form-field"><label>From Date</label><input type="date" id="crFromDate"></div>
+                        <div class="form-field"><label>To Date</label><input type="date" id="crToDate"></div>
+                        <button class="btn btn-primary" id="btnCrFilter">Apply</button>
+                        <button type="button" class="btn btn-secondary btn-clear-filters" data-clear-filters="crTable" title="Clear column filters">Clear filters</button>
+                        <button class="btn" id="btnCrPrint">Print</button>
+                        <button class="btn" id="btnCrCsv">Export CSV</button>
+                        <button class="btn" id="btnCrXls">Export Excel</button>
+                    </div>
+                    <div class="card">
+                        <div class="table-wrap"><table class="table" id="crTable"></table></div>
+                    </div>
+                </div>
+
+                <div class="report-panel" id="panel-consumableUsed">
+                    <div class="report-filters">
+                        <div class="form-field"><label>Site</label><select id="cuSite"><option value="">All</option></select></div>
+                        <div class="form-field"><label>From Date</label><input type="date" id="cuFromDate"></div>
+                        <div class="form-field"><label>To Date</label><input type="date" id="cuToDate"></div>
+                        <button class="btn btn-primary" id="btnCuFilter">Apply</button>
+                        <button type="button" class="btn btn-secondary btn-clear-filters" data-clear-filters="cuTable" title="Clear column filters">Clear filters</button>
+                        <button class="btn" id="btnCuPrint">Print</button>
+                        <button class="btn" id="btnCuCsv">Export CSV</button>
+                        <button class="btn" id="btnCuXls">Export Excel</button>
+                    </div>
+                    <div class="card">
+                        <div class="table-wrap"><table class="table" id="cuTable"></table></div>
+                    </div>
+                </div>
+
+                <!-- ==================== SPARE PARTS RESTOCK / USED PANELS ==================== -->
+                <div class="report-panel" id="panel-sparePartsRestock">
+                    <div class="report-filters">
+                        <div class="form-field"><label>Site</label><select id="srSite"><option value="">All</option></select></div>
+                        <div class="form-field"><label>From Date</label><input type="date" id="srFromDate"></div>
+                        <div class="form-field"><label>To Date</label><input type="date" id="srToDate"></div>
+                        <button class="btn btn-primary" id="btnSrFilter">Apply</button>
+                        <button type="button" class="btn btn-secondary btn-clear-filters" data-clear-filters="srTable" title="Clear column filters">Clear filters</button>
+                        <button class="btn" id="btnSrPrint">Print</button>
+                        <button class="btn" id="btnSrCsv">Export CSV</button>
+                        <button class="btn" id="btnSrXls">Export Excel</button>
+                    </div>
+                    <div class="card">
+                        <div class="table-wrap"><table class="table" id="srTable"></table></div>
+                    </div>
+                </div>
+
+                <div class="report-panel" id="panel-sparePartsUsed">
+                    <div class="report-filters">
+                        <div class="form-field"><label>Site</label><select id="suSite"><option value="">All</option></select></div>
+                        <div class="form-field"><label>From Date</label><input type="date" id="suFromDate"></div>
+                        <div class="form-field"><label>To Date</label><input type="date" id="suToDate"></div>
+                        <button class="btn btn-primary" id="btnSuFilter">Apply</button>
+                        <button type="button" class="btn btn-secondary btn-clear-filters" data-clear-filters="suTable" title="Clear column filters">Clear filters</button>
+                        <button class="btn" id="btnSuPrint">Print</button>
+                        <button class="btn" id="btnSuCsv">Export CSV</button>
+                        <button class="btn" id="btnSuXls">Export Excel</button>
+                    </div>
+                    <div class="card">
+                        <div class="table-wrap"><table class="table" id="suTable"></table></div>
+                    </div>
+                </div>
+
+                <!-- ==================== ASSET DISTRIBUTION PANEL ==================== -->
+                <div class="report-panel" id="panel-assetDistribution">
+                    <div class="report-filters">
+                        <div class="form-field">
+                            <label>Search</label>
+                            <input type="text" id="distReportSearch" placeholder="Employee name, code, department...">
+                        </div>
+                        <button class="btn btn-primary" id="btnDistReportFilter">Apply</button>
+                        <button type="button" class="btn btn-secondary btn-clear-filters" data-clear-filters="distReportTable" title="Clear column filters">Clear filters</button>
+                        <button class="btn" id="btnDistReportCsv">Export CSV</button>
+                        <button class="btn" id="btnDistReportXls">Export Excel</button>
+                    </div>
+                    <p class="form-hint" style="margin-bottom:10px;">Per-employee asset holdings: Direct = personally held (no subordinate/team holder recorded); Team = held by the employee's subordinates, or assigned to the employee with a subordinate/team member as the actual user.</p>
+                    <div class="card">
+                        <div class="table-wrap">
+                            <table class="table" id="distReportTable"></table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script defer src="../js/dummy-data.js"></script>
+    <script defer src="../js/theme.js"></script>
+    <script defer src="../js/app.js"></script>
+    <script defer src="../js/layout.js"></script>
+    <script defer src="../js/sortable.js"></script>
+    <script defer src="../js/xlsx-helpers.js"></script>
+    <script defer src="../js/print-docs.js"></script>
+    <script defer src="../js/print-forms.js"></script>
+    <script defer src="../js/reports.js"></script>
+</body>
+</html>
+<!--
+#-------------- End of the code : REPORT MASTER PAGE ----------------------------
+#------------------------------------------------------------------------------
+-->

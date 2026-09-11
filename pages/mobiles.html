@@ -1,0 +1,524 @@
+<!DOCTYPE html>
+<!--
+#-------------- Start Code for : MOBILE MASTER PAGE (mobiles.html) -------------
+#
+#  PURPOSE   : Mobile Master - same lifecycle as Asset Master (Add/Edit,
+#              Assign/Return/Edit Mobile Issue, Transfer, Not Working, Retire /
+#              Scrap, Replace, Asset ID Record, Import / Export / Template) for
+#              mobile phones and handheld devices, stored separately. SIM Card
+#              assignment is available on Assign and Edit Mobile Issue.
+#
+#  FILES USED :
+#    - css/themes.css, css/main.css, css/assets.css
+#    - js/dummy-data.js, js/theme.js, js/app.js, js/layout.js, js/mobiles.js
+#------------------------------------------------------------------------------
+-->
+<html lang="en" data-theme="dark-grey">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mobiles | Asset Management System</title>
+
+    <link rel="stylesheet" href="../css/themes.css">
+    <link rel="stylesheet" href="../css/main.css">
+    <link rel="stylesheet" href="../css/ui-styles.css">
+    <link rel="stylesheet" href="../css/assets.css">
+</head>
+<body>
+    <div class="app">
+        <aside class="sidebar" id="sidebar">
+            <div id="sidebar-mount"></div>
+        </aside>
+
+        <main class="app-main">
+            <header class="topbar" id="topbar-mount"></header>
+
+            <div class="app-content">
+                <!-- ==================== PAGE HEADING ==================== -->
+                <div class="page-heading">
+                    <p>Manage mobile phones and handheld devices - assignment, transfer, repair, retirement.</p>
+                </div>
+
+                <!-- ==================== STOCK SUMMARY ==================== -->
+                <section class="stat-grid" id="assetStockSummary">
+                    <!-- Filled by assets.js -> renderAssetStockSummary() -->
+                </section>
+
+                <details class="stock-by-type">
+                    <summary>Stock by Asset Type</summary>
+                    <div class="card card-compact">
+                        <div class="table-wrap">
+                            <table class="table" id="assetStockByTypeTable"></table>
+                        </div>
+                    </div>
+                </details>
+
+                <!-- ==================== TOOLBAR ==================== -->
+                <div class="asset-toolbar">
+                    <div class="asset-toolbar-left">
+                        <input type="search" id="searchBox" class="search-input" placeholder="Search Asset ID, type, make, serial...">
+                        <select id="siteFilter" class="select" style="width:auto;">
+                            <option value="">All Sites</option>
+                        </select>
+                        <select id="statusFilter" class="select" style="width:auto;">
+                            <option value="">All Statuses</option>
+                            <option value="In Store">In Store</option>
+                            <option value="Assigned">Assigned</option>
+                            <option value="In Repair">In Repair</option>
+                            <option value="Transfer">Transfer</option>
+                            <option value="Not Working">Not Working</option>
+                            <option value="Retired / Scrapped">Retired / Scrapped</option>
+                            <option value="Replaced">Replaced</option>
+                        </select>
+                        <button type="button" class="btn btn-secondary btn-clear-filters" id="btnClearFilters" title="Clear column filters">Clear filters</button>
+                    </div>
+                    <div class="flex items-center gap-8">
+                        <button class="btn btn-primary" id="btnAddAsset">&#43; Add Mobile</button>
+                        <button class="btn btn-secondary" id="btnAssetTemplate">Template</button>
+                        <button class="btn btn-secondary" id="btnAssetExport">Export</button>
+                        <button class="btn btn-secondary" id="btnAssetImport">Import</button>
+                        <input type="file" id="assetImportFileInput" accept=".csv,.xlsx" style="display:none;">
+                    </div>
+                </div>
+
+                <!-- Import summary banner - shown after a bulk import so results aren't just an alert -->
+                <div class="import-summary-banner" id="importSummaryBanner"></div>
+
+                <!-- ==================== ASSET TABLE ==================== -->
+                <div class="card">
+                    <div class="table-wrap" id="assetTableWrap">
+                        <table class="table" id="assetTable"></table>
+                    </div>
+                    <div class="asset-table-footer" id="assetTableFooter"></div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- ====================================================================
+         MODAL : ADD / EDIT ASSET
+         ==================================================================== -->
+    <div class="modal-overlay" id="modalForm">
+        <div class="modal modal-lg">
+            <div class="modal-header">
+                <h3 id="formModalTitle">Add Mobile</h3>
+                <button class="modal-close" data-close="modalForm">&times;</button>
+            </div>
+            <form id="assetForm">
+                <div class="modal-body">
+                    <div class="form-grid">
+                        <div class="field field-full">
+                            <label>AMS Asset ID (auto-generated, Super Root only)</label>
+                            <div class="ams-id-preview" id="amsAssetIdPreview">AMS-???-000000-000000</div>
+                        </div>
+                        <div class="field">
+                            <label>Asset ID (Display)</label>
+                            <input type="text" id="fAssetId" class="input" placeholder="Auto-generated - or enter legacy/custom ID">
+                            <div class="form-hint">Leave blank to auto-generate. Legacy-format IDs are accepted as-is.</div>
+                        </div>
+                        <div class="field">
+                            <label>Status <span class="req">*</span></label>
+                            <select id="fStatus" class="select" required></select>
+                        </div>
+                        <div class="field">
+                            <label>Category <span class="req">*</span></label>
+                            <div class="select-with-add">
+                                <select id="fCategory" class="select" required></select>
+                                <button type="button" class="btn-quickadd" data-quickadd="category" title="Add new Category">+</button>
+                                <div class="quickadd-popover" id="qaPopoverCategory">
+                                    <label class="qa-label">New Category Name</label>
+                                    <input type="text" id="qaCategoryName" placeholder="e.g. Software License">
+                                    <div class="qa-actions">
+                                        <button type="button" class="btn btn-secondary" data-qa-cancel="category">Cancel</button>
+                                        <button type="button" class="btn btn-primary" data-qa-save="category">Add</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="field">
+                            <label>Asset Type <span class="req">*</span></label>
+                            <div class="select-with-add">
+                                <select id="fType" class="select" required></select>
+                                <button type="button" class="btn-quickadd" data-quickadd="type" title="Add new Asset Type">+</button>
+                                <div class="quickadd-popover" id="qaPopoverType">
+                                    <label class="qa-label">New Asset Type Name</label>
+                                    <input type="text" id="qaTypeName" placeholder="e.g. Tablet">
+                                    <label class="qa-label">Shortform (for Asset ID)</label>
+                                    <input type="text" id="qaTypeShort" placeholder="e.g. TB" maxlength="4" style="text-transform:uppercase;">
+                                    <div class="qa-actions">
+                                        <button type="button" class="btn btn-secondary" data-qa-cancel="type">Cancel</button>
+                                        <button type="button" class="btn btn-primary" data-qa-save="type">Add</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="field">
+                            <label>Asset Make <span class="req">*</span></label>
+                            <div class="select-with-add">
+                                <select id="fMake" class="select" required></select>
+                                <button type="button" class="btn-quickadd" data-quickadd="make" title="Add new Asset Make">+</button>
+                                <div class="quickadd-popover" id="qaPopoverMake">
+                                    <label class="qa-label">New Make / Brand Name</label>
+                                    <input type="text" id="qaMakeName" placeholder="e.g. Asus">
+                                    <div class="qa-actions">
+                                        <button type="button" class="btn btn-secondary" data-qa-cancel="make">Cancel</button>
+                                        <button type="button" class="btn btn-primary" data-qa-save="make">Add</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="field">
+                            <label>Asset Name</label>
+                            <input type="text" id="fName" class="input" placeholder="Optional">
+                        </div>
+                        <div class="field">
+                            <label>Asset Model</label>
+                            <input type="text" id="fModel" class="input" placeholder="Optional">
+                        </div>
+                        <div class="field">
+                            <label>Purchase Site <span class="req">*</span></label>
+                            <div class="select-with-add">
+                                <select id="fPurchaseSite" class="select" required></select>
+                                <button type="button" class="btn-quickadd" data-quickadd="purchaseSite" title="Add new Site">+</button>
+                                <div class="quickadd-popover" id="qaPopoverPurchaseSite">
+                                    <label class="qa-label">New Site Name</label>
+                                    <input type="text" id="qaPurchaseSiteName" placeholder="e.g. Nagpur">
+                                    <label class="qa-label">Shortform (for Asset ID)</label>
+                                    <input type="text" id="qaPurchaseSiteShort" placeholder="e.g. NG" maxlength="4" style="text-transform:uppercase;">
+                                    <div class="qa-actions">
+                                        <button type="button" class="btn btn-secondary" data-qa-cancel="purchaseSite">Cancel</button>
+                                        <button type="button" class="btn btn-primary" data-qa-save="purchaseSite">Add</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="field">
+                            <label>Current Site <span class="req">*</span></label>
+                            <div class="select-with-add">
+                                <select id="fCurrentSite" class="select" required></select>
+                                <button type="button" class="btn-quickadd" data-quickadd="currentSite" title="Add new Site">+</button>
+                                <div class="quickadd-popover" id="qaPopoverCurrentSite">
+                                    <label class="qa-label">New Site Name</label>
+                                    <input type="text" id="qaCurrentSiteName" placeholder="e.g. Nagpur">
+                                    <label class="qa-label">Shortform (for Asset ID)</label>
+                                    <input type="text" id="qaCurrentSiteShort" placeholder="e.g. NG" maxlength="4" style="text-transform:uppercase;">
+                                    <div class="qa-actions">
+                                        <button type="button" class="btn btn-secondary" data-qa-cancel="currentSite">Cancel</button>
+                                        <button type="button" class="btn btn-primary" data-qa-save="currentSite">Add</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="field">
+                            <label>Serial Number</label>
+                            <input type="text" id="fSerial" class="input" placeholder="Optional">
+                        </div>
+                        <div class="field">
+                            <label>IMEI No 1</label>
+                            <input type="text" id="fImei1" class="input" placeholder="Optional">
+                        </div>
+                        <div class="field">
+                            <label>IMEI No 2</label>
+                            <input type="text" id="fImei2" class="input" placeholder="Optional">
+                        </div>
+                        <div class="field">
+                            <label>Battery No</label>
+                            <input type="text" id="fBatteryNo" class="input" placeholder="Optional">
+                        </div>
+                        <div class="field">
+                            <label>Charger No</label>
+                            <input type="text" id="fChargerNo" class="input" placeholder="Optional">
+                        </div>
+                        <div class="field">
+                            <label>Mobile No (SIM Card)</label>
+                            <select id="fSimMobileNo" class="select"></select>
+                            <div class="form-hint">Attach a number from SIM Card Master. Default is 0 (none).</div>
+                        </div>
+                        <div class="field">
+                            <label>Purchase Date <span class="req">*</span></label>
+                            <input type="date" id="fPurchaseDate" class="input" required>
+                        </div>
+                        <div class="field">
+                            <label>Warranty End Date</label>
+                            <input type="date" id="fWarrantyEnd" class="input">
+                        </div>
+                        <div class="field">
+                            <label>Vendor</label>
+                            <div class="select-with-add">
+                                <select id="fVendor" class="input ams-vendor-select"><option value="">(None - optional)</option></select>
+                                <button type="button" class="btn-quickadd" data-quickadd-vendor="fVendor" title="Add new Vendor">+</button>
+                            </div>
+                        </div>
+                        <div class="field">
+                            <label>Purchase Cost (&#8377;)</label>
+                            <input type="number" id="fCost" class="input" placeholder="Optional">
+                        </div>
+                        <div class="field field-full">
+                            <label>Other / Remarks</label>
+                            <textarea id="fRemarks" class="textarea" rows="2" placeholder="Optional"></textarea>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-close="modalForm">Cancel</button>
+                     <button type="submit" class="btn btn-primary">Save Mobile</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ====================================================================
+         MODAL : VIEW ASSET
+         ==================================================================== -->
+    <div class="modal-overlay" id="modalView">
+        <div class="modal">
+            <div class="modal-header">
+                <h3>Mobile Details</h3>
+                <button class="modal-close" data-close="modalView">&times;</button>
+            </div>
+            <div class="modal-body" id="viewModalBody"></div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" id="btnViewCsv" title="Download this asset's details as a CSV report">Download Report</button>
+                <button type="button" class="btn btn-secondary" data-close="modalView">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ====================================================================
+          MODAL : ASSIGN / EDIT MOBILE ISSUE
+         ==================================================================== -->
+    <div class="modal-overlay" id="modalAssign">
+        <div class="modal modal-lg">
+            <div class="modal-header">
+                <h3 id="assignModalTitle">Assign Mobile</h3>
+                <button class="modal-close" data-close="modalAssign">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-grid">
+                    <div class="field field-full">
+                        <label>Assign To (Direct Employee) <span class="req">*</span></label>
+                        <div class="select-with-add">
+                            <select id="assignDirectEmp" class="select" required></select>
+                            <button type="button" class="btn-quickadd" data-open-add-employee="assignDirectEmp" title="Add new Employee">+</button>
+                        </div>
+                        <div class="form-hint">Employee officially responsible for this mobile</div>
+                    </div>
+                    <div class="field field-full">
+                        <label>Assign To (Subordinate / Actual User)</label>
+                        <div class="select-with-add">
+                            <select id="assignSubEmp" class="select"></select>
+                            <button type="button" class="btn-quickadd" data-open-add-employee="assignSubEmp" title="Add new Employee">+</button>
+                        </div>
+                        <input type="text" id="assignSubText" class="input" style="display:none; margin-top:6px;" placeholder="Actual user's name (not in User Master)">
+                        <div class="form-hint">Optional - the person who actually uses the mobile. Pick from the list, or choose "Other / Not in User Master..." and type a name for anyone not in the User Master.</div>
+                    </div>
+                    <div class="field field-full">
+                        <label>SIM Card</label>
+                        <select id="assignSimMobileNo" class="select"></select>
+                        <div class="form-hint">Optional - company SIM to issue with this mobile (None by default). Links SIM Card Master and issues the SIM to the same employee.</div>
+                    </div>
+                    <div class="field field-full">
+                        <label>Assignment Date <span class="req">*</span></label>
+                        <input type="date" id="assignDate" class="input" required>
+                    </div>
+                    <div class="field field-full">
+                        <div class="accessories-header">
+                            <label>Common / Supportive Accessories (optional)</label>
+                            <div class="quickadd-inline">
+                                <button type="button" class="btn-quickadd" data-acc-quickadd="assignAccessories" title="Add a missing accessory">+</button>
+                                <div class="quickadd-popover" id="accQaPopover-assignAccessories">
+                                    <label class="qa-label">New Accessory Name</label>
+                                    <input type="text" id="accQaInput-assignAccessories" placeholder="e.g. Docking Station">
+                                    <div class="qa-actions">
+                                        <button type="button" class="btn btn-secondary" data-acc-qa-cancel="assignAccessories">Cancel</button>
+                                        <button type="button" class="btn btn-primary" data-acc-qa-save="assignAccessories">Add</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="accessories-checklist" id="assignAccessories"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-close="modalAssign">Cancel</button>
+                <button type="button" class="btn btn-primary" id="btnConfirmAssign">Confirm</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ====================================================================
+         MODAL : QUICK-ADD EMPLOYEE (inline, from the Assign modal - ported
+         from v3-3's iframe embed into a compact form that writes through the
+         shared addEmployee() helper so the AMS ID is generated in one place)
+         ==================================================================== -->
+    <div class="modal-overlay" id="modalQuickAddEmp">
+        <div class="modal">
+            <div class="modal-header">
+                <h3>Add Employee (Quick)</h3>
+                <button class="modal-close" data-close="modalQuickAddEmp">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-error" id="quickadd-emp-error"></div>
+                <div class="form-grid">
+                    <div class="field" style="grid-column:1 / -1;">
+                        <label>Full Name <span class="req">*</span></label>
+                        <input type="text" id="qaEmpName" class="input" placeholder="e.g. Ravikumar Rajendra Tiparadi">
+                    </div>
+                    <div class="field">
+                        <label>Department <span class="req">*</span></label>
+                        <select id="qaEmpDept" class="select"></select>
+                    </div>
+                    <div class="field">
+                        <label>Designation <span class="req">*</span></label>
+                        <input type="text" id="qaEmpDesig" class="input" list="qaEmpDesigList">
+                        <datalist id="qaEmpDesigList"></datalist>
+                    </div>
+                </div>
+                <div class="form-hint">The AMS Employee ID is auto-generated (EMP-&lt;DeptShort&gt;-000001). Other details (contact, email, manager) can be filled later in the Employee Master.</div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-close="modalQuickAddEmp">Cancel</button>
+                <button type="button" class="btn btn-primary" id="qaEmpSave">Add Employee</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ====================================================================
+         MODAL : TRANSFER ASSET (change Current Site)
+         ==================================================================== -->
+    <div class="modal-overlay" id="modalTransfer">
+        <div class="modal">
+            <div class="modal-header">
+                <h3>Transfer Asset</h3>
+                <button class="modal-close" data-close="modalTransfer">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-grid">
+                    <div class="field field-full">
+                        <label>Transfer To Site <span class="req">*</span></label>
+                        <select id="transferSite" class="select" required></select>
+                    </div>
+                    <div class="field field-full">
+                        <label>Transfer Date <span class="req">*</span></label>
+                        <input type="date" id="transferDate" class="input" required>
+                    </div>
+                    <div class="field field-full">
+                        <label>Set Status <span class="req">*</span></label>
+                        <select id="transferStatus" class="select" required></select>
+                        <div class="form-hint">Choose the status to set after this transfer - not forced to "Transfer"</div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-close="modalTransfer">Cancel</button>
+                <button type="button" class="btn btn-primary" id="btnConfirmTransfer">Confirm Transfer</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ====================================================================
+         MODAL : REPLACE ASSET (creates a new asset, marks the old one Replaced,
+         links both records)
+         ==================================================================== -->
+    <div class="modal-overlay" id="modalReplace">
+        <div class="modal modal-lg">
+            <div class="modal-header">
+                <h3>Replace Asset</h3>
+                <button class="modal-close" data-close="modalReplace">&times;</button>
+            </div>
+            <form id="replaceForm">
+                <div class="modal-body">
+                    <p class="form-hint" style="margin-bottom:12px;">
+                        Replacing <strong id="replaceOldAssetLabel"></strong>. Pick an <strong>In-Store (unassigned)</strong>
+                        asset to take over this asset's current assignment. The old asset is marked "Replaced" and both
+                        records stay cross-linked in their Asset ID Record. If no suitable In-Store asset exists, use
+                        <strong>+</strong> to add a new asset first, then select it here.
+                    </p>
+                    <div class="form-grid">
+                        <div class="field">
+                            <label>Asset Type</label>
+                            <select id="replType" class="select"></select>
+                            <div class="form-hint" id="replTypeHint"></div>
+                        </div>
+                        <div class="field">
+                            <label>Replacement Asset <span class="req">*</span></label>
+                            <div class="select-with-add">
+                                <select id="replSourceAsset" class="select" required></select>
+                                <button type="button" class="btn-quickadd" id="btnReplaceAddAsset" title="Add a new asset first, then select it here">+</button>
+                            </div>
+                            <div class="form-hint">Only In-Store (unassigned) assets of the selected type are listed. The + button opens the Add Asset form.</div>
+                        </div>
+                        <div class="field field-full">
+                            <div id="replSelectedInfo"></div>
+                        </div>
+                        <div class="field">
+                            <label>Issue Date</label>
+                            <input type="date" id="replIssueDate" class="input">
+                            <div class="form-hint">Defaults to today - when the replacement was handed over.</div>
+                        </div>
+                        <div class="field">
+                            <label>Reason for Replacement <span class="req">*</span></label>
+                            <select id="replReason" class="select" required>
+                                <option value="">(Select a reason)</option>
+                                <option value="Damaged / Faulty">Damaged / Faulty</option>
+                                <option value="Lost / Stolen">Lost / Stolen</option>
+                                <option value="Upgrade">Upgrade</option>
+                                <option value="End of Life">End of Life</option>
+                                <option value="Warranty Replacement">Warranty Replacement</option>
+                                <option value="Other">Other</option>
+                            </select>
+                        </div>
+                        <div class="field">
+                            <label>Replacement Note</label>
+                            <input type="text" id="replNote" class="input" placeholder="Optional - e.g. old unit damaged beyond repair">
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-close="modalReplace">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Confirm Replacement</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ====================================================================
+         MODAL : ASSET ID RECORD (lifecycle history)
+         ==================================================================== -->
+    <div class="modal-overlay" id="modalHistory">
+        <div class="modal modal-lg">
+            <div class="modal-header">
+                <h3>Asset ID Record</h3>
+                <button class="modal-close" data-close="modalHistory">&times;</button>
+            </div>
+            <div class="modal-body" id="historyModalBody"></div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" id="btnHistoryCsv" title="Download the asset ID record (lifecycle history) as a CSV report">Download Report</button>
+                <button type="button" class="btn btn-secondary" data-close="modalHistory">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <script defer src="../js/dummy-data.js"></script>
+    <script defer src="../js/theme.js"></script>
+    <script defer src="../js/app.js"></script>
+    <script defer src="../js/layout.js"></script>
+    <script defer src="../js/sortable.js"></script>
+    <script defer src="../js/xlsx-helpers.js"></script>
+    <script defer src="../js/print-docs.js"></script>
+    <script defer src="../js/mobiles.js"></script>
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            initLayout("mobiles");
+            initMobiles();
+            amsPopulateVendorSelects();
+            amsWireVendorQuickAdds();
+        });
+    </script>
+</body>
+</html>
+<!--
+#-------------- End of the code : MOBILE MASTER PAGE (mobiles.html) -----------
+#------------------------------------------------------------------------------
+-->

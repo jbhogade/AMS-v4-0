@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<!--
+#-------------- Start Code for : EMPLOYEE MASTER PAGE (employees.html) ---------
+#
+#  PURPOSE   : Record and manage company employees (Employee Master).
+#
+#  KEY FEATURES :
+#    - AMS Employee ID auto-generated as EMP-<DeptShort>-000001 and HIDDEN
+#      from normal users (visible only to "Super Root" credential level).
+#    - Company Employee ID (default EMP-000001 if not supplied).
+#    - Assets owned by the employee AND assets owned by his subordinates.
+#    - Row actions: View, Edit, Assign Asset, Reassign Asset, Exit,
+#      Assign Report (Asset Issue Form), Exit Report (Handover Form).
+#    - Professional Asset Issue / Asset Handover form sheets (printable).
+#    - Exit includes a facility check-off (Email Login, ERP Login, etc.)
+#
+#  FILES USED :
+#    - css/themes.css, css/main.css, css/employees.css
+#    - js/dummy-data.js (data + helpers), js/theme.js, js/app.js,
+#      js/layout.js (sidebar/header), js/employees.js (this page)
+#------------------------------------------------------------------------------
+-->
+<html lang="en" data-theme="dark-grey">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Employee Master | Asset Management System</title>
+
+    <link rel="stylesheet" href="../css/themes.css">
+    <link rel="stylesheet" href="../css/main.css">
+    <link rel="stylesheet" href="../css/ui-styles.css">
+    <link rel="stylesheet" href="../css/employees.css">
+</head>
+<body>
+    <div class="app">
+        <aside class="sidebar" id="sidebar">
+            <div id="sidebar-mount"></div>
+        </aside>
+
+        <main class="app-main">
+            <header class="topbar" id="topbar-mount"></header>
+
+            <div class="app-content">
+                <!-- ==================== PAGE HEADING ==================== -->
+                <div class="page-heading">
+                    <p>Manage employees, their assets and handover records.</p>
+                </div>
+
+                <!-- ==================== IMPORT SUMMARY ==================== -->
+                <div class="import-banner" id="emp-import-banner" style="display:none;"></div>
+
+                <!-- ==================== STATS STRIP ==================== -->
+                <div class="emp-stats">
+                    <span class="stat">Total: <strong id="stat-total">0</strong></span>
+                    <span class="stat">Active: <strong id="stat-active">0</strong></span>
+                    <span class="stat">Inactive: <strong id="stat-inactive">0</strong></span>
+                    <span class="stat">Assets assigned: <strong id="stat-assigned">0</strong></span>
+                </div>
+
+                <!-- ==================== TOOLBAR ==================== -->
+                <div class="emp-toolbar">
+                    <div class="emp-toolbar-left">
+                        <input type="search" class="input emp-search" id="emp-search" placeholder="Search name, ID, designation...">
+
+                        <select class="select" id="emp-site-filter" style="width:auto;">
+                            <option value="All">All Sites</option>
+                        </select>
+
+                        <select class="select" id="emp-status-filter" style="width:auto;">
+                            <option value="All">All Status</option>
+                            <option value="Active">Active</option>
+                            <option value="Inactive">Inactive</option>
+                        </select>
+                        <button type="button" class="btn btn-secondary btn-clear-filters" id="emp-clear-filters" title="Clear column filters">Clear filters</button>
+
+                        <span class="ams-hint" id="ams-hint">AMS Employee IDs are hidden</span>
+                    </div>
+                    <div class="flex items-center gap-8">
+                        <button class="btn btn-primary" id="emp-add-btn">&#43; Add Employee</button>
+                        <button class="btn btn-secondary" id="emp-template-btn" title="Download a CSV template for bulk import">Template</button>
+                        <button class="btn btn-secondary" id="emp-import-btn" title="Import employees from a CSV file">Import</button>
+                        <button class="btn btn-secondary" id="emp-export-btn" title="Export the current list to CSV">Export</button>
+                        <input type="file" id="emp-import-file" accept=".csv,.xlsx" style="display:none;">
+                    </div>
+                </div>
+
+                <!-- ==================== EMPLOYEE TABLE ==================== -->
+                <div class="card">
+                    <div class="table-wrap">
+                        <table class="table">
+                            <thead id="employee-table-head">
+                                <tr>
+                                    <th id="ams-col">AMS ID</th>
+                                    <th>Employee</th>
+                                    <th>Department</th>
+                                    <th>Site</th>
+                                    <th>Designation</th>
+                                    <th>Contact</th>
+                                    <th>Email</th>
+                                    <th>Owned</th>
+                                    <th>Team</th>
+                                    <th>Status</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="employee-table-body"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- ====================================================================
+         MODAL : ADD / EDIT EMPLOYEE
+         ==================================================================== -->
+    <div class="modal-overlay" id="modal-employee">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 id="employee-modal-title">Add Employee</h3>
+                <button class="modal-close" data-close>&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-error" id="employee-form-error"></div>
+
+                <!-- Identity section -->
+                <div class="form-section">1. Identity</div>
+                <div class="form-grid">
+                    <div class="field" id="ams-field" style="display:none;">
+                        <label>AMS Employee ID</label>
+                        <input class="input" id="f-amsid" readonly>
+                    </div>
+                    <div class="field">
+                        <label>Employee ID <span class="req">*</span></label>
+                        <input class="input" id="f-empid" placeholder="e.g. 00609, D00001 (default EMP-000001)">
+                    </div>
+                    <div class="field" style="grid-column:1 / -1;">
+                        <label>Full Name <span class="req">*</span></label>
+                        <input class="input" id="f-name" placeholder="e.g. Ravikumar Rajendra Tiparadi">
+                    </div>
+                </div>
+
+                <!-- Work section -->
+                <div class="form-section">2. Work Details</div>
+                <div class="form-grid">
+                    <div class="field">
+                        <label>Department <span class="req">*</span></label>
+                        <div class="select-with-add">
+                            <select class="select" id="f-dept"></select>
+                            <button type="button" class="btn-quickadd" id="qa-dept-btn" title="Add new Department">+</button>
+                            <div class="quickadd-popover" id="qa-popover-dept">
+                                <label class="qa-label">New Department Name</label>
+                                <input type="text" id="qa-dept-name" placeholder="e.g. Electrical">
+                                <label class="qa-label">Shortform (for AMS ID)</label>
+                                <input type="text" id="qa-dept-short" placeholder="e.g. EL" maxlength="4" style="text-transform:uppercase;">
+                                <div class="qa-actions">
+                                    <button type="button" class="btn btn-secondary" id="qa-dept-cancel">Cancel</button>
+                                    <button type="button" class="btn btn-primary" id="qa-dept-save">Add</button>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="ams-hint" id="emp-ams-preview" style="margin-top:4px;"></div>
+                    </div>
+                    <div class="field">
+                        <label>Designation <span class="req">*</span></label>
+                        <div class="select-with-add">
+                            <input class="input" id="f-desig" list="designation-list" placeholder="Type or pick">
+                            <button type="button" class="btn-quickadd" id="qa-desig-btn" title="Add new Designation">+</button>
+                            <div class="quickadd-popover" id="qa-popover-desig">
+                                <label class="qa-label">New Designation</label>
+                                <input type="text" id="qa-desig-name" placeholder="e.g. Electrician">
+                                <div class="qa-actions">
+                                    <button type="button" class="btn btn-secondary" id="qa-desig-cancel">Cancel</button>
+                                    <button type="button" class="btn btn-primary" id="qa-desig-save">Add</button>
+                                </div>
+                            </div>
+                        </div>
+                        <datalist id="designation-list"></datalist>
+                    </div>
+                    <div class="field">
+                        <label>Site</label>
+                        <select class="select" id="f-site"></select>
+                    </div>
+                    <div class="field">
+                        <label>Reports To (Manager)</label>
+                        <select class="select" id="f-manager"></select>
+                    </div>
+                    <div class="field">
+                        <label>Reporting Manager ID</label>
+                        <input class="input" id="f-manager-id" readonly placeholder="Auto-filled from manager">
+                    </div>
+                </div>
+
+                <!-- Contact section -->
+                <div class="form-section">3. Contact (Optional)</div>
+                <div class="form-grid">
+                    <div class="field">
+                        <label>Personal Contact Number</label>
+                        <input class="input" id="f-contact" placeholder="e.g. +91 98765 43210">
+                    </div>
+                    <div class="field">
+                        <label>Email ID</label>
+                        <input class="input" id="f-email" placeholder="name@company.com">
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn" data-close>Cancel</button>
+                <button class="btn btn-primary" id="employee-save">Save Employee</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ====================================================================
+         MODAL : VIEW EMPLOYEE PROFILE
+         ==================================================================== -->
+    <div class="modal-overlay" id="modal-view">
+        <div class="modal modal-lg">
+            <div class="modal-header">
+                <h3>Employee Profile</h3>
+                <button class="modal-close" data-close>&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="profile-head">
+                    <div class="profile-avatar" id="view-avatar">--</div>
+                    <div>
+                        <h2 id="view-name">Employee Name</h2>
+                        <p id="view-meta">Designation - Department</p>
+                        <span id="view-status"></span>
+                        <span class="badge badge-red" id="view-exit" style="display:none;"></span>
+                    </div>
+                </div>
+
+                <div class="detail-grid">
+                    <div class="detail-item" id="view-ams-wrap">
+                        <label>AMS Employee ID</label>
+                        <span id="view-ams">-</span>
+                    </div>
+                    <div class="detail-item">
+                        <label>Employee ID</label>
+                        <span id="view-empid">-</span>
+                    </div>
+                    <div class="detail-item">
+                        <label>Department</label>
+                        <span id="view-dept">-</span>
+                    </div>
+                    <div class="detail-item">
+                        <label>Site</label>
+                        <span id="view-site">-</span>
+                    </div>
+                    <div class="detail-item">
+                        <label>Designation</label>
+                        <span id="view-desig">-</span>
+                    </div>
+                    <div class="detail-item">
+                        <label>Reports To</label>
+                        <span id="view-manager">-</span>
+                    </div>
+                    <div class="detail-item">
+                        <label>Contact Number</label>
+                        <span id="view-contact">-</span>
+                    </div>
+                    <div class="detail-item">
+                        <label>Email ID</label>
+                        <span id="view-email">-</span>
+                    </div>
+                </div>
+
+                <!-- Assets owned by him -->
+                <div class="form-section">Assets Owned by Him <span class="badge badge-blue" id="view-owned-count">0</span></div>
+                <ul class="asset-mini-list" id="view-owned-list"></ul>
+
+                <!-- Assets owned by his subordinates -->
+                <div class="form-section">Assets Owned by His Subordinates <span class="badge badge-blue" id="view-team-count">0</span></div>
+                <ul class="asset-mini-list" id="view-team-list"></ul>
+            </div>
+            <div class="modal-footer">
+                <button class="btn" data-close>Close</button>
+                <button class="btn btn-secondary" id="btnEmpViewCsv" title="Download this employee's profile and asset holdings as a CSV report">Download Report</button>
+                <button class="btn btn-primary" onclick="openAssignModal(currentEmployeeAmsId)">Assign Asset</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ====================================================================
+         MODAL : ASSIGN ASSET
+         ==================================================================== -->
+    <div class="modal-overlay" id="modal-assign">
+        <div class="modal">
+            <div class="modal-header">
+                <h3>Assign Asset</h3>
+                <button class="modal-close" data-close>&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-error" id="assign-form-error"></div>
+                <p class="text-secondary mb-16">
+                    Assigning an unassigned asset to:
+                    <strong id="assign-employee-name">-</strong>
+                </p>
+                <div class="field">
+                    <label>Select Asset (unassigned) <span class="req">*</span></label>
+                    <select class="select" id="assign-asset"></select>
+                </div>
+                <div class="field">
+                    <label>Remarks / Purpose</label>
+                    <textarea class="textarea" id="assign-remarks" placeholder="Why is this asset being assigned?"></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn" data-close>Cancel</button>
+                <button class="btn btn-primary" id="assign-confirm">Assign Asset</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ====================================================================
+         MODAL : REASSIGN ASSET
+         ==================================================================== -->
+    <div class="modal-overlay" id="modal-reassign">
+        <div class="modal">
+            <div class="modal-header">
+                <h3>Reassign Asset</h3>
+                <button class="modal-close" data-close>&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-error" id="reassign-form-error"></div>
+                <p class="text-secondary mb-16">
+                    Moving an asset currently held by <strong id="reassign-from-name">-</strong> to another employee.
+                </p>
+                <div class="field">
+                    <label>Asset to Reassign <span class="req">*</span></label>
+                    <select class="select" id="reassign-asset"></select>
+                </div>
+                <div class="field">
+                    <label>New Custodian (Employee) <span class="req">*</span></label>
+                    <select class="select" id="reassign-target"></select>
+                </div>
+                <div class="field">
+                    <label>Remarks</label>
+                    <textarea class="textarea" id="reassign-remarks" placeholder="Reason for reassignment"></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn" data-close>Cancel</button>
+                <button class="btn btn-primary" id="reassign-confirm">Reassign Asset</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ====================================================================
+         MODAL : EMPLOYEE EXIT / OFF-BOARDING
+         (marks employee Inactive, returns assets, disables facilities)
+         ==================================================================== -->
+    <div class="modal-overlay" id="modal-exit">
+        <div class="modal modal-lg">
+            <div class="modal-header">
+                <h3>Employee Exit / Off-boarding</h3>
+                <button class="modal-close" data-close>&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-danger">This will mark the employee as <strong>Inactive</strong> and release all held assets back to the store.</div>
+
+                <div class="detail-grid">
+                    <div class="detail-item">
+                        <label>Employee</label>
+                        <span id="exit-name">-</span>
+                    </div>
+                    <div class="detail-item">
+                        <label>Designation - Department</label>
+                        <span id="exit-meta">-</span>
+                    </div>
+                    <div class="detail-item">
+                        <label>AMS ID</label>
+                        <span id="exit-emp-ams">-</span>
+                    </div>
+                    <div class="detail-item">
+                        <label>Exit Date</label>
+                        <input type="date" class="input" id="exit-date" style="font-size:13px;">
+                    </div>
+                    <div class="detail-item">
+                        <label>Reason of Exit <span class="req">*</span></label>
+                        <select class="select" id="exit-reason" style="font-size:13px;">
+                            <option value="">Select reason...</option>
+                            <option>Resignation</option>
+                            <option>Retirement</option>
+                            <option>Termination</option>
+                            <option>Contract End</option>
+                            <option>Transfer (Internal)</option>
+                            <option>Medical / Personal Reasons</option>
+                            <option>Other</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Assets to be returned -->
+                <div class="form-section">Assets to be Returned</div>
+                <ul class="facility-checklist" id="exit-asset-list"></ul>
+
+                <!-- Subordinate / team assets - pick the new Incharge / HOD so the
+                     team's asset records continue under them -->
+                <div id="exit-team-wrap">
+                    <div class="form-section">Subordinate / Team Assets (continued record)</div>
+                    <p class="ams-hint" style="margin-top:-8px;margin-bottom:8px;">These employees report to the exiting person. Choose who takes over as their new Incharge / HOD &mdash; their asset records continue under that person.</p>
+                    <ul class="facility-checklist" id="exit-team-list"></ul>
+                    <div class="field mt-16">
+                        <label>Transfer Subordinate / Team Assets To (New Incharge / HOD) <span class="req">*</span></label>
+                        <select class="select" id="exit-incharge"></select>
+                    </div>
+                </div>
+
+                <!-- Facilities to disable -->
+                <div class="form-section">Facilities to Disable (check the ones being revoked)</div>
+                <ul class="facility-checklist" id="exit-facility-list"></ul>
+                <p class="ams-hint" style="margin-top:6px;">Nothing is pre-selected. Check a facility to revoke it, or mark N/A if it does not apply to this employee.</p>
+
+                <div class="field mt-16">
+                    <label>Exit Remarks</label>
+                    <textarea class="textarea" id="exit-remarks" placeholder="Final remarks (reason of exit, handover notes..."></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn" data-close>Cancel</button>
+                <button class="btn btn-primary" id="exit-confirm" style="background:var(--danger);border-color:var(--danger);">Confirm Exit</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script defer src="../js/dummy-data.js"></script>
+    <script defer src="../js/theme.js"></script>
+    <script defer src="../js/app.js"></script>
+    <script defer src="../js/layout.js"></script>
+    <script defer src="../js/sortable.js"></script>
+    <script defer src="../js/xlsx-helpers.js"></script>
+    <script defer src="../js/print-docs.js"></script>
+    <script defer src="../js/employees.js"></script>
+    <script defer src="../js/print-forms.js"></script>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            initLayout("employees");
+            initEmployees();
+        });
+    </script>
+</body>
+</html>
+<!--
+#-------------- End of the code : EMPLOYEE MASTER PAGE -------------------------
+#------------------------------------------------------------------------------
+-->

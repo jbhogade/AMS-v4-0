@@ -1,0 +1,22 @@
+/*==============================================================================
+#-------------- Start Code for : EMBED-MODE STYLES (embed-mode.css) ------------
+#
+#  PURPOSE   : When a page is opened inside the System Administrator Master hub
+#              (pages/system-admin.html) via an iframe with ?embed=1, its own
+#              sidebar and top header bar are hidden so only the page's content
+#              area shows inside the hub's tab frame. The body.embed-mode class
+#              is added by js/embed-mode.js.
+#
+#  USED ON   : masters.html, accessories.html, consumables.html, spare-parts.html,
+#              company.html
+#------------------------------------------------------------------------------*/
+
+/*-------------- Start Code for EMBED LAYOUT ----------------------------------*/
+body.embed-mode .sidebar { display: none; }
+body.embed-mode .topbar { display: none; }
+body.embed-mode .app-main { margin-left: 0; }
+body.embed-mode .app-content { padding: 18px 20px 40px; max-width: none; }
+/*-------------- End of the code ----------------------------------------------*/
+/*==============================================================================
+#-------------- End of the code : EMBED-MODE STYLES ----------------------------
+#------------------------------------------------------------------------------*/

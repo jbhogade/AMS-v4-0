@@ -1,0 +1,288 @@
+/*==============================================================================
+#-------------- Start Code for : MASTER TABLE COMPONENTS (master-table.css) ----
+#
+#  PURPOSE   : Shared styles for ALL Master Table pages (Asset Type Master,
+#              Asset Make Master, Asset Category Master, Site Master,
+#              Department Master, Designation Master, ...). One CSS file,
+#              reused by every master page so they all look identical.
+#              Reads colours ONLY from v4-0 theme variables (themes.css).
+#
+#  PORTER'S NOTE : Ported from v3-3 (master-table-v1-0.css) into v4-0.
+#       - Variables renamed: --bg-surface -> --bg-card, --bg-surface-2 ->
+#         --bg-elevated, --border-color -> --border, --text-main ->
+#         --text-primary, --text-muted -> --text-secondary, --bg-main ->
+#         --bg-body.
+#       - v4-0's main.css already styles .btn/.table/.modal; this file only
+#         adds the master-specific extras (toolbar, actions menu, quick-add,
+#         checklist grid, viewing-as bar).
+#------------------------------------------------------------------------------*/
+
+/* ---- TOOLBAR (search + action buttons) -------------------------------------- */
+.toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+}
+
+.search-input {
+    background: var(--bg-input);
+    border: 1px solid var(--border);
+    color: var(--text-primary);
+    border-radius: 8px;
+    padding: 8px 12px;
+    font-size: 13px;
+    width: 240px;
+}
+
+.search-input:focus {
+    outline: 2px solid var(--accent);
+    outline-offset: 1px;
+    border-color: var(--accent);
+}
+
+/* Secondary button variant (neutral - complements v4-0's .btn-primary) */
+.btn-secondary {
+    background: var(--bg-elevated);
+    border-color: var(--border);
+    color: var(--text-primary);
+}
+
+.btn-secondary:hover {
+    border-color: var(--accent);
+    background: var(--bg-elevated);
+}
+
+/* ---- ROW ACTION buttons (inline variant - only 3 actions per row) ----------- */
+.row-actions { display: flex; gap: 6px; justify-content: flex-end; }
+
+.row-actions button {
+    background: var(--bg-elevated);
+    border: 1px solid var(--border);
+    color: var(--text-primary);
+    border-radius: 6px;
+    padding: 5px 9px;
+    font-size: 11px;
+    cursor: pointer;
+}
+
+.row-actions button:hover { background: var(--accent); color: var(--accent-contrast); border-color: var(--accent); }
+.row-actions button.danger:hover { background: var(--danger); border-color: var(--danger); }
+.row-actions button:disabled { opacity: 0.4; cursor: not-allowed; }
+.row-actions button:disabled:hover { background: var(--bg-elevated); color: var(--text-primary); border-color: var(--border); }
+
+/* ---- FORM FIELD LAYOUT (used by the dynamically built Add/Edit modal) ------- */
+.form-field { margin-bottom: 14px; }
+
+.form-field label {
+    display: block;
+    font-size: 12px;
+    color: var(--text-secondary);
+    margin-bottom: 5px;
+    font-weight: 600;
+}
+
+.form-field label .req { color: var(--danger); }
+
+.form-field input,
+.form-field select,
+.form-field textarea {
+    width: 100%;
+    background: var(--bg-input);
+    border: 1px solid var(--border);
+    color: var(--text-primary);
+    border-radius: 8px;
+    padding: 8px 10px;
+    font-size: 13px;
+    font-family: inherit;
+}
+
+.form-field textarea { resize: vertical; }
+
+.form-field input:focus,
+.form-field select:focus,
+.form-field textarea:focus {
+    outline: 2px solid var(--accent);
+    outline-offset: 1px;
+    border-color: var(--accent);
+}
+
+.form-checkbox {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    cursor: pointer;
+}
+
+.form-hint { font-size: 11px; color: var(--text-muted); margin-top: 4px; }
+
+/* ---- VIEWING AS role simulator bar ------------------------------------------- */
+.viewing-as-bar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--accent);
+    border-radius: 8px;
+    padding: 10px 14px;
+    margin-bottom: 14px;
+    font-size: 12.5px;
+}
+
+.viewing-as-bar select {
+    background: var(--bg-input);
+    border: 1px solid var(--border);
+    color: var(--text-primary);
+    border-radius: 6px;
+    padding: 6px 10px;
+    font-size: 12.5px;
+}
+
+/* ---- CHECKLIST GRID (e.g. Access Rights per-page checkboxes) ------------------ */
+.checklist-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 6px 14px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px;
+    margin-bottom: 10px;
+    background: var(--bg-elevated);
+}
+
+.checklist-grid label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12.5px;
+    cursor: pointer;
+    min-width: 0;
+}
+
+.checklist-grid input[type="checkbox"] {
+    width: 15px;
+    height: 15px;
+    padding: 0;
+    margin: 0;
+    border: 1px solid var(--border);
+    background: var(--bg-card);
+    border-radius: 3px;
+    flex-shrink: 0;
+    accent-color: var(--accent);
+}
+
+/* ---- QUICK-ADD (+) button + popover (add a dropdown option inline) ------------ */
+.select-with-add { position: relative; display: flex; gap: 6px; }
+.select-with-add select { flex: 1; }
+
+.btn-quickadd {
+    width: 34px;
+    flex-shrink: 0;
+    background: var(--bg-elevated);
+    border: 1px solid var(--border);
+    color: var(--accent);
+    font-size: 16px;
+    font-weight: 700;
+    border-radius: 6px;
+    cursor: pointer;
+}
+
+.btn-quickadd:hover { background: var(--accent); color: var(--accent-contrast); }
+
+.quickadd-popover {
+    position: absolute;
+    top: calc(100% + 6px);
+    right: 0;
+    width: 230px;
+    background: var(--bg-elevated);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px;
+    box-shadow: var(--shadow);
+    z-index: 220;
+    display: none;
+}
+
+.quickadd-popover.open { display: block; }
+
+.quickadd-popover .qa-label {
+    font-size: 11px;
+    color: var(--text-muted);
+    display: block;
+    margin-bottom: 4px;
+}
+
+.quickadd-popover input {
+    width: 100%;
+    margin-bottom: 8px;
+    background: var(--bg-input);
+    border: 1px solid var(--border);
+    color: var(--text-primary);
+    border-radius: 6px;
+    padding: 7px 9px;
+    font-size: 12.5px;
+}
+
+.quickadd-popover .qa-actions { display: flex; gap: 8px; justify-content: flex-end; }
+.quickadd-popover .qa-actions .btn { padding: 5px 10px; font-size: 11px; }
+
+/* ---- ACTIONS dropdown menu (the 3-dot "more options" menu per row) ------------ */
+.actions-menu {
+    position: absolute;
+    right: 0;
+    top: 30px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    min-width: 190px;
+    box-shadow: var(--shadow);
+    z-index: 150;
+    display: none;
+    overflow: hidden;
+}
+
+.actions-menu.open { display: block; }
+
+.actions-menu button {
+    display: block;
+    width: 100%;
+    text-align: left;
+    padding: 8px 12px;
+    background: transparent;
+    border: none;
+    color: var(--text-primary);
+    font-size: 12.5px;
+    cursor: pointer;
+}
+
+.actions-menu button:hover { background: var(--bg-elevated); }
+.actions-menu .menu-divider { height: 1px; background: var(--border); margin: 4px 0; }
+.actions-menu button.danger-item { color: var(--danger); }
+.actions-menu button:disabled { color: var(--text-muted); cursor: not-allowed; }
+
+.actions-cell { position: relative; text-align: right; }
+
+.actions-trigger {
+    background: var(--bg-elevated);
+    border: 1px solid var(--border);
+    color: var(--text-primary);
+    border-radius: 6px;
+    padding: 5px 12px;
+    cursor: pointer;
+    font-size: 12.5px;
+    font-weight: 600;
+    line-height: 1;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    white-space: nowrap;
+}
+
+/*------------------------------------------------------------------------------
+#-------------- End of the code : MASTER TABLE COMPONENTS ----------------------
+#------------------------------------------------------------------------------*/

@@ -1,0 +1,298 @@
+/*==============================================================================
+#-------------- Start Code for : THEME DEFINITIONS (themes.css) ----------------
+#
+#  PURPOSE   : Defines 11 color themes for the Asset Management System.
+#              Every theme is controlled through CSS custom properties
+#              (variables). Changing one variable recolors the entire portal.
+#
+#  HOW IT WORKS :
+#    - The <html> tag carries a data-theme attribute, e.g. <html data-theme="blue">.
+#    - Each theme below sets the same set of variables to different values.
+#    - No other CSS file needs theme-specific colors; they all just read
+#      these variables. This keeps theme switching fast and error-free.
+#
+#  THEME LIST :
+#      1. dark-grey  -> DEFAULT (low light / low power - saves screen energy)
+#      2. midnight   -> Very dark, high contrast
+#      3. slate-blue -> Dark blue-grey corporate look
+#      4. blue       -> Bright blue (user requested)
+#      5. lite       -> Light / bright (user requested)
+#      6. forest     -> Dark green, nature inspired
+#      7. purple     -> Dark purple
+#      8. amber      -> Warm amber / sunset
+#      9. violet     -> Dark violet (ported from v3-3)
+#      10. crimson   -> Dark red / crimson (ported from v3-3)
+#      11. contrast  -> Pure black high-contrast (ported from v3-3)
+#
+#  TO EDIT A COLOR : find the theme block below and change a variable value,
+#  e.g. change  --text-primary: #e5e7eb;  to any hex / rgb value you like.
+#------------------------------------------------------------------------------*/
+
+/* =============================================================================
+   1) DARK GREY  (DEFAULT THEME)
+   - Chosen as default: grey surfaces reduce eye strain and screen power.
+   ===========================================================================*/
+[data-theme="dark-grey"] {
+    --bg-body:        #17181c;   /* Page background (behind everything)   */
+    --bg-sidebar:     #1e1f24;   /* Sidebar background                    */
+    --bg-card:        #212226;   /* Card / panel background                */
+    --bg-elevated:    #2a2b30;   /* Hovered / raised surfaces             */
+    --bg-input:       #17181c;   /* Input field background                 */
+    --text-primary:   #e5e7eb;   /* Main body text                        */
+    --text-secondary: #9ca3af;   /* Sub-text / descriptions                */
+    --text-muted:     #6b7280;   /* Placeholders / disabled text          */
+    --border:         #33343a;   /* Borders and dividers                   */
+    --accent:         #3b82f6;   /* Primary accent (actions, links)       */
+    --accent-hover:   #2563eb;   /* Accent when hovered                    */
+    --accent-soft:    rgba(59, 130, 246, 0.12); /* Soft accent tint        */
+    --accent-contrast:#ffffff;   /* Text placed ON the accent color        */
+    --success:        #22c55e;   /* Positive / healthy states              */
+    --warning:        #f59e0b;   /* Warning / attention states             */
+    --danger:         #ef4444;   /* Error / critical states                */
+    --info:           #06b6d4;   /* Informational states                   */
+    --shadow:         0 1px 3px rgba(0,0,0,0.4), 0 4px 12px rgba(0,0,0,0.2);
+}
+
+/* =============================================================================
+   2) MIDNIGHT  (Very dark, high contrast)
+   ===========================================================================*/
+[data-theme="midnight"] {
+    --bg-body:        #0b0b0f;
+    --bg-sidebar:     #101016;
+    --bg-card:        #15151d;
+    --bg-elevated:    #1e1e28;
+    --bg-input:       #0b0b0f;
+    --text-primary:   #f3f4f6;
+    --text-secondary: #a1a1aa;
+    --text-muted:     #71717a;
+    --border:         #26262f;
+    --accent:         #8b5cf6;
+    --accent-hover:   #7c3aed;
+    --accent-soft:    rgba(139, 92, 246, 0.14);
+    --accent-contrast:#ffffff;
+    --success:        #10b981;
+    --warning:        #f59e0b;
+    --danger:         #f43f5e;
+    --info:           #22d3ee;
+    --shadow:         0 1px 3px rgba(0,0,0,0.5), 0 6px 16px rgba(0,0,0,0.35);
+}
+
+/* =============================================================================
+   3) SLATE BLUE  (Dark blue-grey corporate look)
+   ===========================================================================*/
+[data-theme="slate-blue"] {
+    --bg-body:        #111827;
+    --bg-sidebar:     #0f172a;
+    --bg-card:        #1e293b;
+    --bg-elevated:    #273449;
+    --bg-input:       #111827;
+    --text-primary:   #e2e8f0;
+    --text-secondary: #94a3b8;
+    --text-muted:     #64748b;
+    --border:         #334155;
+    --accent:         #38bdf8;
+    --accent-hover:   #0ea5e9;
+    --accent-soft:    rgba(56, 189, 248, 0.14);
+    --accent-contrast:#0f172a;
+    --success:        #34d399;
+    --warning:        #fbbf24;
+    --danger:         #f87171;
+    --info:           #60a5fa;
+    --shadow:         0 1px 3px rgba(0,0,0,0.4), 0 4px 12px rgba(0,0,0,0.25);
+}
+
+/* =============================================================================
+   4) BLUE  (Bright blue - user requested)
+   ===========================================================================*/
+[data-theme="blue"] {
+    --bg-body:        #eaf1fb;
+    --bg-sidebar:     #0c2d57;
+    --bg-card:        #ffffff;
+    --bg-elevated:    #f1f5fb;
+    --bg-input:       #ffffff;
+    --text-primary:   #1f2937;
+    --text-secondary: #475569;
+    --text-muted:     #94a3b8;
+    --border:         #dbe4f0;
+    --accent:         #1d4ed8;
+    --accent-hover:   #1e40af;
+    --accent-soft:    rgba(29, 78, 216, 0.10);
+    --accent-contrast:#ffffff;
+    --success:        #059669;
+    --warning:        #d97706;
+    --danger:         #dc2626;
+    --info:           #0891b2;
+    --shadow:         0 1px 3px rgba(15, 23, 42, 0.10), 0 4px 12px rgba(15, 23, 42, 0.08);
+}
+
+/* =============================================================================
+   5) LITE  (Light / bright theme - user requested)
+   ===========================================================================*/
+[data-theme="lite"] {
+    --bg-body:        #f3f4f6;
+    --bg-sidebar:     #ffffff;
+    --bg-card:        #ffffff;
+    --bg-elevated:    #eef0f3;
+    --bg-input:       #ffffff;
+    --text-primary:   #111827;
+    --text-secondary: #4b5563;
+    --text-muted:     #9ca3af;
+    --border:         #e5e7eb;
+    --accent:         #4f46e5;
+    --accent-hover:   #4338ca;
+    --accent-soft:    rgba(79, 70, 229, 0.10);
+    --accent-contrast:#ffffff;
+    --success:        #16a34a;
+    --warning:        #d97706;
+    --danger:         #dc2626;
+    --info:           #0284c7;
+    --shadow:         0 1px 3px rgba(0,0,0,0.08), 0 4px 12px rgba(0,0,0,0.05);
+}
+
+/* =============================================================================
+   6) FOREST  (Dark green, nature inspired)
+   ===========================================================================*/
+[data-theme="forest"] {
+    --bg-body:        #10150f;
+    --bg-sidebar:     #151c13;
+    --bg-card:        #1b2418;
+    --bg-elevated:    #253022;
+    --bg-input:       #10150f;
+    --text-primary:   #e7efe3;
+    --text-secondary: #a3b39c;
+    --text-muted:     #6e7d68;
+    --border:         #2c3828;
+    --accent:         #4ade80;
+    --accent-hover:   #22c55e;
+    --accent-soft:    rgba(74, 222, 128, 0.12);
+    --accent-contrast:#10150f;
+    --success:        #4ade80;
+    --warning:        #fbbf24;
+    --danger:         #f87171;
+    --info:           #38bdf8;
+    --shadow:         0 1px 3px rgba(0,0,0,0.5), 0 4px 12px rgba(0,0,0,0.3);
+}
+
+/* =============================================================================
+   7) PURPLE  (Dark purple)
+   ===========================================================================*/
+[data-theme="purple"] {
+    --bg-body:        #160f1e;
+    --bg-sidebar:     #1c1326;
+    --bg-card:        #221830;
+    --bg-elevated:    #2d213e;
+    --bg-input:       #160f1e;
+    --text-primary:   #efeaf5;
+    --text-secondary: #b7a9c7;
+    --text-muted:     #7d6d8f;
+    --border:         #372a49;
+    --accent:         #c084fc;
+    --accent-hover:   #a855f7;
+    --accent-soft:    rgba(192, 132, 252, 0.14);
+    --accent-contrast:#160f1e;
+    --success:        #4ade80;
+    --warning:        #fbbf24;
+    --danger:         #fb7185;
+    --info:           #22d3ee;
+    --shadow:         0 1px 3px rgba(0,0,0,0.5), 0 4px 12px rgba(0,0,0,0.3);
+}
+
+/* =============================================================================
+   8) AMBER  (Warm amber / sunset)
+   ===========================================================================*/
+[data-theme="amber"] {
+    --bg-body:        #1c1410;
+    --bg-sidebar:     #231913;
+    --bg-card:        #2a1f17;
+    --bg-elevated:    #362820;
+    --bg-input:       #1c1410;
+    --text-primary:   #f5eee6;
+    --text-secondary: #c4b3a3;
+    --text-muted:     #8a7a6c;
+    --border:         #3e2f24;
+    --accent:         #fbbf24;
+    --accent-hover:   #f59e0b;
+    --accent-soft:    rgba(251, 191, 36, 0.14);
+    --accent-contrast:#1c1410;
+    --success:        #34d399;
+    --warning:        #fb923c;
+    --danger:         #f87171;
+    --info:           #38bdf8;
+    --shadow:         0 1px 3px rgba(0,0,0,0.5), 0 4px 12px rgba(0,0,0,0.3);
+}
+
+/* =============================================================================
+   9) VIOLET  (Dark violet - ported from v3-3)
+   ===========================================================================*/
+[data-theme="violet"] {
+    --bg-body:        #181523;
+    --bg-sidebar:     #1e1930;
+    --bg-card:        #221d33;
+    --bg-elevated:    #2a2440;
+    --bg-input:       #181523;
+    --text-primary:   #e6e1f2;
+    --text-secondary: #a49bc2;
+    --text-muted:     #6f6a8a;
+    --border:         #423a5c;
+    --accent:         #a78bfa;
+    --accent-hover:   #8b5cf6;
+    --accent-soft:    rgba(167, 139, 250, 0.14);
+    --accent-contrast:#181523;
+    --success:        #4ade80;
+    --warning:        #fbbf24;
+    --danger:         #f87171;
+    --info:           #22d3ee;
+    --shadow:         0 1px 3px rgba(0,0,0,0.5), 0 4px 12px rgba(0,0,0,0.3);
+}
+
+/* =============================================================================
+   10) CRIMSON  (Dark red / crimson - ported from v3-3)
+   ===========================================================================*/
+[data-theme="crimson"] {
+    --bg-body:        #1e1214;
+    --bg-sidebar:     #25161a;
+    --bg-card:        #2a1a1d;
+    --bg-elevated:    #352126;
+    --bg-input:       #1e1214;
+    --text-primary:   #f2e2e4;
+    --text-secondary: #bd9296;
+    --text-muted:     #855d61;
+    --border:         #4d2c31;
+    --accent:         #f43f5e;
+    --accent-hover:   #e11d48;
+    --accent-soft:    rgba(244, 63, 94, 0.14);
+    --accent-contrast:#ffffff;
+    --success:        #4ade80;
+    --warning:        #fbbf24;
+    --danger:         #dc2626;
+    --info:           #22d3ee;
+    --shadow:         0 1px 3px rgba(0,0,0,0.5), 0 4px 12px rgba(0,0,0,0.3);
+}
+
+/* =============================================================================
+   11) CONTRAST  (Pure black, maximum contrast - ported from v3-3)
+   ===========================================================================*/
+[data-theme="contrast"] {
+    --bg-body:        #000000;
+    --bg-sidebar:     #0a0a0a;
+    --bg-card:        #121212;
+    --bg-elevated:    #1c1c1c;
+    --bg-input:       #000000;
+    --text-primary:   #ffffff;
+    --text-secondary: #bbbbbb;
+    --text-muted:     #888888;
+    --border:         #444444;
+    --accent:         #ffeb3b;
+    --accent-hover:   #facc15;
+    --accent-soft:    rgba(255, 235, 59, 0.14);
+    --accent-contrast:#000000;
+    --success:        #69f0ae;
+    --warning:        #ffeb3b;
+    --danger:         #ff5252;
+    --info:           #00e5ff;
+    --shadow:         0 1px 3px rgba(0,0,0,0.6), 0 6px 16px rgba(0,0,0,0.5);
+}
+
+/*------------------------------------------------------------------------------
+#-------------- End of the code : THEME DEFINITIONS ---------------------------
+#------------------------------------------------------------------------------*/

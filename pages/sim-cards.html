@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<!--
+#-------------- Start Code for : SIM CARD MASTER PAGE (sim-cards.html) ----------
+#
+#  PURPOSE   : SIM Card Master - a separate record type for mobile SIM cards
+#              issued to employees. Some users receive BOTH a mobile phone and a
+#              SIM card from the company; the phone is already tracked as an
+#              Asset, this page stores the SIM card record on its own
+#              (SIM serial / ICCID, mobile number, operator, plan, status,
+#              assignment to an employee, optional company-mobile / Personal
+#              Mobile link, purchase/activation details).
+#
+#  FIELDS    : SIM ID (auto-generated, e.g. SIM-000001), SIM Serial / ICCID,
+#              Mobile Number, Operator, Plan, Status (In Store / Issued /
+#              Blocked / Retired), optional Site, Activation Date, Vendor, Cost,
+#              Remarks, Assigned To (employee) + lifecycle history.
+#
+#  FILES USED :
+#    - css/themes.css, css/main.css, css/assets.css
+#    - js/dummy-data.js (data + helpers), js/theme.js, js/app.js,
+#      js/layout.js (sidebar/header), js/sim-cards.js (this page)
+#------------------------------------------------------------------------------
+-->
+<html lang="en" data-theme="dark-grey">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SIM Cards | Asset Management System</title>
+
+    <link rel="stylesheet" href="../css/themes.css">
+    <link rel="stylesheet" href="../css/main.css">
+    <link rel="stylesheet" href="../css/ui-styles.css">
+    <link rel="stylesheet" href="../css/assets.css">
+</head>
+<body>
+    <div class="app">
+        <aside class="sidebar" id="sidebar">
+            <div id="sidebar-mount"></div>
+        </aside>
+
+        <main class="app-main">
+            <header class="topbar" id="topbar-mount"></header>
+
+            <div class="app-content">
+                <!-- ==================== PAGE HEADING ==================== -->
+                <div class="page-heading">
+                    <p>Manage mobile SIM cards issued to employees - the phone is tracked separately as an Asset.</p>
+                </div>
+
+                <!-- ==================== STOCK SUMMARY ==================== -->
+                <section class="stat-grid" id="simStockSummary">
+                    <!-- Filled by sim-cards.js -> renderSimStockSummary() -->
+                </section>
+
+                <!-- ==================== TOOLBAR ==================== -->
+                <div class="asset-toolbar">
+                    <div class="asset-toolbar-left">
+                        <input type="search" id="simSearchBox" class="search-input" placeholder="Search SIM ID, mobile number, operator, ICCID...">
+                        <select id="simStatusFilter" class="select" style="width:auto;">
+                            <option value="">All Statuses</option>
+                            <option value="In Store">In Store</option>
+                            <option value="Issued">Issued</option>
+                            <option value="Blocked">Blocked</option>
+                            <option value="Retired">Retired</option>
+                        </select>
+                        <select id="simSiteFilter" class="select" style="width:auto;">
+                            <option value="">All Sites</option>
+                        </select>
+                        <button type="button" class="btn btn-secondary btn-clear-filters" id="btnSimClearFilters" title="Clear column filters">Clear filters</button>
+                    </div>
+                    <div class="flex items-center gap-8">
+                        <button class="btn btn-primary" id="btnAddSim">&#43; Add SIM Card</button>
+                        <button class="btn btn-secondary" id="btnSimTemplate">Template</button>
+                        <button class="btn btn-secondary" id="btnSimExport">Export</button>
+                        <button class="btn btn-secondary" id="btnSimImport">Import</button>
+                        <input type="file" id="simImportFileInput" accept=".csv,.xlsx" style="display:none;">
+                    </div>
+                </div>
+
+                <!-- Import summary banner - shown after a bulk import -->
+                <div class="import-summary-banner" id="simImportBanner"></div>
+
+                <!-- ==================== SIM CARD TABLE ==================== -->
+                <div class="card">
+                    <div class="table-wrap" id="simTableWrap">
+                        <table class="table" id="simTable"></table>
+                    </div>
+                    <div class="asset-table-footer" id="simTableFooter"></div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- ====================================================================
+         MODAL : ADD / EDIT SIM CARD
+         ==================================================================== -->
+    <div class="modal-overlay" id="modalSimForm">
+        <div class="modal modal-lg">
+            <div class="modal-header">
+                <h3 id="simFormModalTitle">Add SIM Card</h3>
+                <button class="modal-close" data-close="modalSimForm">&times;</button>
+            </div>
+            <form id="simForm">
+                <div class="modal-body">
+                    <div class="form-grid">
+                        <div class="field field-full">
+                            <label>SIM ID (auto-generated)</label>
+                            <div class="ams-id-preview" id="simIdPreview">SIM-000001</div>
+                        </div>
+                        <div class="field">
+                            <label>SIM Serial / ICCID</label>
+                            <input type="text" id="fSimIccid" class="input" placeholder="Optional - e.g. 8991...">
+                        </div>
+                        <div class="field">
+                            <label>Mobile Number <span class="req">*</span></label>
+                            <input type="text" id="fSimMobile" class="input" required placeholder="e.g. +91 98XXX XXXXX">
+                        </div>
+                        <div class="field">
+                            <label>Operator</label>
+                            <div class="select-with-add">
+                                <input type="text" id="fSimOperator" class="input" list="simOperatorList" placeholder="e.g. Jio, Airtel..." style="flex:1; min-width:0;">
+                                <datalist id="simOperatorList"></datalist>
+                                <button type="button" class="btn-quickadd" id="btnSimQaOperator" title="Add new Operator to the SIM Operator Master">+</button>
+                            </div>
+                        </div>
+                        <div class="field">
+                            <label>Plan</label>
+                            <div class="select-with-add">
+                                <input type="text" id="fSimPlan" class="input" list="simPlanList" placeholder="e.g. Postpaid / Prepaid" style="flex:1; min-width:0;">
+                                <datalist id="simPlanList"></datalist>
+                                <button type="button" class="btn-quickadd" id="btnSimQaPlan" title="Add new Plan to the SIM Plan Master">+</button>
+                            </div>
+                        </div>
+                        <div class="field">
+                            <label>Status <span class="req">*</span></label>
+                            <select id="fSimStatus" class="select" required></select>
+                        </div>
+                        <div class="field">
+                            <label>Site</label>
+                            <select id="fSimSite" class="select">
+                                <option value="">(None)</option>
+                            </select>
+                        </div>
+                        <div class="field">
+                            <label>Activation Date</label>
+                            <input type="date" id="fSimActivationDate" class="input">
+                        </div>
+                        <div class="field">
+                            <label>Vendor</label>
+                            <div class="select-with-add">
+                                <select id="fSimVendor" class="input ams-vendor-select"><option value="">(None - optional)</option></select>
+                                <button type="button" class="btn-quickadd" data-quickadd-vendor="fSimVendor" title="Add new Vendor">+</button>
+                            </div>
+                        </div>
+                        <div class="field">
+                            <label>Cost (&#8377;)</label>
+                            <input type="number" id="fSimCost" class="input" placeholder="Optional">
+                        </div>
+                        <div class="field field-full">
+                            <label>Remarks</label>
+                            <textarea id="fSimRemarks" class="textarea" rows="2" placeholder="Optional"></textarea>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-close="modalSimForm">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save SIM Card</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ====================================================================
+         MODAL : QUICK ADD OPERATOR / PLAN (added to their master with details)
+         ==================================================================== -->
+    <div class="modal-overlay" id="modalSimQuickAdd">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 id="simQuickAddTitle">Add SIM Operator</h3>
+                <button class="modal-close" data-close="modalSimQuickAdd">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-grid">
+                    <div class="field field-full">
+                        <label>Name <span class="req">*</span></label>
+                        <input type="text" id="simQaName" class="input" placeholder="e.g. Jio, Airtel...">
+                    </div>
+                    <div class="field field-full">
+                        <label id="simQaField2Label">Helpline / Customer Care</label>
+                        <input type="text" id="simQaField2" class="input">
+                    </div>
+                    <div class="field field-full">
+                        <label id="simQaField3Label">Website</label>
+                        <input type="text" id="simQaField3" class="input">
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-close="modalSimQuickAdd">Cancel</button>
+                <button type="button" class="btn btn-primary" id="btnSimQaSave">Add</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ====================================================================
+          MODAL : ASSIGN / REASSIGN / EDIT SIM ISSUE
+         ==================================================================== -->
+    <div class="modal-overlay" id="modalSimAssign">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 id="simAssignModalTitle">Assign SIM Card</h3>
+                <button class="modal-close" data-close="modalSimAssign">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-grid">
+                    <div class="field field-full">
+                        <label>Assign To Employee <span class="req">*</span></label>
+                        <select id="simAssignEmp" class="select" required></select>
+                        <div class="form-hint">Employee this SIM card is issued to</div>
+                    </div>
+                    <div class="field field-full">
+                        <label>Used In Mobile</label>
+                        <select id="simAssignMobile" class="select"></select>
+                        <div class="form-hint">Company mobiles without a SIM (default None), or Personal Mobile</div>
+                    </div>
+                    <div class="field field-full">
+                        <label>Assignment Date <span class="req">*</span></label>
+                        <input type="date" id="simAssignDate" class="input" required>
+                    </div>
+                    <div class="field field-full">
+                        <label>Remarks</label>
+                        <textarea id="simAssignRemarks" class="textarea" rows="2" placeholder="Optional"></textarea>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-close="modalSimAssign">Cancel</button>
+                <button type="button" class="btn btn-primary" id="btnSimConfirmAssign">Confirm</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ====================================================================
+         MODAL : VIEW SIM CARD (details + lifecycle history)
+         ==================================================================== -->
+    <div class="modal-overlay" id="modalSimView">
+        <div class="modal modal-lg">
+            <div class="modal-header">
+                <h3>SIM Card Details</h3>
+                <button class="modal-close" data-close="modalSimView">&times;</button>
+            </div>
+            <div class="modal-body" id="simViewModalBody"></div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" id="btnSimViewCsv" title="Download this SIM card's details and history as a CSV report">Download Report</button>
+                <button type="button" class="btn btn-secondary" data-close="modalSimView">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <script defer src="../js/dummy-data.js"></script>
+    <script defer src="../js/theme.js"></script>
+    <script defer src="../js/app.js"></script>
+    <script defer src="../js/layout.js"></script>
+    <script defer src="../js/sortable.js"></script>
+    <script defer src="../js/xlsx-helpers.js"></script>
+    <script defer src="../js/print-docs.js"></script>
+    <script defer src="../js/sim-cards.js"></script>
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            initLayout("sim-cards");
+            initSimCards();
+            amsPopulateVendorSelects();
+            amsWireVendorQuickAdds();
+        });
+    </script>
+</body>
+</html>
+<!--
+#-------------- End of the code : SIM CARD MASTER PAGE (sim-cards.html) ---------
+#------------------------------------------------------------------------------
+-->

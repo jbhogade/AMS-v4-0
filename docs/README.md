@@ -117,55 +117,23 @@ SQL Server to load from):
    npx serve .
    ```
 
-**Django Server** - Steps to run in Django:
-
-Open a terminal / Command Prompt **inside** the project folder
-(`D:\Asset_Management_System_v4-0\server\ams_django\`) and run:
-
-```bash
-# 1. (Recommended) Create a virtual environment so packages stay isolated
-python -m venv venv
-
-# 2. Activate it
-venv\Scripts\activate          # Windows
-# source venv/bin/activate     # Mac/Linux
-
-# 3. Install required packages
-pip install -r requirements.txt
-
-# 4. Apply Django's internal migrations (admin/auth/sessions only —
-#    NOT related to our asset data, which is still dummy data)
-python manage.py migrate
-
-# 5. Run the local development server
-python manage.py runserver
-
-# 6. Stop virtual environment
-deactivate
-```
-
-Then open your browser to: **http://127.0.0.1:8000/**
-
-You should see the Dashboard page load in Dark theme by default, with a theme
-switcher dropdown in the top-right corner (10 themes available).
-
 ## Themes
 
 The portal ships with **11 themes** switchable from the dropdown in the top-right corner of the header. The choice is remembered by your browser.
 
-| Theme      | Type  | Notes                              |
-| ---------- | ----- | ---------------------------------- |
-| Dark Grey  | dark  | **Default** - low glare, low power |
-| Midnight   | dark  | Very dark, high contrast           |
-| Slate Blue | dark  | Corporate blue-grey                |
-| Blue       | light | Bright blue accent (requested)     |
-| Lite       | light | Bright / light theme (requested)   |
-| Forest     | dark  | Dark green                         |
-| Purple     | dark  | Dark purple                        |
-| Amber      | dark  | Warm amber                         |
-| Violet     | dark  | Dark violet (v3-3)                 |
-| Crimson    | dark  | Dark crimson (v3-3)                |
-| Contrast   | dark  | High-contrast mono (v3-3)          |
+| Theme       | Type     | Notes                                  |
+|-------------|----------|----------------------------------------|
+| Dark Grey   | dark     | **Default** - low glare, low power     |
+| Midnight    | dark     | Very dark, high contrast               |
+| Slate Blue  | dark     | Corporate blue-grey                    |
+| Blue        | light    | Bright blue accent (requested)         |
+| Lite        | light    | Bright / light theme (requested)       |
+| Forest      | dark     | Dark green                             |
+| Purple      | dark     | Dark purple                            |
+| Amber       | dark     | Warm amber                             |
+| Violet      | dark     | Dark violet (v3-3)                     |
+| Crimson     | dark     | Dark crimson (v3-3)                    |
+| Contrast    | dark     | High-contrast mono (v3-3)              |
 
 ## Build Roadmap (step by step)
 
@@ -187,7 +155,7 @@ The portal ships with **11 themes** switchable from the dropdown in the top-righ
 - [x] Log Report (Super Root / Supreme Root - activity audit trail, visibility split, CSV export, hub tab)
 - [x] Report Master (7 tabs: asset lifecycle, AIF/AHF click-to-print, consumable & spare-parts restock/used; CSV + Excel export on every panel)
 - [x] Vendors page (Vendor Master over the generic CRUD engine - contact, phone, email, city, supplies category, GSTIN; "Used By" guards delete while an asset/consumable/spare part references the vendor; live vendor list feeds the vendor fields on the Asset / Consumable / Spare Parts forms; System Admin hub tab)
-- [x] Bulk CSV hardening (employee Template/Export cover every Add-Employee field incl. Reports-To-Manager + Manager ID; required fields marked with \*; empId enforced unique against the system AND within the file; every master-table + Asset + Employee import shows a per-row Import Report - added/updated/skipped/error with reasons; within-file duplicate identities rejected; dashboard quick actions removed). Employees use a single **Full Name** (no First/Middle/Last split) - the form, CSV template/export/import and the asset quick-add all take one `name` column; legacy split-name records are auto-migrated to `name` on load. Bulk import saves the reporting manager's **name and ID as typed** (`managerName`/`managerId`) without requiring the manager to exist - if the manager is found (by empId, AMS ID or full name) the `managerAmsId` link is set immediately; otherwise the raw reference is kept and `amsResolvePendingManagers()` links it automatically once that manager is added.
+- [x] Bulk CSV hardening (employee Template/Export cover every Add-Employee field incl. Reports-To-Manager + Manager ID; required fields marked with *; empId enforced unique against the system AND within the file; every master-table + Asset + Employee import shows a per-row Import Report - added/updated/skipped/error with reasons; within-file duplicate identities rejected; dashboard quick actions removed). Employees use a single **Full Name** (no First/Middle/Last split) - the form, CSV template/export/import and the asset quick-add all take one `name` column; legacy split-name records are auto-migrated to `name` on load. Bulk import saves the reporting manager's **name and ID as typed** (`managerName`/`managerId`) without requiring the manager to exist - if the manager is found (by empId, AMS ID or full name) the `managerAmsId` link is set immediately; otherwise the raw reference is kept and `amsResolvePendingManagers()` links it automatically once that manager is added.
 - [x] UX round 2 (Reporting Manager ID shows only the company ID; Import Report Download button + Supreme-Root quick-add of missing Department/Designation; Asset Stock-by-Type bar chart + 20-row scrollable/paginated list; all three-dot menus replaced with "Actions" buttons; Vendor fields are pick-lists with a (+) quick-add that creates + selects a new vendor)
 - [x] UX round 3 (Consumable & Spare Parts Add/Edit modal's Vendor field upgraded from free-text to the same pick-list + (+) quick-add as Assets; the master-table engine now supports optional pick-list fields with in-modal quick-add and preserves legacy values no longer in the master when editing)
 - [x] Settings page (portal preferences hub: Appearance - 11-theme gallery with live CSS-var previews + font size sm/md/lg; General - portal name shown in the sidebar brand + default list page size wired into the Asset table + currency note; Notifications - toast popup toggle, clear the bell / activity log; Data - "Viewing As" role shortcut + Reset Demo Data. Every choice is localStorage-backed and applies on all pages)

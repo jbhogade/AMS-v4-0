@@ -1,0 +1,120 @@
+/*==============================================================================
+#-------------- Start Code for : DASHBOARD PAGE STYLES (dashboard.css) ---------
+#
+#  PURPOSE   : Styles used ONLY on the Dashboard page (index.html).
+#              Everything here is optional layout polish on top of main.css.
+#------------------------------------------------------------------------------*/
+
+/* Two unequal columns: charts+list on the left (wide), ring on the right (narrow) */
+.dashboard-cols {
+    display: grid;
+    grid-template-columns: 1.7fr 1fr;
+    gap: 14px;
+    margin-top: 16px;
+}
+
+/* Stack the ring chart and a small list inside the right column */
+.dashboard-right { display: flex; flex-direction: column; gap: 14px; }
+
+/* Low Stock Alerts - two compact columns instead of one long list */
+.low-stock-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 4px 18px;
+}
+
+/* Recent activity list */
+.activity-list { list-style: none; }
+
+.activity-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 9px 0;
+    border-bottom: 1px solid var(--border);
+}
+
+.activity-item:last-child { border-bottom: none; }
+
+/* Icon dot with a status color for each activity */
+.activity-icon {
+    width: 30px;
+    height: 30px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    flex-shrink: 0;
+}
+
+.activity-body { flex: 1; min-width: 0; }
+
+.activity-title {
+    font-size: 13px;
+    font-weight: 600;
+    line-height: 1.3;
+}
+
+.activity-meta {
+    font-size: 11.5px;
+    color: var(--text-muted);
+    margin-top: 2px;
+}
+
+/* Table inside a card gets tighter padding on the dashboard */
+.dashboard-table .table thead th { padding: 8px 14px; }
+.dashboard-table .table tbody td { padding: 8px 14px; }
+
+/* "Show more" style link at the bottom of a card */
+.card-footer-link {
+    display: block;
+    text-align: center;
+    padding: 10px;
+    font-size: 13px;
+    font-weight: 600;
+    border-top: 1px solid var(--border);
+    color: var(--accent);
+}
+
+.card-footer-link:hover { background: var(--bg-elevated); text-decoration: none; }
+
+/* Under-maintenance count card uses the danger palette */
+.kpi-icon.amber-warn { background: rgba(245,158,11,0.12); color: var(--warning); }
+
+/* ---- DASHBOARD DENSITY : fit more on one screen ----------------------------
+   Only the Dashboard overrides the global card / KPI spacing so the whole page
+   fits without scrolling on a typical laptop viewport. */
+.kpi-grid {
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 10px;
+    margin-bottom: 12px;
+}
+
+.kpi-card { padding: 12px 14px; gap: 10px; }
+.kpi-icon { width: 42px; height: 42px; font-size: 19px; border-radius: 10px; }
+.kpi-value { font-size: 22px; }
+.kpi-label { font-size: 12px; }
+.kpi-trend { font-size: 11px; margin-top: 1px; }
+
+.dashboard-cols .card-header { padding: 11px 16px; }
+.dashboard-cols .card-header h3 { font-size: 14px; }
+.dashboard-cols .card-body { padding: 14px 16px; }
+
+/* Smaller status ring + legend so the right column stays compact */
+#status-ring .ring-wrap { gap: 16px; }
+#status-ring .ring { width: 148px; height: 148px; }
+#status-ring .ring svg { width: 148px; height: 148px; }
+#status-ring .ring .ring-center strong { font-size: 22px; }
+
+/* Bar chart rows get a tighter gap so all 4 rows fit the card */
+.chart-bars { gap: 10px; }
+.chart-bar-row { grid-template-columns: 120px 1fr 44px; gap: 10px; }
+.chart-bar-track { height: 15px; }
+
+/* Alert strip at the very top of the dashboard */
+.alert { margin-bottom: 14px; }
+
+/*------------------------------------------------------------------------------
+#-------------- End of the code : DASHBOARD PAGE STYLES -----------------------
+#------------------------------------------------------------------------------*/

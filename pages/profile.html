@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<!--
+#-------------- Start Code for : PROFILE PAGE (profile.html) --------------------
+#
+#  PURPOSE   : View / edit the signed-in account's profile (display name, contact
+#              no, address, DOB, gender) and change the password. Reads the full
+#              profile from the API (GET /api/auth/me) and persists changes via
+#              PUT /api/auth/me. Falls back to the stored session when the API
+#              is unreachable so the page still works offline.
+#
+#  FILES USED :
+#    - css/themes.css, css/main.css
+#    - js/dummy-data.js, js/theme.js, js/app.js, js/layout.js
+#    - js/profile.js
+#------------------------------------------------------------------------------
+-->
+<html lang="en" data-theme="dark-grey">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Profile | Asset Management System</title>
+
+    <link rel="stylesheet" href="../css/themes.css">
+    <link rel="stylesheet" href="../css/main.css">
+    <link rel="stylesheet" href="../css/ui-styles.css">
+</head>
+<body>
+    <div class="app">
+        <aside class="sidebar" id="sidebar">
+            <div id="sidebar-mount"></div>
+        </aside>
+
+        <main class="app-main">
+            <header class="topbar" id="topbar-mount"></header>
+
+            <div class="app-content">
+                <!-- ==================== PAGE HEADING ==================== -->
+                <div class="page-heading flex items-center justify-between">
+                    <div>
+                        <h1 id="pageTitle">My Profile</h1>
+                        <p class="page-sub" id="pageSub"></p>
+                    </div>
+                </div>
+
+                <!-- ==================== ACCOUNT CARD ==================== -->
+                <div class="card">
+                    <div class="card-header">
+                        <h3>Account Details</h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="profile-summary flex items-center" style="gap:16px; margin-bottom:20px;">
+                            <div class="user-avatar" id="profile-avatar" style="width:56px; height:56px; font-size:22px;">--</div>
+                            <div>
+                                <div style="font-size:16px; font-weight:700;" id="profile-display"></div>
+                                <div style="color:var(--text-muted); font-size:13px;" id="profile-username"></div>
+                            </div>
+                        </div>
+
+                        <div class="form-grid">
+                            <div class="field">
+                                <label for="pf-displayName">Display Name</label>
+                                <input type="text" id="pf-displayName" class="input" maxlength="200">
+                            </div>
+                            <div class="field">
+                                <label for="pf-email">Email</label>
+                                <input type="email" id="pf-email" class="input">
+                            </div>
+                            <div class="field">
+                                <label for="pf-contactNo">Contact No.</label>
+                                <input type="text" id="pf-contactNo" class="input" maxlength="50">
+                            </div>
+                            <div class="field">
+                                <label for="pf-gender">Gender</label>
+                                <select id="pf-gender" class="select">
+                                    <option value="">(Not set)</option>
+                                    <option value="Male">Male</option>
+                                    <option value="Female">Female</option>
+                                    <option value="Other">Other</option>
+                                </select>
+                            </div>
+                            <div class="field">
+                                <label for="pf-dob">Date of Birth</label>
+                                <input type="date" id="pf-dob" class="input">
+                            </div>
+                            <div class="field field-full">
+                                <label for="pf-address">Address</label>
+                                <textarea id="pf-address" class="textarea" rows="3" maxlength="500"></textarea>
+                            </div>
+                        </div>
+
+                        <div style="display:flex; gap:10px; margin-top:6px;">
+                            <button class="btn btn-primary" id="pf-save">Save Profile</button>
+                            <span id="pf-status" class="form-hint" style="margin:0; align-self:center;"></span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ==================== PASSWORD CARD ==================== -->
+                <div class="card">
+                    <div class="card-header">
+                        <h3>Change Password</h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="form-grid">
+                            <div class="field">
+                                <label for="pw-current">Current Password</label>
+                                <input type="password" id="pw-current" class="input" autocomplete="current-password">
+                            </div>
+                            <div class="field">
+                                <label for="pw-new">New Password</label>
+                                <input type="password" id="pw-new" class="input" autocomplete="new-password">
+                            </div>
+                            <div class="field">
+                                <label for="pw-confirm">Confirm New Password</label>
+                                <input type="password" id="pw-confirm" class="input" autocomplete="new-password">
+                            </div>
+                        </div>
+                        <div style="display:flex; gap:10px; margin-top:6px;">
+                            <button class="btn btn-primary" id="pw-save">Change Password</button>
+                            <span id="pw-status" class="form-hint" style="margin:0; align-self:center;"></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script defer src="../js/dummy-data.js"></script>
+    <script defer src="../js/theme.js"></script>
+    <script defer src="../js/app.js"></script>
+    <script defer src="../js/layout.js"></script>
+    <script defer src="../js/profile.js"></script>
+</body>
+</html>
+<!--
+#-------------- End of the code : PROFILE PAGE ----------------------------------
+#------------------------------------------------------------------------------
+-->

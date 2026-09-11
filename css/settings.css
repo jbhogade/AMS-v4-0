@@ -1,0 +1,221 @@
+/*==============================================================================
+#-------------- Start Code for : SETTINGS STYLES (settings.css) -----------------
+#
+#  PURPOSE   : Styles unique to the Settings page - the tab strip (mirrors the
+#              System Admin / Report tab look), the theme gallery cards with
+#              live CSS-variable previews, font-size picker, stat rows.
+#
+#  COLORS    : theme-variable only (see themes.css) - no hardcoded hex here.
+#------------------------------------------------------------------------------*/
+
+/*-------------- Start Code for TABS ------------------------------------------*/
+.settings-tabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 18px;
+}
+
+.settings-tab {
+    padding: 8px 14px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--bg-elevated);
+    color: var(--text-secondary);
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 600;
+    font-family: inherit;
+    transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+
+.settings-tab:hover { color: var(--text-primary); border-color: var(--accent); }
+
+.settings-tab.active {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: var(--accent-contrast);
+}
+
+.settings-pane { display: none; }
+.settings-pane.active { display: block; }
+/*-------------- End of the code ----------------------------------------------*/
+
+/*-------------- Start Code for THEME GALLERY ----------------------------------*/
+.theme-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 12px;
+}
+
+.theme-card {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    align-items: stretch;
+    padding: 12px;
+    border: 2px solid var(--border);
+    border-radius: 10px;
+    background: var(--bg-card);
+    cursor: pointer;
+    font-family: inherit;
+    text-align: left;
+    transition: border-color 0.15s ease, transform 0.1s ease;
+}
+
+.theme-card:hover { border-color: var(--accent); transform: translateY(-1px); }
+
+.theme-card.selected {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 1px var(--accent);
+}
+
+/* Four-cell preview strip - colours resolve to the card's own data-theme */
+.theme-swatch {
+    display: flex;
+    gap: 4px;
+    height: 34px;
+}
+
+.theme-swatch span {
+    flex: 1;
+    border-radius: 4px;
+    border: 1px solid var(--border);
+}
+
+.sw-bg       { background: var(--bg-body); }
+.sw-elevated { background: var(--bg-elevated); }
+.sw-accent   { background: var(--accent); }
+.sw-text     { background: var(--text-primary); }
+
+.theme-card-name {
+    font-size: 12.5px;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+/*-------------- End of the code ----------------------------------------------*/
+
+/*-------------- Start Code for STYLE GALLERY ----------------------------------*/
+.style-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+    gap: 12px;
+}
+
+.style-card {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    align-items: stretch;
+    padding: 12px;
+    border: 2px solid var(--border);
+    border-radius: 10px;
+    background: var(--bg-card);
+    cursor: pointer;
+    font-family: inherit;
+    text-align: left;
+    transition: border-color 0.15s ease, transform 0.1s ease;
+}
+
+.style-card:hover { border-color: var(--accent); transform: translateY(-1px); }
+
+.style-card.selected {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 1px var(--accent);
+}
+
+.style-card-name {
+    font-size: 12.5px;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.style-card-hint {
+    font-size: 11px;
+    color: var(--text-muted);
+    line-height: 1.4;
+}
+/*-------------- End of the code ----------------------------------------------*/
+
+/*-------------- Start Code for FONT SIZE --------------------------------------*/
+.font-size-options {
+    display: inline-flex;
+    gap: 8px;
+}
+
+.font-size-opt {
+    padding: 8px 16px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--bg-elevated);
+    color: var(--text-secondary);
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 600;
+    font-family: inherit;
+}
+
+.font-size-opt:hover { color: var(--text-primary); border-color: var(--accent); }
+
+.font-size-opt.active {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: var(--accent-contrast);
+}
+/*-------------- End of the code ----------------------------------------------*/
+
+/*-------------- Start Code for GENERAL FORM + STATS ---------------------------*/
+.settings-form .field { margin-bottom: 16px; }
+
+.settings-stat-row {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.settings-stat {
+    flex: 1 1 180px;
+    max-width: 220px;
+    padding: 14px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--bg-elevated);
+    text-align: center;
+}
+
+.settings-stat-value {
+    font-size: 26px;
+    font-weight: 700;
+    color: var(--accent);
+    line-height: 1.2;
+}
+
+.settings-stat-label {
+    font-size: 12px;
+    color: var(--text-secondary);
+    margin-top: 4px;
+}
+
+.settings-actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+/* Destructive action - outlined danger style (theme-variable only, so no
+   hardcoded contrast colour is needed). */
+.btn-danger {
+    background: transparent;
+    border-color: var(--danger);
+    color: var(--danger);
+}
+
+.btn-danger:hover {
+    background: var(--bg-elevated);
+    border-color: var(--danger);
+    color: var(--danger);
+}
+/*-------------- End of the code ----------------------------------------------*/
+/*==============================================================================
+#-------------- End of the code : SETTINGS STYLES ------------------------------
+#------------------------------------------------------------------------------*/
