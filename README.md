@@ -4,7 +4,7 @@ A web portal for recording company **assets**, **consumables**, **spare parts** 
 
 > **This is AMS-Test** - the live-testing copy backed by a **SQL Server database** through a C#/ASP.NET Core Web API. The original dummy-data version (all seed records + print fixes) is preserved unchanged in `../AMS-Backup/`. See `docs/MERGE_PLAN.md` Phase 15 for the full migration notes.
 
-## Live Mode (SQL Server + ASP.NET Core API)
+## Live Mode (SQL Server + ASP.NET Core API + Django Server)
 
 The portal is gated by `login.html`. On a Windows machine with SQL Server:
 
