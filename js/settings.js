@@ -3,7 +3,7 @@
 #
 #  PURPOSE   : Drives the Settings page - a portal preferences hub:
 #
-#                1. Appearance  - theme gallery (11 themes with live CSS-var
+#                1. Appearance  - theme gallery (12 themes with live CSS-var
 #                   previews), style gallery (surface look), font size (sm / md / lg)
 #                2. General     - portal name (sidebar brand), default list
 #                   page size, currency display note
@@ -52,8 +52,7 @@ function renderThemeGallery() {
         card.addEventListener("click", () => {
             const name = card.getAttribute("data-theme-card");
             applyTheme(name);
-            grid.querySelectorAll(".theme-card").forEach(c =>
-                c.classList.toggle("selected", c === card));
+            markSelectedTheme();
             const label = card.querySelector(".theme-card-name").textContent;
             amsNotify(`Theme changed to ${label}`, "success");
         });
@@ -64,32 +63,6 @@ function markSelectedTheme() {
     const current = loadSavedTheme();
     document.querySelectorAll("[data-theme-card]").forEach(card =>
         card.classList.toggle("selected", card.getAttribute("data-theme-card") === current));
-}
-
-function renderStyleGallery() {
-    const grid = document.getElementById("styleGallery");
-    if (!grid || typeof UI_STYLES === "undefined") return;
-    grid.innerHTML = UI_STYLES.map(s => `
-        <button type="button" class="style-card" data-style-card="${amsEsc(s.name)}" title="Apply ${amsEsc(s.label)}">
-            <span class="style-card-name">${amsEsc(s.label)}</span>
-            <span class="style-card-hint">${amsEsc(s.hint || "")}</span>
-        </button>`).join("");
-    grid.querySelectorAll("[data-style-card]").forEach(card => {
-        card.addEventListener("click", () => {
-            const name = card.getAttribute("data-style-card");
-            applyUiStyle(name);
-            grid.querySelectorAll(".style-card").forEach(c =>
-                c.classList.toggle("selected", c === card));
-            const label = card.querySelector(".style-card-name").textContent;
-            amsNotify(`Style changed to ${label}`, "success");
-        });
-    });
-}
-
-function markSelectedStyle() {
-    const current = loadSavedUiStyle();
-    document.querySelectorAll("[data-style-card]").forEach(card =>
-        card.classList.toggle("selected", card.getAttribute("data-style-card") === current));
 }
 
 function renderFontSize() {
@@ -203,8 +176,6 @@ function initSettings() {
     initSettingsTabs();
     renderThemeGallery();
     markSelectedTheme();
-    renderStyleGallery();
-    markSelectedStyle();
     renderFontSize();
     initFontSize();
     loadGeneralTab();

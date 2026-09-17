@@ -297,9 +297,9 @@ function amsSimOpenEditModal(key) {
     document.getElementById("fSimMobile").value = s.mobileNumber || "";
     document.getElementById("fSimOperator").value = s.operator || "";
     document.getElementById("fSimPlan").value = s.plan || "";
-    document.getElementById("fSimStatus").value = s.status;
-    document.getElementById("fSimSite").value = s.site || "";
-    document.getElementById("fSimActivationDate").value = s.activationDate || "";
+    amsSetSelectValue("fSimStatus", s.status);
+    amsSetSelectValue("fSimSite", s.site || "");
+    amsSetDateInput("fSimActivationDate", s.activationDate);
     amsSetVendorSelectValue("fSimVendor", s.vendor || "");
     document.getElementById("fSimCost").value = s.cost || "";
     document.getElementById("fSimRemarks").value = s.remarks || "";
@@ -623,10 +623,10 @@ function amsSimOpenAssignModal(key, mode) {
     if (confirmBtn) confirmBtn.textContent = mode === "edit" ? "Save Changes" : "Confirm";
     amsSimPopulateEmpDropdown();
     amsSimPopulateMobileDropdown(s);
-    document.getElementById("simAssignEmp").value = s.assignedTo || "";
+    amsSetSelectValue("simAssignEmp", s.assignedTo || "");
     const dateEl = document.getElementById("simAssignDate");
-    if (mode === "edit") dateEl.value = amsSimLastAssignDate(s) || new Date().toISOString().slice(0, 10);
-    else dateEl.value = new Date().toISOString().slice(0, 10);
+    if (mode === "edit") amsSetDateInput(dateEl, amsSimLastAssignDate(s) || new Date().toISOString().slice(0, 10));
+    else amsSetDateInput(dateEl, new Date().toISOString().slice(0, 10));
     document.getElementById("simAssignRemarks").value = "";
     amsSimOpenModal("modalSimAssign");
 }
@@ -864,9 +864,9 @@ const SIM_CSV_HEADERS = ["simId", "iccid", "mobileNumber*", "operator", "plan", 
 
 function amsDownloadSimTemplate() {
     const sample = ["", "8991XXXXX", "9876543210", "Jio", "Postpaid", "In Store", "", "13-07-2026", "", "", "Example row - delete before importing"];
-    amsWriteWorkbook("SIM_Cards_import_template.xlsx", [
+    amsWriteWorkbook("SIM_Card_Master_import_template.xlsx", [
         { name: "Instructions", cols: [{ wch: 90 }], aoa: [
-            ["SIM Card Import Template - Instructions"],
+            ["SIM Card Master Import Template - Instructions"],
             ["Fields marked with * are required: mobileNumber."],
             ["simId blank = auto-generated."],
             ["status = In Store, Issued, Blocked or Retired (default In Store)."],
@@ -885,7 +885,7 @@ function amsExportSims() {
         s.simId, s.iccid || "", s.mobileNumber || "", s.operator || "", s.plan || "",
         s.status, s.site || "", amsFormatDate(s.activationDate), s.vendor || "", s.cost || "", s.remarks || "",
     ]);
-    amsExportXlsx("SIM_Cards_export", SIM_CSV_HEADERS, rows);
+    amsExportXlsx("SIM_Card_Master_export", SIM_CSV_HEADERS, rows);
 }
 
 function amsSimShowImportSummary(results) {

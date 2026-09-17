@@ -183,7 +183,6 @@ function amsHandleImportFile(file) {
             } else {
                 const newItem = { active };
                 cfg.fields.forEach(f => { newItem[f.key] = obj[f.key] || ""; });
-                if (cfg.autoIdField) newItem[cfg.autoIdField] = cfg.autoIdGenerate(newItem);
                 if (typeof cfg.rowFilter === "function" && !cfg.rowFilter(newItem)) {
                     results.push({ row: line, record, result: "skipped", reason: "Record is not visible to your role" });
                     continue;
@@ -196,6 +195,10 @@ function amsHandleImportFile(file) {
                     }
                 }
                 cfg.dataArray.push(newItem);
+                /* Generate the ID AFTER the push so a max+1 scan sees this row:
+                   two new rows in the same import then get distinct IDs instead
+                   of colliding on the server's record_key (409 -> nothing saves). */
+                if (cfg.autoIdField) newItem[cfg.autoIdField] = cfg.autoIdGenerate(newItem);
                 results.push({ row: line, record, result: "added", reason: "New record added" });
             }
         }
@@ -402,6 +405,7 @@ function amsMtOpenEdit(key) {
         const el = document.getElementById(`mt-${f.key}`);
         if (f.type === "select" && item[f.key]) amsMtEnsureOption(el, item[f.key]);
         if (f.type === "password") { el.value = ""; return; } // never render a stored password back
+        if (f.type === "date") { amsSetDateInput(el, item[f.key]); return; }
         el.value = item[f.key] || "";
     });
     document.getElementById("mt-active").checked = !!item.active;

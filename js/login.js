@@ -14,8 +14,20 @@
     var form = document.getElementById("login-form");
     var msgEl = document.getElementById("login-msg");
     var btn = document.getElementById("login-btn");
+    var passEl = document.getElementById("login-password");
+    var toggleBtn = document.getElementById("login-toggle-pass");
+
+    if (toggleBtn && passEl) {
+        toggleBtn.addEventListener("click", function () {
+            var show = passEl.type === "password";
+            passEl.type = show ? "text" : "password";
+            toggleBtn.textContent = show ? "Hide" : "Show";
+            toggleBtn.setAttribute("aria-label", show ? "Hide password" : "Show password");
+        });
+    }
 
     if (typeof initTheme === "function") initTheme();
+    if (typeof buildThemeMenu === "function") buildThemeMenu("theme-select");
     if (typeof amsApplyPortalPrefs === "function") amsApplyPortalPrefs();
 
     /* If a live session already exists, skip the login page entirely. */
@@ -81,6 +93,15 @@
             /* A fresh login should start from the account's real role, not a
                stale role-simulator override left over from earlier testing. */
             try { localStorage.removeItem("ams_viewing_as_role"); } catch (e) { /* storage unavailable */ }
+            if (typeof applyTheme === "function") {
+                var userKey = String(result.username || "").trim().toLowerCase();
+                var map = (typeof amsReadThemeMap === "function") ? amsReadThemeMap() : {};
+                if (userKey && map[userKey]) {
+                    applyTheme(map[userKey]);
+                } else {
+                    applyTheme(document.documentElement.getAttribute("data-theme"));
+                }
+            }
             window.location.replace("index.html");
         }).catch(function (err) {
             var msg = (err && err.message) ? err.message : "Could not reach the server.";

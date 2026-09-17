@@ -251,22 +251,77 @@ function amsDbSaveDocAsync(key) {
     amsDbSaveDoc(key).catch(() => {});
 }
 
-/* Converts stored ISO date (yyyy-mm-dd) to dd-mm-yyyy for display in the UI */
+/* Converts stored ISO date (yyyy-mm-dd) to dd-mm-yyyy for display in the UI.
+   Non-ISO stored values (Excel import leftovers) are normalised first. */
 function amsFormatDate(iso) {
-    if (!iso) return "";
-    const parts = String(iso).split("-");
-    if (parts.length !== 3) return iso;
-    const [y, m, d] = parts;
+    const canonical = amsParseDMY(iso);
+    if (!canonical) return iso ? String(iso) : "";
+    const [y, m, d] = canonical.split("-");
     return `${d}-${m}-${y}`;
 }
 
-/* Reverse of amsFormatDate: dd-mm-yyyy (e.g. from CSV import) back to ISO */
+/* Normalises any imported / stored date to ISO yyyy-mm-dd for <input type="date">.
+   Accepts: yyyy-mm-dd (already ISO, must not be swapped), dd-mm-yyyy (template),
+   slash/dot variants, US m/d/yyyy when the day is > 12, named months, Excel
+   serials, and Date objects. Unrecognised values return "". */
 function amsParseDMY(dmy) {
-    if (!dmy) return "";
-    const parts = String(dmy).trim().split("-");
-    if (parts.length !== 3) return dmy;
-    const [d, m, y] = parts;
-    return `${y}-${m.padStart(2, "0")}-${d.padStart(2, "0")}`;
+    if (dmy == null || dmy === "") return "";
+    const pad = n => String(n).padStart(2, "0");
+    const isoFromParts = (y, mo, d) => {
+        const year = Number(y);
+        const month = Number(mo);
+        const day = Number(d);
+        if (!year || month < 1 || month > 12 || day < 1 || day > 31) return "";
+        return `${String(year).padStart(4, "0")}-${pad(month)}-${pad(day)}`;
+    };
+    const expandYear = y => {
+        const s = String(y);
+        if (s.length !== 2) return s;
+        const n = parseInt(s, 10);
+        return String(n >= 70 ? 1900 + n : 2000 + n);
+    };
+    if (dmy instanceof Date && !isNaN(dmy.getTime())) {
+        return isoFromParts(dmy.getFullYear(), dmy.getMonth() + 1, dmy.getDate());
+    }
+    let s = String(dmy).trim();
+    if (!s) return "";
+    s = s.replace(/[T\s]\d{1,2}:\d{2}(:\d{2}(\.\d+)?)?(Z|[+-]\d{2}:?\d{2})?$/i, "");
+
+    if (/^\d+(\.\d+)?$/.test(s)) {
+        const n = Number(s);
+        if (n >= 20000 && n < 80000) {
+            const utc = Date.UTC(1899, 11, 30) + Math.round(n) * 86400000;
+            const dt = new Date(utc);
+            return isoFromParts(dt.getUTCFullYear(), dt.getUTCMonth() + 1, dt.getUTCDate());
+        }
+    }
+
+    let m = s.match(/^(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})$/);
+    if (m) return isoFromParts(m[1], m[2], m[3]);
+
+    m = s.match(/^(\d{1,2})[-/.](\d{1,2})[-/.](\d{2,4})$/);
+    if (m) {
+        let day = parseInt(m[1], 10);
+        let month = parseInt(m[2], 10);
+        const year = expandYear(m[3]);
+        if (day <= 12 && month > 12) {
+            const tmp = day; day = month; month = tmp;
+        }
+        return isoFromParts(year, month, day);
+    }
+
+    const MONTHS = { jan: 1, feb: 2, mar: 3, apr: 4, may: 5, jun: 6, jul: 7, aug: 8, sep: 9, sept: 9, oct: 10, nov: 11, dec: 12 };
+    m = s.match(/^(\d{1,2})[-/. ]([A-Za-z]+)[-/. ,]+(\d{2,4})$/);
+    if (m) {
+        const month = MONTHS[m[2].slice(0, 3).toLowerCase()];
+        if (month) return isoFromParts(expandYear(m[3]), month, m[1]);
+    }
+    m = s.match(/^([A-Za-z]+)[-/. ]+(\d{1,2}),?[-/. ]+(\d{2,4})$/);
+    if (m) {
+        const month = MONTHS[m[1].slice(0, 3).toLowerCase()];
+        if (month) return isoFromParts(expandYear(m[3]), month, m[2]);
+    }
+    return "";
 }
 
 /* Toast notification - types: info | success | warning | danger */
@@ -1421,14 +1476,30 @@ function amsPopulateVendorSelects() {
 /* Sets a vendor select to a given vendor name, adding it as an option first if
    it is not in the current master list (so old records never show blank). */
 function amsSetVendorSelectValue(selId, value) {
-    const sel = document.getElementById(selId);
+    amsSetSelectValue(selId, value);
+}
+
+/* Sets any <select> to a stored value. If that value is missing from the
+   option list (imported / deactivated master), it is added so Edit never
+   shows blank when the record still has the value. */
+function amsSetSelectValue(selOrId, value) {
+    const sel = typeof selOrId === "string" ? document.getElementById(selOrId) : selOrId;
     if (!sel) return;
-    if (value && !Array.from(sel.options).some(o => o.value === value)) {
+    const keep = value == null ? "" : String(value);
+    if (keep && !Array.from(sel.options).some(o => o.value === keep)) {
         const opt = document.createElement("option");
-        opt.value = value; opt.textContent = value;
+        opt.value = keep;
+        opt.textContent = keep;
         sel.appendChild(opt);
     }
-    sel.value = value || "";
+    sel.value = keep;
+}
+
+/* Fills an <input type="date"> from any stored / imported date format. */
+function amsSetDateInput(elOrId, value) {
+    const el = typeof elOrId === "string" ? document.getElementById(elOrId) : elOrId;
+    if (!el) return;
+    el.value = amsParseDMY(value) || "";
 }
 
 /* ---- Vendor quick-add (+) : one shared popover, dropped next to whichever
@@ -1832,10 +1903,15 @@ function exitEmployee(amsId, exitDate, remarks, facilitiesDisabled, exitReason, 
     const subordinateMobilesHeld = [];
     const subordinateSimCardsHeld = [];
     getSubordinates(amsId).forEach(sub => {
-        getEmployeeMobiles(sub.amsId).forEach(a => subordinateMobilesHeld.push({
-            ...a, id: a.id, holder: getEmployeeFullName(sub), holderId: amsGetEmployeeDisplayId(sub),
-            site: a.currentSite || a.site, subName: getEmployeeFullName(sub), subEmpId: amsGetEmployeeDisplayId(sub),
-        }));
+        /* Only what the subordinate PERSONALLY holds - skip custodian-held ones
+           (real user deeper), so they do not cascade onto every senior's form. */
+        getEmployeeMobiles(sub.amsId).forEach(a => {
+            if (amsAssetIsDeptOrSub(a)) return;
+            subordinateMobilesHeld.push({
+                ...a, id: a.id, holder: getEmployeeFullName(sub), holderId: amsGetEmployeeDisplayId(sub),
+                site: a.currentSite || a.site, subName: getEmployeeFullName(sub), subEmpId: amsGetEmployeeDisplayId(sub),
+            });
+        });
         getEmployeeSimCards(sub.amsId).forEach(s => subordinateSimCardsHeld.push({
             ...s, holder: getEmployeeFullName(sub), holderId: amsGetEmployeeDisplayId(sub),
             subName: getEmployeeFullName(sub), subEmpId: amsGetEmployeeDisplayId(sub),
@@ -1924,16 +2000,20 @@ function amsSimPrintUsedIn(s) {
     return m && typeof amsPrintAssetId === "function" ? amsPrintAssetId(m) : s.linkedMobileId;
 }
 
-/* Assets owned by an employee's subordinates (the whole team) */
+/* Assets PERSONALLY held by an employee's direct subordinates.
+   Assets a subordinate is only the CUSTODIAN of - whose actual user is a deeper
+   subordinate/free-text holder (amsAssetIsDeptOrSub) - are excluded. Those are
+   already represented on that subordinate's own form, so including them here
+   would make them cascade onto every manager further up the chain. */
 function getSubordinateAssets(amsId) {
     const subIds = getSubordinates(amsId).map(s => s.amsId);
-    return DUMMY_ASSETS.filter(a => subIds.includes(a.assignedTo));
+    return DUMMY_ASSETS.filter(a => subIds.includes(a.assignedTo) && !amsAssetIsDeptOrSub(a));
 }
 
-/* Mobiles owned by an employee's direct subordinates */
+/* Mobiles PERSONALLY held by an employee's direct subordinates (see above). */
 function getSubordinateMobiles(amsId) {
     const subIds = getSubordinates(amsId).map(s => s.amsId);
-    return DUMMY_MOBILES.filter(a => subIds.includes(a.assignedTo));
+    return DUMMY_MOBILES.filter(a => subIds.includes(a.assignedTo) && !amsAssetIsDeptOrSub(a));
 }
 
 /* SIM cards owned by an employee's direct subordinates */
@@ -2134,13 +2214,18 @@ function amsCollectPrintMobilesForEmp(amsId) {
     const split = amsSplitDirectVsSubordinateAssets(getEmployeeMobiles(amsId));
     const subordinate = [];
     getSubordinates(amsId).forEach(sub => {
-        getEmployeeMobiles(sub.amsId).forEach(a => subordinate.push({
-            ...a,
-            id: amsPrintAssetId(a),
-            holder: getEmployeeFullName(sub),
-            holderId: amsGetEmployeeDisplayId(sub),
-            site: a.currentSite || a.site,
-        }));
+        /* Only mobiles the subordinate PERSONALLY holds - skip ones they are
+           merely custodian of, so they do not cascade up the chain. */
+        getEmployeeMobiles(sub.amsId).forEach(a => {
+            if (amsAssetIsDeptOrSub(a)) return;
+            subordinate.push({
+                ...a,
+                id: amsPrintAssetId(a),
+                holder: getEmployeeFullName(sub),
+                holderId: amsGetEmployeeDisplayId(sub),
+                site: a.currentSite || a.site,
+            });
+        });
     });
     split.subordinate.forEach(oa => {
         const holderEmp = oa.assignedToSubordinate ? amsGetEmployeeByAmsId(oa.assignedToSubordinate) : null;
@@ -2754,7 +2839,7 @@ function amsSaveReportHeaderPrefs(prefs) {
    The in-memory seed arrays are untouched, so a page reload brings the demo
    data back exactly as shipped. */
 function amsResetDemoData() {
-    ["ams-theme", "ams-ui-style", "ams-sidebar-show", "ams_notifications", "ams_activity_log", "ams_viewing_as_role",
+    ["ams-theme", "ams-theme-by-user", "ams-ui-style", "ams-sidebar-show", "ams-sidebar-show-by-user", "ams_notifications", "ams_activity_log", "ams_viewing_as_role",
      "ams_role_access_defaults", "ams_company_details",
      AMS_PORTAL_NAME_STORAGE_KEY, AMS_FONT_SIZE_STORAGE_KEY,
      AMS_PAGE_SIZE_STORAGE_KEY, AMS_TOAST_STORAGE_KEY,
@@ -2780,8 +2865,14 @@ const AMS_DUMMY_EXIT_RECORDS = [];
 
 
 function amsGenerateExitId() {
-    const n = AMS_DUMMY_EXIT_RECORDS.length + 1;
-    return `EXIT-${String(n).padStart(6, "0")}`;
+    /* max+1 (not count+1): a count-based sequence reuses IDs after a delete,
+       colliding on the server's natural key (record_key) and failing the save. */
+    let maxSeq = 0;
+    AMS_DUMMY_EXIT_RECORDS.forEach(r => {
+        const m = String(r.exitId || "").match(/^EXIT-(\d+)$/);
+        if (m) maxSeq = Math.max(maxSeq, parseInt(m[1], 10));
+    });
+    return `EXIT-${String(maxSeq + 1).padStart(6, "0")}`;
 }
 
 const AMS_EXIT_FACILITIES_CHECKLIST = [

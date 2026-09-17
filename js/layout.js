@@ -151,7 +151,6 @@ function renderTopbar(currentPage) {
             </div>
         </div>
         <select class="select" id="theme-select" aria-label="Theme" style="width:auto;padding:8px 10px;font-size:13px;"></select>
-        <select class="select" id="style-select" aria-label="Style" style="width:auto;padding:8px 10px;font-size:13px;"></select>
         ${(function () {
             const session = (typeof amsGetSession === "function") ? amsGetSession() : null;
             const name = (session && (session.displayName || session.name)) ? (session.displayName || session.name) : "Operator";
@@ -170,9 +169,8 @@ function renderTopbar(currentPage) {
         })()}
     `;
 
-    /* Wire up the theme and style dropdowns that were just created */
+    /* Wire up the theme dropdown that was just created */
     buildThemeMenu("theme-select");
-    buildStyleMenu("style-select");
 
     /* User chip dropdown: My Profile / Logout */
     const chip = document.getElementById("user-chip");
@@ -201,10 +199,32 @@ function renderTopbar(currentPage) {
 /* ---- Desktop sidebar: icon-only rail, overlay peek, persist-show pin --------
    Collapsed = 64px icons so lists get width. Hover/focus peeks labels over
    the page without shifting .app-main. Pin Show (localStorage ams-sidebar-show)
-   keeps names visible. Mobile drawer (#sidebar-toggle) is unchanged. */
+   keeps names visible. Pin is stored per signed-in username
+   (ams-sidebar-show-by-user). Mobile drawer (#sidebar-toggle) is unchanged. */
 const AMS_SIDEBAR_SHOW_KEY = "ams-sidebar-show";
+const AMS_SIDEBAR_SHOW_BY_USER_KEY = "ams-sidebar-show-by-user";
+
+function amsSidebarUserKey() {
+    const sess = (typeof amsGetSession === "function") ? amsGetSession() : null;
+    return (sess && sess.username) ? String(sess.username).trim().toLowerCase() : "";
+}
+
+function amsReadSidebarMap() {
+    try { return JSON.parse(localStorage.getItem(AMS_SIDEBAR_SHOW_BY_USER_KEY) || "{}") || {}; }
+    catch (e) { return {}; }
+}
+
+function amsWriteSidebarMap(map) {
+    try { localStorage.setItem(AMS_SIDEBAR_SHOW_BY_USER_KEY, JSON.stringify(map)); } catch (e) { /* storage unavailable */ }
+}
 
 function amsSidebarIsPinnedShow() {
+    const user = amsSidebarUserKey();
+    if (user) {
+        const map = amsReadSidebarMap();
+        if (Object.prototype.hasOwnProperty.call(map, user)) return map[user] === "1" || map[user] === true;
+        return false;
+    }
     try { return localStorage.getItem(AMS_SIDEBAR_SHOW_KEY) === "1"; }
     catch (e) { return false; }
 }
@@ -213,6 +233,12 @@ function amsSidebarSetPinnedShow(on) {
     try {
         if (on) localStorage.setItem(AMS_SIDEBAR_SHOW_KEY, "1");
         else localStorage.removeItem(AMS_SIDEBAR_SHOW_KEY);
+        const user = amsSidebarUserKey();
+        if (user) {
+            const map = amsReadSidebarMap();
+            map[user] = on ? "1" : "0";
+            amsWriteSidebarMap(map);
+        }
     } catch (e) { /* storage unavailable */ }
 }
 
@@ -306,6 +332,7 @@ function initLayout(currentPage) {
 
     /* Notification bell (needs the topbar to already be rendered) */
     if (typeof amsInitBell === "function") amsInitBell();
+    amsInitDatePickers();
 
     /* Page access (including Supreme Root per-user assignments) is on the
        user profile loaded from SQL. Re-apply the sidebar once that lands. */
@@ -318,6 +345,188 @@ function initLayout(currentPage) {
             if (typeof amsApplyViewOnlyChrome === "function") amsApplyViewOnlyChrome();
         });
     }
+}
+
+/* =============================================================================
+   THEMED DATE PICKER
+   -----------------------------------------------------------------------------
+   Native <input type="date"> calendars are drawn by the OS and ignore Theme.
+   This panel is viewport-fixed, uses theme variables, and is wired to every
+   date field (including ones added later by Add/Edit modals).
+   ----------------------------------------------------------------------------*/
+const AMS_DATE_MONTHS = ["January", "February", "March", "April", "May", "June",
+    "July", "August", "September", "October", "November", "December"];
+const AMS_DATE_DOW = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
+
+let AMS_DATE_POP = null;
+let AMS_DATE_TARGET = null;
+let AMS_DATE_VIEW = { y: 0, m: 0 };
+
+function amsDateIso(d) {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, "0");
+    const day = String(d.getDate()).padStart(2, "0");
+    return y + "-" + m + "-" + day;
+}
+
+function amsDateParse(value) {
+    if (!value) return null;
+    const m = String(value).match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (!m) return null;
+    const d = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
+    return isNaN(d.getTime()) ? null : d;
+}
+
+function amsDateEnsurePop() {
+    if (AMS_DATE_POP) return AMS_DATE_POP;
+    const pop = document.createElement("div");
+    pop.className = "ams-date-pop";
+    pop.hidden = true;
+    pop.innerHTML = `
+        <div class="ams-date-pop-head">
+            <button type="button" class="ams-date-pop-nav" data-date-nav="-1" aria-label="Previous month">&lt;</button>
+            <div class="ams-date-pop-title"></div>
+            <button type="button" class="ams-date-pop-nav" data-date-nav="1" aria-label="Next month">&gt;</button>
+        </div>
+        <div class="ams-date-pop-week">${AMS_DATE_DOW.map(d => "<span>" + d + "</span>").join("")}</div>
+        <div class="ams-date-pop-grid"></div>
+        <div class="ams-date-pop-foot">
+            <button type="button" data-date-clear>Clear</button>
+            <button type="button" data-date-today>Today</button>
+        </div>`;
+    document.body.appendChild(pop);
+    pop.addEventListener("click", function (e) {
+        const nav = e.target.closest("[data-date-nav]");
+        if (nav) {
+            AMS_DATE_VIEW.m += Number(nav.getAttribute("data-date-nav"));
+            if (AMS_DATE_VIEW.m < 0) { AMS_DATE_VIEW.m = 11; AMS_DATE_VIEW.y -= 1; }
+            if (AMS_DATE_VIEW.m > 11) { AMS_DATE_VIEW.m = 0; AMS_DATE_VIEW.y += 1; }
+            amsDateRenderGrid();
+            return;
+        }
+        if (e.target.closest("[data-date-clear]")) {
+            amsDateApply("");
+            return;
+        }
+        if (e.target.closest("[data-date-today]")) {
+            amsDateApply(amsDateIso(new Date()));
+            return;
+        }
+        const day = e.target.closest("[data-date-day]");
+        if (day) amsDateApply(day.getAttribute("data-date-day"));
+    });
+    AMS_DATE_POP = pop;
+    return pop;
+}
+
+function amsDateRenderGrid() {
+    const pop = amsDateEnsurePop();
+    pop.querySelector(".ams-date-pop-title").textContent =
+        AMS_DATE_MONTHS[AMS_DATE_VIEW.m] + " " + AMS_DATE_VIEW.y;
+    const first = new Date(AMS_DATE_VIEW.y, AMS_DATE_VIEW.m, 1);
+    const startDow = first.getDay();
+    const daysInMonth = new Date(AMS_DATE_VIEW.y, AMS_DATE_VIEW.m + 1, 0).getDate();
+    const prevDays = new Date(AMS_DATE_VIEW.y, AMS_DATE_VIEW.m, 0).getDate();
+    const selected = AMS_DATE_TARGET ? AMS_DATE_TARGET.value : "";
+    const today = amsDateIso(new Date());
+    let html = "";
+    for (let i = 0; i < 42; i++) {
+        let y = AMS_DATE_VIEW.y;
+        let m = AMS_DATE_VIEW.m;
+        let d = i - startDow + 1;
+        let muted = "";
+        if (d < 1) {
+            m -= 1;
+            if (m < 0) { m = 11; y -= 1; }
+            d = prevDays + d;
+            muted = " muted";
+        } else if (d > daysInMonth) {
+            d = d - daysInMonth;
+            m += 1;
+            if (m > 11) { m = 0; y += 1; }
+            muted = " muted";
+        }
+        const iso = y + "-" + String(m + 1).padStart(2, "0") + "-" + String(d).padStart(2, "0");
+        const cls = "ams-date-pop-day" + muted
+            + (iso === selected ? " selected" : "")
+            + (iso === today ? " today" : "");
+        html += '<button type="button" class="' + cls + '" data-date-day="' + iso + '">' + d + "</button>";
+    }
+    pop.querySelector(".ams-date-pop-grid").innerHTML = html;
+}
+
+function amsDatePlace() {
+    const pop = amsDateEnsurePop();
+    const r = AMS_DATE_TARGET.getBoundingClientRect();
+    const pw = pop.offsetWidth || 280;
+    const ph = pop.offsetHeight || 320;
+    let left = r.left;
+    if (left + pw > window.innerWidth - 8) left = window.innerWidth - pw - 8;
+    if (left < 8) left = 8;
+    let top = r.bottom + 6;
+    if (top + ph > window.innerHeight - 8) {
+        top = r.top - ph - 6;
+        if (top < 8) top = 8;
+    }
+    pop.style.left = left + "px";
+    pop.style.top = top + "px";
+}
+
+function amsDateOpen(input) {
+    AMS_DATE_TARGET = input;
+    const parsed = amsDateParse(input.value) || new Date();
+    AMS_DATE_VIEW = { y: parsed.getFullYear(), m: parsed.getMonth() };
+    const pop = amsDateEnsurePop();
+    pop.hidden = false;
+    amsDateRenderGrid();
+    amsDatePlace();
+}
+
+function amsDateClose() {
+    if (AMS_DATE_POP) AMS_DATE_POP.hidden = true;
+    AMS_DATE_TARGET = null;
+}
+
+function amsDateApply(iso) {
+    if (!AMS_DATE_TARGET) return;
+    const el = AMS_DATE_TARGET;
+    el.value = iso;
+    el.dispatchEvent(new Event("input", { bubbles: true }));
+    el.dispatchEvent(new Event("change", { bubbles: true }));
+    amsDateClose();
+}
+
+function amsInitDatePickers() {
+    if (document.documentElement.dataset.amsDatePickers === "1") return;
+    document.documentElement.dataset.amsDatePickers = "1";
+    document.addEventListener("mousedown", function (e) {
+        const input = e.target.closest && e.target.closest('input[type="date"]');
+        if (!input) return;
+        e.preventDefault();
+        e.stopPropagation();
+        if (AMS_DATE_TARGET === input && AMS_DATE_POP && !AMS_DATE_POP.hidden) amsDateClose();
+        else amsDateOpen(input);
+    }, true);
+    document.addEventListener("click", function (e) {
+        if (e.target.closest && e.target.closest('input[type="date"]')) {
+            e.preventDefault();
+            e.stopPropagation();
+            return;
+        }
+        if (AMS_DATE_POP && !AMS_DATE_POP.hidden && !e.target.closest(".ams-date-pop")) amsDateClose();
+    }, true);
+    document.addEventListener("focusin", function (e) {
+        if (e.target && e.target.matches && e.target.matches('input[type="date"]')) amsDateOpen(e.target);
+    });
+    document.addEventListener("scroll", function (e) {
+        if (!AMS_DATE_TARGET) return;
+        if (AMS_DATE_POP && (e.target === AMS_DATE_POP || AMS_DATE_POP.contains(e.target))) return;
+        amsDateClose();
+    }, true);
+    window.addEventListener("resize", function () { if (AMS_DATE_TARGET) amsDateClose(); }, { passive: true });
+    document.addEventListener("keydown", function (e) {
+        if (e.key === "Escape") amsDateClose();
+    });
 }
 
 /* =============================================================================
@@ -338,7 +547,7 @@ function amsDropdownOpen(trigger, menu) {
     menu.style.position = "fixed";
     menu.style.right = "auto";
     menu.style.top = "auto";
-    menu.style.zIndex = "500";
+    menu.style.zIndex = "4000";
     menu.style.left = "-9999px";                 /* measure off-screen first   */
     const mw = menu.offsetWidth || 200;
     const mh = menu.offsetHeight || 320;

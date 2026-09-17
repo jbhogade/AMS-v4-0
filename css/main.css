@@ -1314,6 +1314,112 @@ th.sort-active { color: var(--accent, #4da3ff); }
 
 .btn-clear-filters { white-space: nowrap; }
 
+/* =============================================================================
+   DATE PICKER  (replaces the OS calendar so Theme / glass apply everywhere)
+   ===========================================================================*/
+input[type="date"] {
+    position: relative;
+    color: var(--text-primary);
+    accent-color: var(--accent);
+}
+input[type="date"]::-webkit-calendar-picker-indicator {
+    opacity: 0;
+    pointer-events: none;
+    display: block;
+    width: 1px;
+    height: 1px;
+}
+input[type="date"]::-webkit-inner-spin-button {
+    display: none;
+}
+
+.ams-date-pop {
+    position: fixed;
+    z-index: 5000;
+    width: 280px;
+    padding: 12px;
+    border-radius: 12px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    box-shadow: var(--shadow);
+    color: var(--text-primary);
+    font-family: inherit;
+}
+.ams-date-pop-head {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 10px;
+}
+.ams-date-pop-title {
+    flex: 1;
+    text-align: center;
+    font-size: 13px;
+    font-weight: 700;
+}
+.ams-date-pop-nav {
+    width: 28px;
+    height: 28px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: var(--bg-elevated);
+    color: var(--text-primary);
+    cursor: pointer;
+    font-size: 14px;
+    line-height: 1;
+}
+.ams-date-pop-nav:hover { border-color: var(--accent); }
+.ams-date-pop-week,
+.ams-date-pop-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 2px;
+}
+.ams-date-pop-week span {
+    text-align: center;
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--text-muted);
+    padding: 4px 0 6px;
+    text-transform: uppercase;
+}
+.ams-date-pop-day {
+    height: 32px;
+    border: none;
+    border-radius: 8px;
+    background: transparent;
+    color: var(--text-primary);
+    cursor: pointer;
+    font-size: 12.5px;
+    font-family: inherit;
+}
+.ams-date-pop-day:hover { background: var(--bg-elevated); }
+.ams-date-pop-day.muted { color: var(--text-muted); opacity: 0.55; }
+.ams-date-pop-day.today { box-shadow: inset 0 0 0 1px var(--accent); }
+.ams-date-pop-day.selected {
+    background: var(--accent);
+    color: var(--accent-contrast);
+}
+.ams-date-pop-foot {
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+    margin-top: 10px;
+}
+.ams-date-pop-foot button {
+    flex: 1;
+    padding: 6px 8px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: var(--bg-elevated);
+    color: var(--text-primary);
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 600;
+    font-family: inherit;
+}
+.ams-date-pop-foot button:hover { border-color: var(--accent); }
+
 /*------------------------------------------------------------------------------
 #-------------- End of the code : MAIN LAYOUT & COMPONENTS --------------------
 #------------------------------------------------------------------------------*/

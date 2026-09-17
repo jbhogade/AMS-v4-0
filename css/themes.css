@@ -1,36 +1,43 @@
 /*==============================================================================
 #-------------- Start Code for : THEME DEFINITIONS (themes.css) ----------------
 #
-#  PURPOSE   : Defines 11 color themes for the Asset Management System.
+#  PURPOSE   : Defines 12 color themes for the Asset Management System.
 #              Every theme is controlled through CSS custom properties
 #              (variables). Changing one variable recolors the entire portal.
 #
 #  HOW IT WORKS :
-#    - The <html> tag carries a data-theme attribute, e.g. <html data-theme="blue">.
+#    - The <html> tag carries a data-theme attribute, e.g. <html data-theme="platinum">.
 #    - Each theme below sets the same set of variables to different values.
 #    - No other CSS file needs theme-specific colors; they all just read
 #      these variables. This keeps theme switching fast and error-free.
 #
 #  THEME LIST :
-#      1. dark-grey  -> DEFAULT (low light / low power - saves screen energy)
-#      2. midnight   -> Very dark, high contrast
-#      3. slate-blue -> Dark blue-grey corporate look
-#      4. blue       -> Bright blue (user requested)
-#      5. lite       -> Light / bright (user requested)
-#      6. forest     -> Dark green, nature inspired
-#      7. purple     -> Dark purple
-#      8. amber      -> Warm amber / sunset
-#      9. violet     -> Dark violet (ported from v3-3)
-#      10. crimson   -> Dark red / crimson (ported from v3-3)
-#      11. contrast  -> Pure black high-contrast (ported from v3-3)
+#      1.  platinum   -> DEFAULT (cool silver glass)
+#      2.  dark-gold  -> Dark + gold
+#      3.  midnight   -> Very dark, high contrast
+#      4.  obsidian   -> Near-black with cyan edge
+#      5.  dark-grey  -> Low light / low power
+#      6.  slate-blue -> Dark blue-grey corporate look
+#      7.  ice        -> Cool pale-blue glass
+#      8.  teal       -> Dark teal
+#      9.  forest     -> Dark green, nature inspired
+#      10. emerald    -> Deep emerald
+#      11. purple     -> Dark purple
+#      12. violet     -> Dark violet (ported from v3-3)
+#      13. wine       -> Dark burgundy
+#      14. crimson    -> Dark red / crimson (ported from v3-3)
+#      15. rose-gold  -> Warm rose + gold
+#      16. amber      -> Warm amber / sunset
+#      17. copper     -> Dark copper
+#      18. lite       -> Light / bright (user requested)
+#      19. contrast   -> Pure black high-contrast (ported from v3-3)
 #
 #  TO EDIT A COLOR : find the theme block below and change a variable value,
 #  e.g. change  --text-primary: #e5e7eb;  to any hex / rgb value you like.
 #------------------------------------------------------------------------------*/
 
 /* =============================================================================
-   1) DARK GREY  (DEFAULT THEME)
-   - Chosen as default: grey surfaces reduce eye strain and screen power.
+   1) DARK GREY
    ===========================================================================*/
 [data-theme="dark-grey"] {
     --bg-body:        #17181c;   /* Page background (behind everything)   */
@@ -99,30 +106,6 @@
     --danger:         #f87171;
     --info:           #60a5fa;
     --shadow:         0 1px 3px rgba(0,0,0,0.4), 0 4px 12px rgba(0,0,0,0.25);
-}
-
-/* =============================================================================
-   4) BLUE  (Bright blue - user requested)
-   ===========================================================================*/
-[data-theme="blue"] {
-    --bg-body:        #eaf1fb;
-    --bg-sidebar:     #0c2d57;
-    --bg-card:        #ffffff;
-    --bg-elevated:    #f1f5fb;
-    --bg-input:       #ffffff;
-    --text-primary:   #1f2937;
-    --text-secondary: #475569;
-    --text-muted:     #94a3b8;
-    --border:         #dbe4f0;
-    --accent:         #1d4ed8;
-    --accent-hover:   #1e40af;
-    --accent-soft:    rgba(29, 78, 216, 0.10);
-    --accent-contrast:#ffffff;
-    --success:        #059669;
-    --warning:        #d97706;
-    --danger:         #dc2626;
-    --info:           #0891b2;
-    --shadow:         0 1px 3px rgba(15, 23, 42, 0.10), 0 4px 12px rgba(15, 23, 42, 0.08);
 }
 
 /* =============================================================================
@@ -291,6 +274,222 @@
     --danger:         #ff5252;
     --info:           #00e5ff;
     --shadow:         0 1px 3px rgba(0,0,0,0.6), 0 6px 16px rgba(0,0,0,0.5);
+}
+
+/* =============================================================================
+   12) DARK GOLD
+   ===========================================================================*/
+[data-theme="dark-gold"] {
+    --bg-body:        #0a0907;
+    --bg-sidebar:     #12110c;
+    --bg-card:        #181510;
+    --bg-elevated:    #221c14;
+    --bg-input:       #0d0c09;
+    --text-primary:   #f8f4ea;
+    --text-secondary: #cbb98a;
+    --text-muted:     #8a7a55;
+    --border:         #3a3120;
+    --accent:         #d4af37;
+    --accent-hover:   #f0d78c;
+    --accent-soft:    rgba(212, 175, 55, 0.14);
+    --accent-contrast:#0a0907;
+    --success:        #34d399;
+    --warning:        #fbbf24;
+    --danger:         #f87171;
+    --info:           #38bdf8;
+    --shadow:         0 1px 3px rgba(0,0,0,0.55), 0 8px 24px rgba(0,0,0,0.4);
+}
+
+/* =============================================================================
+   13) OBSIDIAN
+   ===========================================================================*/
+[data-theme="obsidian"] {
+    --bg-body:        #050608;
+    --bg-sidebar:     #0b0d12;
+    --bg-card:        #11141c;
+    --bg-elevated:    #1a1f2a;
+    --bg-input:       #08090d;
+    --text-primary:   #e8eef8;
+    --text-secondary: #93a4bf;
+    --text-muted:     #64748b;
+    --border:         #243044;
+    --accent:         #22d3ee;
+    --accent-hover:   #67e8f9;
+    --accent-soft:    rgba(34, 211, 238, 0.14);
+    --accent-contrast:#050608;
+    --success:        #34d399;
+    --warning:        #fbbf24;
+    --danger:         #f87171;
+    --info:           #38bdf8;
+    --shadow:         0 1px 3px rgba(0,0,0,0.55), 0 8px 24px rgba(0,0,0,0.4);
+}
+
+/* =============================================================================
+   14) ICE
+   ===========================================================================*/
+[data-theme="ice"] {
+    --bg-body:        #0b1520;
+    --bg-sidebar:     #102030;
+    --bg-card:        #152838;
+    --bg-elevated:    #1c3348;
+    --bg-input:       #0b1520;
+    --text-primary:   #e8f4ff;
+    --text-secondary: #9fc3dd;
+    --text-muted:     #6e8aa3;
+    --border:         #2a4a63;
+    --accent:         #7dd3fc;
+    --accent-hover:   #38bdf8;
+    --accent-soft:    rgba(125, 211, 252, 0.14);
+    --accent-contrast:#0b1520;
+    --success:        #34d399;
+    --warning:        #fbbf24;
+    --danger:         #f87171;
+    --info:           #38bdf8;
+    --shadow:         0 1px 3px rgba(0,0,0,0.5), 0 8px 24px rgba(0,0,0,0.35);
+}
+
+/* =============================================================================
+   15) TEAL
+   ===========================================================================*/
+[data-theme="teal"] {
+    --bg-body:        #071616;
+    --bg-sidebar:     #0c1f1f;
+    --bg-card:        #122828;
+    --bg-elevated:    #1a3535;
+    --bg-input:       #071616;
+    --text-primary:   #e5f7f6;
+    --text-secondary: #9bccc8;
+    --text-muted:     #678f8c;
+    --border:         #234747;
+    --accent:         #2dd4bf;
+    --accent-hover:   #5eead4;
+    --accent-soft:    rgba(45, 212, 191, 0.14);
+    --accent-contrast:#071616;
+    --success:        #34d399;
+    --warning:        #fbbf24;
+    --danger:         #f87171;
+    --info:           #38bdf8;
+    --shadow:         0 1px 3px rgba(0,0,0,0.5), 0 8px 24px rgba(0,0,0,0.35);
+}
+
+/* =============================================================================
+   16) EMERALD
+   ===========================================================================*/
+[data-theme="emerald"] {
+    --bg-body:        #06140e;
+    --bg-sidebar:     #0b1c14;
+    --bg-card:        #12261c;
+    --bg-elevated:    #1a3226;
+    --bg-input:       #06140e;
+    --text-primary:   #e6f7ee;
+    --text-secondary: #9dcdb3;
+    --text-muted:     #678f7a;
+    --border:         #234836;
+    --accent:         #34d399;
+    --accent-hover:   #6ee7b7;
+    --accent-soft:    rgba(52, 211, 153, 0.14);
+    --accent-contrast:#06140e;
+    --success:        #34d399;
+    --warning:        #fbbf24;
+    --danger:         #f87171;
+    --info:           #38bdf8;
+    --shadow:         0 1px 3px rgba(0,0,0,0.5), 0 8px 24px rgba(0,0,0,0.35);
+}
+
+/* =============================================================================
+   17) WINE
+   ===========================================================================*/
+[data-theme="wine"] {
+    --bg-body:        #16090d;
+    --bg-sidebar:     #1f0e14;
+    --bg-card:        #29141c;
+    --bg-elevated:    #361c26;
+    --bg-input:       #16090d;
+    --text-primary:   #f7e8ee;
+    --text-secondary: #d4a3b4;
+    --text-muted:     #8f6674;
+    --border:         #4a2834;
+    --accent:         #fb7185;
+    --accent-hover:   #fda4af;
+    --accent-soft:    rgba(251, 113, 133, 0.14);
+    --accent-contrast:#16090d;
+    --success:        #34d399;
+    --warning:        #fbbf24;
+    --danger:         #f43f5e;
+    --info:           #38bdf8;
+    --shadow:         0 1px 3px rgba(0,0,0,0.5), 0 8px 24px rgba(0,0,0,0.35);
+}
+
+/* =============================================================================
+   18) ROSE GOLD
+   ===========================================================================*/
+[data-theme="rose-gold"] {
+    --bg-body:        #16100e;
+    --bg-sidebar:     #1e1613;
+    --bg-card:        #271c18;
+    --bg-elevated:    #342722;
+    --bg-input:       #16100e;
+    --text-primary:   #f8eee8;
+    --text-secondary: #d4b4a4;
+    --text-muted:     #8f7468;
+    --border:         #4a372e;
+    --accent:         #e8b4a0;
+    --accent-hover:   #f3d0c2;
+    --accent-soft:    rgba(232, 180, 160, 0.14);
+    --accent-contrast:#16100e;
+    --success:        #34d399;
+    --warning:        #fbbf24;
+    --danger:         #f87171;
+    --info:           #38bdf8;
+    --shadow:         0 1px 3px rgba(0,0,0,0.5), 0 8px 24px rgba(0,0,0,0.35);
+}
+
+/* =============================================================================
+   19) COPPER
+   ===========================================================================*/
+[data-theme="copper"] {
+    --bg-body:        #160f0a;
+    --bg-sidebar:     #1e1510;
+    --bg-card:        #271c15;
+    --bg-elevated:    #34261c;
+    --bg-input:       #160f0a;
+    --text-primary:   #f6eee6;
+    --text-secondary: #d0b198;
+    --text-muted:     #8c7360;
+    --border:         #4a3728;
+    --accent:         #d97757;
+    --accent-hover:   #ea8a68;
+    --accent-soft:    rgba(217, 119, 87, 0.14);
+    --accent-contrast:#160f0a;
+    --success:        #34d399;
+    --warning:        #fbbf24;
+    --danger:         #f87171;
+    --info:           #38bdf8;
+    --shadow:         0 1px 3px rgba(0,0,0,0.5), 0 8px 24px rgba(0,0,0,0.35);
+}
+
+/* =============================================================================
+   20) PLATINUM
+   ===========================================================================*/
+[data-theme="platinum"] {
+    --bg-body:        #121416;
+    --bg-sidebar:     #181b1e;
+    --bg-card:        #1f2327;
+    --bg-elevated:    #2a2f34;
+    --bg-input:       #121416;
+    --text-primary:   #f1f3f5;
+    --text-secondary: #b6bec8;
+    --text-muted:     #7c858f;
+    --border:         #3a4148;
+    --accent:         #cbd5e1;
+    --accent-hover:   #e2e8f0;
+    --accent-soft:    rgba(203, 213, 225, 0.14);
+    --accent-contrast:#121416;
+    --success:        #34d399;
+    --warning:        #fbbf24;
+    --danger:         #f87171;
+    --info:           #38bdf8;
+    --shadow:         0 1px 3px rgba(0,0,0,0.5), 0 8px 24px rgba(0,0,0,0.35);
 }
 
 /*------------------------------------------------------------------------------

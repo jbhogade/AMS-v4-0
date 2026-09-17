@@ -27,7 +27,17 @@ window.AMS_MASTER_CONFIG = {
        Site, so the real identifier is an auto-generated ID, matched on import by
        Name+Site instead. */
     autoIdField: "consumableId",
-    autoIdGenerate: () => `CNS-${String(AMS_DUMMY_CONSUMABLES.length + 1).padStart(6, "0")}`,
+    /* max+1 (not count+1): after a row is deleted a count-based sequence would
+       reuse an existing ID and collide on the server's natural key (record_key),
+       which makes the whole wholesale PUT fail with 409 so nothing persists. */
+    autoIdGenerate: () => {
+        let maxSeq = 0;
+        AMS_DUMMY_CONSUMABLES.forEach(c => {
+            const m = String(c.consumableId || "").match(/^CNS-(\d+)$/);
+            if (m) maxSeq = Math.max(maxSeq, parseInt(m[1], 10));
+        });
+        return `CNS-${String(maxSeq + 1).padStart(6, "0")}`;
+    },
     importMatchKeys: ["name", "site"],
     fields: [
         { key: "name", label: "Consumable Name", required: true },
