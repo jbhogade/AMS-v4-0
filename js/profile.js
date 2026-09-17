@@ -23,7 +23,7 @@
         set("pf-email", profile.email || "");
         set("pf-contactNo", profile.contactNo || "");
         set("pf-gender", profile.gender || "");
-        set("pf-dob", profile.dob || "");
+        set("pf-dob", typeof amsParseDMY === "function" ? (amsParseDMY(profile.dob) || "") : (profile.dob || ""));
         set("pf-address", profile.address || "");
     }
 

@@ -2,7 +2,7 @@
    AMS-v4-0 DATABASE SCRIPT  (relational schema)
    -----------------------------------------------------------------------------
    Creates the AMS-v4-0 database and the full relational schema used by the
-    Asset Management System live portal.
+   Asset Management System live portal.
 
    DESIGN NOTES (v2 - per-entity tables)
    -----------------------------------------------------------------------------
