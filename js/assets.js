@@ -47,8 +47,18 @@ function amsGenerateAmsAssetId(typeShort) {
     const now = new Date();
     const pad = n => String(n).padStart(2, "0");
     const ts = `${pad(now.getDate())}${pad(now.getMonth() + 1)}${String(now.getFullYear()).slice(2)}-${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;
-    const seq = AST_STATE.assets.filter(a => a.type && amsTypeShort(a.type) === typeShort).length + 1;
-    return `AMS-${typeShort}-${ts}-${String(seq).padStart(6, "0")}`;
+    /* max+1 within this type+timestamp. This ID is the stable key that links a
+       SIM card to its mobile, so a count-based sequence that repeats an existing
+       ID (two rows in one import / after a delete) would mis-link the SIM. */
+    const prefix = `AMS-${typeShort}-${ts}-`;
+    let maxSeq = 0;
+    AST_STATE.assets.forEach(a => {
+        const id = String(a.amsAssetId || "");
+        if (id.indexOf(prefix) !== 0) return;
+        const n = parseInt(id.slice(prefix.length), 10);
+        if (!isNaN(n)) maxSeq = Math.max(maxSeq, n);
+    });
+    return `${prefix}${String(maxSeq + 1).padStart(6, "0")}`;
 }
 
 function amsGenerateDisplayId(typeShort) {
@@ -590,15 +600,15 @@ function amsOpenEditModal(key) {
     document.getElementById("fAssetId").value = amsBaseDisplayId(a);
     document.getElementById("fName").value = a.name || "";
     document.getElementById("fModel").value = a.model || "";
-    document.getElementById("fPurchaseSite").value = a.purchaseSite;
-    document.getElementById("fCurrentSite").value = a.currentSite || a.site;
+    amsSetSelectValue("fPurchaseSite", a.purchaseSite || "");
+    amsSetSelectValue("fCurrentSite", a.currentSite || a.site || "");
     document.getElementById("fSerial").value = a.serialNumber || "";
-    document.getElementById("fPurchaseDate").value = a.purchaseDate || "";
-    document.getElementById("fWarrantyEnd").value = a.warrantyEnd || "";
+    amsSetDateInput("fPurchaseDate", a.purchaseDate);
+    amsSetDateInput("fWarrantyEnd", a.warrantyEnd);
     amsSetVendorSelectValue("fVendor", a.vendor || "");
     document.getElementById("fCost").value = a.purchaseCost || "";
     document.getElementById("fRemarks").value = a.remarks || "";
-    document.getElementById("fStatus").value = a.status;
+    amsSetSelectValue("fStatus", a.status);
     amsUpdateAssetIdPreview();
     amsOpenModal("modalForm");
 }
@@ -795,13 +805,13 @@ function amsOpenAssignModal(key, mode) {
     const confirmBtn = document.getElementById("btnConfirmAssign");
     if (confirmBtn) confirmBtn.textContent = mode === "edit" ? "Save Changes" : "Confirm";
     amsPopulateEmpDropdowns();
-    document.getElementById("assignDirectEmp").value = a.assignedTo || "";
-    document.getElementById("assignSubEmp").value = a.assignedToSubordinate || (a.assignedSubText ? "__other__" : "");
+    amsSetSelectValue("assignDirectEmp", a.assignedTo || "");
+    amsSetSelectValue("assignSubEmp", a.assignedToSubordinate || (a.assignedSubText ? "__other__" : ""));
     document.getElementById("assignSubText").value = a.assignedSubText || "";
     document.getElementById("assignSubText").style.display = a.assignedSubText ? "block" : "none";
     const dateEl = document.getElementById("assignDate");
-    if (mode === "edit") dateEl.value = amsLastAssignDate(a) || new Date().toISOString().slice(0, 10);
-    else dateEl.value = new Date().toISOString().slice(0, 10);
+    if (mode === "edit") amsSetDateInput(dateEl, amsLastAssignDate(a) || new Date().toISOString().slice(0, 10));
+    else amsSetDateInput(dateEl, new Date().toISOString().slice(0, 10));
     amsRenderAccessoriesChecklist("assignAccessories", a.type, mode === "edit" ? (a.accessories || []) : []);
 
     amsOpenModal("modalAssign");
@@ -1175,9 +1185,15 @@ function amsSubordinateAssetsForEmpDetailed(empId) {
     const directReports = AMS_STATE_EMPLOYEES_REF().filter(e => e.reportsTo === empId);
     let list = [];
     directReports.forEach(r => {
-        amsOwnedAssetsForEmp(r.empId).forEach(a => list.push({
-            ...a, subName: r.name, subEmpId: amsGetEmployeeDisplayId(r),
-        }));
+        amsOwnedAssetsForEmp(r.empId).forEach(a => {
+            /* Only assets the subordinate PERSONALLY holds. Skip ones they are
+               merely custodian of (real user is a deeper subordinate/free text),
+               so an asset does not cascade onto every manager up the chain. */
+            if (amsAssetIsDeptOrSub(a)) return;
+            list.push({
+                ...a, subName: r.name, subEmpId: amsGetEmployeeDisplayId(r),
+            });
+        });
     });
     return list;
 }
@@ -1511,16 +1527,22 @@ function amsImportAssetsFile(file) {
                 results.push({ row: line, record, result: "updated", reason: "Existing asset updated" });
             } else {
                 const typeShort = amsTypeShort(obj.type);
-                const displayId = obj.displayId || amsGenerateDisplayId(typeShort);
                 const asset = {
-                    amsAssetId: amsGenerateAmsAssetId(typeShort), displayId, isLegacyId: !!obj.displayId, id: displayId,
+                    amsAssetId: "", displayId: "", isLegacyId: !!obj.displayId, id: "",
                     type: obj.type, category: obj.category || "", make: obj.make, model: obj.model || "", name: obj.name || "", serialNumber: obj.serialNumber || "",
                     purchaseSite: obj.purchaseSite || obj.currentSite, currentSite: obj.currentSite, site: obj.currentSite,
                     purchaseDate, warrantyEnd, status, dept: "", assignedTo: null, assignedToSubordinate: null,
                     vendor: obj.vendor || "", purchaseCost: obj.purchaseCost || "", remarks: obj.remarks || "",
-                    history: [{ date: new Date().toISOString().slice(0, 10), action: "Added to Inventory (Import)", empId: "", empName: "", empDept: "", assetIdFull: displayId, statusLabel: status }],
+                    history: [],
                 };
                 AST_STATE.assets.push(asset);
+                /* Generate the ID AFTER the push so a max+1 scan sees this row:
+                   two new assets in the same import then get distinct IDs instead
+                   of colliding on the server's record_key (409 -> nothing saves). */
+                asset.displayId = obj.displayId || amsGenerateDisplayId(typeShort);
+                asset.id = asset.displayId;
+                asset.amsAssetId = amsGenerateAmsAssetId(typeShort);
+                asset.history = [{ date: new Date().toISOString().slice(0, 10), action: "Added to Inventory (Import)", empId: "", empName: "", empDept: "", assetIdFull: asset.displayId, statusLabel: status }];
                 results.push({ row: line, record, result: "added", reason: "New asset added" });
             }
         }

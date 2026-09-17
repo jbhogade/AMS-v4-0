@@ -1,5 +1,12 @@
 # AMS-v4-0 change log
 
+## 2026-09-17 — Port AMS-Test UI to live AMS-v4-0
+
+Glass Theme (Platinum default, Blue removed), login Theme dropdown,
+per-user Theme and sidebar Show/Hide, Actions menus, themed date picker,
+max+1 IDs, import date parse, For Reference cascade. Live cut stays
+blank except logins. Database remains `AMS-v4-0`. Hard-refresh (Ctrl+F5).
+
 ## 2026-09-11 — Live blank cut (AMS-v4-0)
 
 Live database is `AMS-v4-0`. Masters and business records start empty.

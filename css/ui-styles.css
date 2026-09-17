@@ -1,403 +1,193 @@
 /*==============================================================================
 #-------------- Start Code for : UI STYLES (ui-styles.css) ---------------------
 #
-#  PURPOSE   : Surface looks independent of color themes. Theme stays on
-#              data-theme (themes.css). Style is data-ui-style on <html>.
+#  PURPOSE   : Always-on frosted glass over a dark geometric field.
+#              Color still comes from data-theme (themes.css). There is no
+#              separate Style picker.
 #
-#  STYLES    :
-#      default        -> no extra rules (current portal)
-#      liquid-glass   -> high blur, light edge, more see-through
-#      glassmorphism  -> frosted panels, glass border
-#      claymorphism   -> large radius, plump inner + outer shadow
-#      neomorphism    -> extruded dual shadow, no hard border
-#      skeuomorphism  -> bevel gradient, inset highlight
-#      minimalism     -> thin border, no shadow, tight corners
+#  LOOK      : More see-through panels, accent-tinted glass edge, local
+#              geometric lattice (no hotlinked image).
+#
+#  DROPDOWNS : backdrop-filter on an ancestor makes position:fixed attach to
+#              that ancestor (and overflow clips it). Cards / modals therefore
+#              blur via ::before so row Actions menus stay viewport-fixed.
 #
 #  COLORS    : theme-variable only. Not --bg-surface / --bg-soft / --primary.
 #
 #  OUT OF SCOPE : .quickadd-popover stays opaque in main.css so form (+)
-#                 panels remain readable. Excel type-in filter inputs follow Style.
+#                 panels remain readable. Login keeps its own page CSS.
+#                 Excel type-in filter inputs follow the glass fill.
 #------------------------------------------------------------------------------*/
 
 /* =============================================================================
-   LIQUID GLASS
+   GEOMETRIC FIELD  (portal pages only; login has its own backdrop)
    ===========================================================================*/
-html[data-ui-style="liquid-glass"] body {
+html:not(.login-page) body {
+    background-color: var(--bg-body);
     background-image:
-        radial-gradient(ellipse at 18% 0%, color-mix(in srgb, var(--accent) 20%, transparent), transparent 52%),
-        radial-gradient(ellipse at 88% 100%, color-mix(in srgb, var(--accent) 14%, transparent), transparent 48%);
-}
-
-html[data-ui-style="liquid-glass"] .sidebar,
-html[data-ui-style="liquid-glass"] .topbar,
-html[data-ui-style="liquid-glass"] .card,
-html[data-ui-style="liquid-glass"] .kpi-card,
-html[data-ui-style="liquid-glass"] .modal,
-html[data-ui-style="liquid-glass"] .user-chip-menu,
-html[data-ui-style="liquid-glass"] .notif-bell-panel,
-html[data-ui-style="liquid-glass"] .ams-toast,
-html[data-ui-style="liquid-glass"] .login-card {
-    background: var(--bg-card);
-    background: color-mix(in srgb, var(--bg-card) 58%, transparent);
-    backdrop-filter: blur(22px) saturate(1.35);
-    -webkit-backdrop-filter: blur(22px) saturate(1.35);
-    border: 1px solid color-mix(in srgb, var(--text-primary) 22%, transparent);
-    box-shadow: 0 8px 32px color-mix(in srgb, var(--accent) 12%, transparent),
-                inset 0 1px 0 color-mix(in srgb, var(--text-primary) 28%, transparent);
-}
-
-html[data-ui-style="liquid-glass"] .user-chip,
-html[data-ui-style="liquid-glass"] .btn,
-html[data-ui-style="liquid-glass"] .input,
-html[data-ui-style="liquid-glass"] .select,
-html[data-ui-style="liquid-glass"] .textarea,
-html[data-ui-style="liquid-glass"] .col-filter-input {
-    background: var(--bg-input);
-    background: color-mix(in srgb, var(--bg-input) 70%, transparent);
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
-    border-color: color-mix(in srgb, var(--text-primary) 18%, var(--border));
-}
-
-html[data-ui-style="liquid-glass"] .btn-primary {
-    backdrop-filter: none;
-    -webkit-backdrop-filter: none;
-    background: var(--accent);
-    border-color: var(--accent);
-    color: var(--accent-contrast);
-    box-shadow: none;
-}
-
-html[data-ui-style="liquid-glass"] .col-filter-row th.col-filter-cell,
-html[data-ui-style="liquid-glass"] .table thead th {
-    background: color-mix(in srgb, var(--bg-elevated) 58%, transparent);
-    backdrop-filter: blur(16px) saturate(1.3);
-    -webkit-backdrop-filter: blur(16px) saturate(1.3);
+        radial-gradient(ellipse at 14% 0%, color-mix(in srgb, var(--accent) 22%, transparent), transparent 44%),
+        radial-gradient(ellipse at 86% 100%, color-mix(in srgb, var(--accent) 14%, transparent), transparent 50%),
+        repeating-linear-gradient(60deg, transparent 0 26px, color-mix(in srgb, var(--accent) 9%, transparent) 26px 27px),
+        repeating-linear-gradient(-60deg, transparent 0 26px, color-mix(in srgb, var(--accent) 6%, transparent) 26px 27px),
+        repeating-linear-gradient(0deg, transparent 0 44px, color-mix(in srgb, var(--text-primary) 4%, transparent) 44px 45px);
+    background-attachment: fixed;
 }
 
 /* =============================================================================
-   GLASSMORPHISM
+   FROSTED GLASS  (chrome: no nested position:fixed menus)
    ===========================================================================*/
-html[data-ui-style="glassmorphism"] body {
-    background-image:
-        radial-gradient(ellipse at 10% 10%, color-mix(in srgb, var(--accent) 14%, transparent), transparent 46%);
-}
-
-html[data-ui-style="glassmorphism"] .sidebar,
-html[data-ui-style="glassmorphism"] .topbar,
-html[data-ui-style="glassmorphism"] .card,
-html[data-ui-style="glassmorphism"] .kpi-card,
-html[data-ui-style="glassmorphism"] .modal,
-html[data-ui-style="glassmorphism"] .user-chip-menu,
-html[data-ui-style="glassmorphism"] .notif-bell-panel,
-html[data-ui-style="glassmorphism"] .ams-toast,
-html[data-ui-style="glassmorphism"] .login-card {
+html[data-ui-style="glass"] .sidebar,
+html[data-ui-style="glass"] .topbar,
+html[data-ui-style="glass"] .user-chip-menu,
+html[data-ui-style="glass"] .notif-bell-panel,
+html[data-ui-style="glass"] .ams-toast,
+html[data-ui-style="glass"] .actions-menu,
+html[data-ui-style="glass"] .ams-date-pop {
     background: var(--bg-card);
-    background: color-mix(in srgb, var(--bg-card) 78%, transparent);
-    backdrop-filter: blur(14px) saturate(1.2);
-    -webkit-backdrop-filter: blur(14px) saturate(1.2);
-    border: 1px solid color-mix(in srgb, var(--text-primary) 16%, var(--border));
-    box-shadow: 0 8px 24px color-mix(in srgb, var(--bg-body) 40%, transparent);
+    background: color-mix(in srgb, var(--bg-card) 34%, transparent);
+    backdrop-filter: blur(22px) saturate(1.4);
+    -webkit-backdrop-filter: blur(22px) saturate(1.4);
+    border: 1px solid color-mix(in srgb, var(--accent) 38%, var(--border));
+    box-shadow: 0 12px 36px color-mix(in srgb, var(--bg-body) 45%, transparent),
+                inset 0 1px 0 color-mix(in srgb, var(--text-primary) 22%, transparent);
 }
 
-html[data-ui-style="glassmorphism"] .user-chip,
-html[data-ui-style="glassmorphism"] .btn,
-html[data-ui-style="glassmorphism"] .input,
-html[data-ui-style="glassmorphism"] .select,
-html[data-ui-style="glassmorphism"] .textarea,
-html[data-ui-style="glassmorphism"] .col-filter-input {
+html[data-ui-style="glass"] .sidebar {
+    background: color-mix(in srgb, var(--bg-sidebar) 40%, transparent);
+}
+
+html[data-ui-style="glass"] .topbar {
+    background: color-mix(in srgb, var(--bg-card) 38%, transparent);
+}
+
+html[data-ui-style="glass"] .actions-menu,
+html[data-ui-style="glass"] .user-chip-menu,
+html[data-ui-style="glass"] .notif-bell-panel,
+html[data-ui-style="glass"] .ams-date-pop {
+    background: color-mix(in srgb, var(--bg-card) 78%, transparent);
+}
+
+html[data-ui-style="glass"] .user-chip,
+html[data-ui-style="glass"] .btn,
+html[data-ui-style="glass"] .input,
+html[data-ui-style="glass"] .select,
+html[data-ui-style="glass"] .textarea,
+html[data-ui-style="glass"] .col-filter-input,
+html[data-ui-style="glass"] .actions-trigger,
+html[data-ui-style="glass"] .actions-btn,
+html[data-ui-style="glass"] input[type="date"],
+html[data-ui-style="glass"] .form-field input[type="date"],
+html[data-ui-style="glass"] .ams-date-pop-nav,
+html[data-ui-style="glass"] .ams-date-pop-foot button,
+html[data-ui-style="glass"] .ams-date-pop-day {
     background: var(--bg-input);
-    background: color-mix(in srgb, var(--bg-input) 86%, transparent);
+    background: color-mix(in srgb, var(--bg-input) 42%, transparent);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-color: color-mix(in srgb, var(--accent) 28%, var(--border));
+}
+
+html[data-ui-style="glass"] .btn-primary {
     backdrop-filter: blur(8px);
     -webkit-backdrop-filter: blur(8px);
+    background: linear-gradient(180deg, color-mix(in srgb, var(--accent) 48%, transparent), color-mix(in srgb, var(--accent) 18%, transparent));
+    border-color: color-mix(in srgb, var(--accent) 72%, var(--border));
+    color: var(--text-primary);
+    box-shadow: 0 8px 20px color-mix(in srgb, var(--bg-body) 35%, transparent),
+                inset 0 1px 0 color-mix(in srgb, var(--text-primary) 26%, transparent);
 }
 
-html[data-ui-style="glassmorphism"] .btn-primary {
-    backdrop-filter: none;
-    -webkit-backdrop-filter: none;
-    background: var(--accent);
-    border-color: var(--accent);
-    color: var(--accent-contrast);
-}
-
-html[data-ui-style="glassmorphism"] .col-filter-row th.col-filter-cell,
-html[data-ui-style="glassmorphism"] .table thead th {
-    background: color-mix(in srgb, var(--bg-elevated) 78%, transparent);
-    backdrop-filter: blur(10px) saturate(1.15);
-    -webkit-backdrop-filter: blur(10px) saturate(1.15);
+html[data-ui-style="glass"] .col-filter-row th.col-filter-cell,
+html[data-ui-style="glass"] .table thead th {
+    background: color-mix(in srgb, var(--bg-elevated) 42%, transparent);
+    backdrop-filter: blur(16px) saturate(1.25);
+    -webkit-backdrop-filter: blur(16px) saturate(1.25);
 }
 
 /* =============================================================================
-   CLAYMORPHISM
+   CARDS / MODALS  (blur on ::before so row Actions stay viewport-fixed)
    ===========================================================================*/
-html[data-ui-style="claymorphism"] .card,
-html[data-ui-style="claymorphism"] .kpi-card,
-html[data-ui-style="claymorphism"] .modal,
-html[data-ui-style="claymorphism"] .user-chip-menu,
-html[data-ui-style="claymorphism"] .notif-bell-panel,
-html[data-ui-style="claymorphism"] .ams-toast,
-html[data-ui-style="claymorphism"] .login-card {
-    border-radius: 24px;
-    border-color: transparent;
-    background: var(--bg-card);
-    box-shadow:
-        0 14px 28px color-mix(in srgb, var(--bg-body) 70%, #000),
-        0 4px 8px color-mix(in srgb, var(--bg-body) 40%, #000),
-        inset 0 -8px 16px color-mix(in srgb, var(--bg-body) 35%, transparent),
-        inset 0 6px 10px color-mix(in srgb, var(--text-primary) 8%, transparent);
+html[data-ui-style="glass"] .card,
+html[data-ui-style="glass"] .kpi-card,
+html[data-ui-style="glass"] .modal {
+    background: color-mix(in srgb, var(--bg-card) 34%, transparent);
+    border: 1px solid color-mix(in srgb, var(--accent) 38%, var(--border));
+    box-shadow: 0 12px 36px color-mix(in srgb, var(--bg-body) 45%, transparent),
+                inset 0 1px 0 color-mix(in srgb, var(--text-primary) 22%, transparent);
+    position: relative;
+    overflow: visible;
+    isolation: isolate;
 }
 
-html[data-ui-style="claymorphism"] .sidebar {
-    border-right-color: transparent;
-    border-radius: 0 22px 22px 0;
-    box-shadow: 8px 0 24px color-mix(in srgb, var(--bg-body) 55%, #000);
+html[data-ui-style="glass"] .card::before,
+html[data-ui-style="glass"] .kpi-card::before,
+html[data-ui-style="glass"] .modal::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    pointer-events: none;
+    z-index: 0;
+    backdrop-filter: blur(22px) saturate(1.4);
+    -webkit-backdrop-filter: blur(22px) saturate(1.4);
 }
 
-html[data-ui-style="claymorphism"] .topbar {
-    border-bottom-color: transparent;
-    border-radius: 0 0 18px 18px;
-    box-shadow: 0 8px 18px color-mix(in srgb, var(--bg-body) 40%, transparent);
-}
-
-html[data-ui-style="claymorphism"] .user-chip,
-html[data-ui-style="claymorphism"] .btn,
-html[data-ui-style="claymorphism"] .input,
-html[data-ui-style="claymorphism"] .select,
-html[data-ui-style="claymorphism"] .textarea,
-html[data-ui-style="claymorphism"] .col-filter-input {
-    border-radius: 16px;
-    border-color: transparent;
-    box-shadow:
-        4px 6px 12px color-mix(in srgb, var(--bg-body) 55%, #000),
-        inset 0 -3px 6px color-mix(in srgb, var(--bg-body) 25%, transparent);
-}
-
-html[data-ui-style="claymorphism"] .btn-primary {
-    background: var(--accent);
-    border-color: var(--accent);
-    color: var(--accent-contrast);
-}
-
-html[data-ui-style="claymorphism"] .col-filter-row th.col-filter-cell,
-html[data-ui-style="claymorphism"] .table thead th {
-    background: var(--bg-card);
-    box-shadow: inset 0 -4px 8px color-mix(in srgb, var(--bg-body) 25%, transparent);
+html[data-ui-style="glass"] .card > *,
+html[data-ui-style="glass"] .kpi-card > *,
+html[data-ui-style="glass"] .modal > * {
+    position: relative;
+    z-index: 1;
 }
 
 /* =============================================================================
-   NEOMORPHISM
-   ===========================================================================*/
-html[data-ui-style="neomorphism"] .sidebar,
-html[data-ui-style="neomorphism"] .topbar,
-html[data-ui-style="neomorphism"] .card,
-html[data-ui-style="neomorphism"] .kpi-card,
-html[data-ui-style="neomorphism"] .modal,
-html[data-ui-style="neomorphism"] .user-chip,
-html[data-ui-style="neomorphism"] .user-chip-menu,
-html[data-ui-style="neomorphism"] .notif-bell-panel,
-html[data-ui-style="neomorphism"] .ams-toast,
-html[data-ui-style="neomorphism"] .login-card,
-html[data-ui-style="neomorphism"] .btn,
-html[data-ui-style="neomorphism"] .input,
-html[data-ui-style="neomorphism"] .select,
-html[data-ui-style="neomorphism"] .textarea,
-html[data-ui-style="neomorphism"] .col-filter-input {
-    background: var(--bg-body);
-    border-color: transparent;
-    box-shadow:
-        6px 6px 14px color-mix(in srgb, #000 28%, transparent),
-        -4px -4px 12px color-mix(in srgb, var(--text-primary) 10%, transparent);
-}
-
-html[data-ui-style="neomorphism"] .sidebar { border-right-color: transparent; }
-html[data-ui-style="neomorphism"] .topbar { border-bottom-color: transparent; }
-
-html[data-ui-style="neomorphism"] .input:focus,
-html[data-ui-style="neomorphism"] .select:focus,
-html[data-ui-style="neomorphism"] .textarea:focus,
-html[data-ui-style="neomorphism"] .col-filter-input:focus {
-    box-shadow:
-        inset 3px 3px 8px color-mix(in srgb, #000 22%, transparent),
-        inset -2px -2px 6px color-mix(in srgb, var(--text-primary) 8%, transparent);
-}
-
-html[data-ui-style="neomorphism"] .btn-primary {
-    background: var(--accent);
-    border-color: var(--accent);
-    color: var(--accent-contrast);
-    box-shadow:
-        4px 4px 10px color-mix(in srgb, #000 30%, transparent),
-        -2px -2px 8px color-mix(in srgb, var(--text-primary) 10%, transparent);
-}
-
-html[data-ui-style="neomorphism"] .col-filter-row th.col-filter-cell,
-html[data-ui-style="neomorphism"] .table thead th {
-    background: var(--bg-body);
-    box-shadow:
-        inset 3px 3px 6px color-mix(in srgb, #000 18%, transparent),
-        inset -2px -2px 5px color-mix(in srgb, var(--text-primary) 7%, transparent);
-}
-
-/* =============================================================================
-   SKEUOMORPHISM
-   ===========================================================================*/
-html[data-ui-style="skeuomorphism"] .card,
-html[data-ui-style="skeuomorphism"] .kpi-card,
-html[data-ui-style="skeuomorphism"] .modal,
-html[data-ui-style="skeuomorphism"] .user-chip-menu,
-html[data-ui-style="skeuomorphism"] .notif-bell-panel,
-html[data-ui-style="skeuomorphism"] .ams-toast,
-html[data-ui-style="skeuomorphism"] .login-card {
-    background: linear-gradient(180deg, var(--bg-elevated) 0%, var(--bg-card) 55%, var(--bg-body) 100%);
-    border: 1px solid var(--border);
-    box-shadow:
-        0 10px 18px color-mix(in srgb, #000 35%, transparent),
-        inset 0 1px 0 color-mix(in srgb, var(--text-primary) 22%, transparent),
-        inset 0 -2px 4px color-mix(in srgb, #000 18%, transparent);
-}
-
-html[data-ui-style="skeuomorphism"] .sidebar {
-    background: linear-gradient(90deg, var(--bg-body) 0%, var(--bg-sidebar) 40%, var(--bg-sidebar) 100%);
-    box-shadow: 4px 0 14px color-mix(in srgb, #000 30%, transparent);
-}
-
-html[data-ui-style="skeuomorphism"] .topbar {
-    background: linear-gradient(180deg, var(--bg-elevated), var(--bg-card));
-    box-shadow:
-        0 4px 10px color-mix(in srgb, #000 25%, transparent),
-        inset 0 1px 0 color-mix(in srgb, var(--text-primary) 18%, transparent);
-}
-
-html[data-ui-style="skeuomorphism"] .user-chip,
-html[data-ui-style="skeuomorphism"] .btn,
-html[data-ui-style="skeuomorphism"] .input,
-html[data-ui-style="skeuomorphism"] .select,
-html[data-ui-style="skeuomorphism"] .textarea,
-html[data-ui-style="skeuomorphism"] .col-filter-input {
-    background: linear-gradient(180deg, var(--bg-elevated), var(--bg-input));
-    box-shadow:
-        0 2px 4px color-mix(in srgb, #000 28%, transparent),
-        inset 0 1px 0 color-mix(in srgb, var(--text-primary) 16%, transparent);
-}
-
-html[data-ui-style="skeuomorphism"] .btn-primary {
-    background: linear-gradient(180deg, var(--accent-hover), var(--accent));
-    border-color: var(--accent);
-    color: var(--accent-contrast);
-    box-shadow:
-        0 3px 6px color-mix(in srgb, #000 30%, transparent),
-        inset 0 1px 0 color-mix(in srgb, var(--accent-contrast) 35%, transparent);
-}
-
-html[data-ui-style="skeuomorphism"] .col-filter-row th.col-filter-cell,
-html[data-ui-style="skeuomorphism"] .table thead th {
-    background: linear-gradient(180deg, var(--bg-elevated), var(--bg-card));
-    box-shadow: inset 0 1px 0 color-mix(in srgb, var(--text-primary) 16%, transparent);
-}
-
-/* =============================================================================
-   MINIMALISM
-   ===========================================================================*/
-html[data-ui-style="minimalism"] .sidebar,
-html[data-ui-style="minimalism"] .topbar,
-html[data-ui-style="minimalism"] .card,
-html[data-ui-style="minimalism"] .kpi-card,
-html[data-ui-style="minimalism"] .modal,
-html[data-ui-style="minimalism"] .user-chip,
-html[data-ui-style="minimalism"] .user-chip-menu,
-html[data-ui-style="minimalism"] .notif-bell-panel,
-html[data-ui-style="minimalism"] .ams-toast,
-html[data-ui-style="minimalism"] .login-card,
-html[data-ui-style="minimalism"] .btn,
-html[data-ui-style="minimalism"] .input,
-html[data-ui-style="minimalism"] .select,
-html[data-ui-style="minimalism"] .textarea,
-html[data-ui-style="minimalism"] .col-filter-input {
-    border-radius: 4px;
-    box-shadow: none;
-    border: 1px solid var(--border);
-}
-
-html[data-ui-style="minimalism"] .sidebar {
-    border-right: 1px solid var(--border);
-}
-
-html[data-ui-style="minimalism"] .topbar {
-    border-bottom: 1px solid var(--border);
-}
-
-html[data-ui-style="minimalism"] .btn-primary {
-    background: var(--accent);
-    border-color: var(--accent);
-    color: var(--accent-contrast);
-}
-
-html[data-ui-style="minimalism"] .col-filter-row th.col-filter-cell,
-html[data-ui-style="minimalism"] .table thead th {
-    background: var(--bg-card);
-    box-shadow: none;
-}
-
-/* =============================================================================
-   REDUCED TRANSPARENCY  (glass styles fall back to solid fills)
+   REDUCED TRANSPARENCY
    ===========================================================================*/
 @media (prefers-reduced-transparency: reduce) {
-    html[data-ui-style="liquid-glass"] .sidebar,
-    html[data-ui-style="liquid-glass"] .topbar,
-    html[data-ui-style="liquid-glass"] .card,
-    html[data-ui-style="liquid-glass"] .kpi-card,
-    html[data-ui-style="liquid-glass"] .modal,
-    html[data-ui-style="liquid-glass"] .user-chip,
-    html[data-ui-style="liquid-glass"] .user-chip-menu,
-    html[data-ui-style="liquid-glass"] .notif-bell-panel,
-    html[data-ui-style="liquid-glass"] .ams-toast,
-    html[data-ui-style="liquid-glass"] .login-card,
-    html[data-ui-style="liquid-glass"] .btn,
-    html[data-ui-style="liquid-glass"] .input,
-    html[data-ui-style="liquid-glass"] .select,
-    html[data-ui-style="liquid-glass"] .textarea,
-    html[data-ui-style="liquid-glass"] .col-filter-input,
-    html[data-ui-style="liquid-glass"] .col-filter-row th.col-filter-cell,
-    html[data-ui-style="liquid-glass"] .table thead th,
-    html[data-ui-style="glassmorphism"] .sidebar,
-    html[data-ui-style="glassmorphism"] .topbar,
-    html[data-ui-style="glassmorphism"] .card,
-    html[data-ui-style="glassmorphism"] .kpi-card,
-    html[data-ui-style="glassmorphism"] .modal,
-    html[data-ui-style="glassmorphism"] .user-chip,
-    html[data-ui-style="glassmorphism"] .user-chip-menu,
-    html[data-ui-style="glassmorphism"] .notif-bell-panel,
-    html[data-ui-style="glassmorphism"] .ams-toast,
-    html[data-ui-style="glassmorphism"] .login-card,
-    html[data-ui-style="glassmorphism"] .btn,
-    html[data-ui-style="glassmorphism"] .input,
-    html[data-ui-style="glassmorphism"] .select,
-    html[data-ui-style="glassmorphism"] .textarea,
-    html[data-ui-style="glassmorphism"] .col-filter-input,
-    html[data-ui-style="glassmorphism"] .col-filter-row th.col-filter-cell,
-    html[data-ui-style="glassmorphism"] .table thead th {
+    html[data-ui-style="glass"] .sidebar,
+    html[data-ui-style="glass"] .topbar,
+    html[data-ui-style="glass"] .card,
+    html[data-ui-style="glass"] .kpi-card,
+    html[data-ui-style="glass"] .modal,
+    html[data-ui-style="glass"] .user-chip,
+    html[data-ui-style="glass"] .user-chip-menu,
+    html[data-ui-style="glass"] .notif-bell-panel,
+    html[data-ui-style="glass"] .ams-toast,
+    html[data-ui-style="glass"] .actions-menu,
+    html[data-ui-style="glass"] .ams-date-pop,
+    html[data-ui-style="glass"] .btn,
+    html[data-ui-style="glass"] .input,
+    html[data-ui-style="glass"] .select,
+    html[data-ui-style="glass"] .textarea,
+    html[data-ui-style="glass"] .col-filter-input,
+    html[data-ui-style="glass"] .actions-trigger,
+    html[data-ui-style="glass"] .actions-btn,
+    html[data-ui-style="glass"] .col-filter-row th.col-filter-cell,
+    html[data-ui-style="glass"] .table thead th {
         backdrop-filter: none;
         -webkit-backdrop-filter: none;
         background: var(--bg-card);
     }
 
-    html[data-ui-style="liquid-glass"] .user-chip,
-    html[data-ui-style="liquid-glass"] .btn,
-    html[data-ui-style="liquid-glass"] .input,
-    html[data-ui-style="liquid-glass"] .select,
-    html[data-ui-style="liquid-glass"] .textarea,
-    html[data-ui-style="liquid-glass"] .col-filter-input,
-    html[data-ui-style="glassmorphism"] .user-chip,
-    html[data-ui-style="glassmorphism"] .btn,
-    html[data-ui-style="glassmorphism"] .input,
-    html[data-ui-style="glassmorphism"] .select,
-    html[data-ui-style="glassmorphism"] .textarea,
-    html[data-ui-style="glassmorphism"] .col-filter-input {
+    html[data-ui-style="glass"] .card::before,
+    html[data-ui-style="glass"] .kpi-card::before,
+    html[data-ui-style="glass"] .modal::before {
+        display: none;
+    }
+
+    html[data-ui-style="glass"] .user-chip,
+    html[data-ui-style="glass"] .btn,
+    html[data-ui-style="glass"] .input,
+    html[data-ui-style="glass"] .select,
+    html[data-ui-style="glass"] .textarea,
+    html[data-ui-style="glass"] .col-filter-input,
+    html[data-ui-style="glass"] .actions-trigger,
+    html[data-ui-style="glass"] .actions-btn,
+    html[data-ui-style="glass"] .ams-date-pop-nav,
+    html[data-ui-style="glass"] .ams-date-pop-foot button {
         background: var(--bg-input);
     }
 
-    html[data-ui-style="liquid-glass"] .btn-primary,
-    html[data-ui-style="glassmorphism"] .btn-primary {
+    html[data-ui-style="glass"] .btn-primary {
         background: var(--accent);
         color: var(--accent-contrast);
     }

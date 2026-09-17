@@ -280,13 +280,13 @@ function openEditModal(amsId) {
 
     document.getElementById("f-empid").value = emp.empId;
     document.getElementById("f-name").value = getEmployeeFullName(emp);
-    document.getElementById("f-dept").value = emp.department;
+    amsSetSelectValue("f-dept", emp.department);
     document.getElementById("f-desig").value = emp.designation;
-    document.getElementById("f-manager").value = emp.managerAmsId || "";
+    amsSetSelectValue("f-manager", emp.managerAmsId || "");
     document.getElementById("f-manager-id").value = onManagerChange() || "";
     document.getElementById("f-contact").value = emp.contact;
     document.getElementById("f-email").value = emp.email;
-    document.getElementById("f-site").value = emp.site || "";
+    amsSetSelectValue("f-site", emp.site || "");
     hideFormError("employee-form-error");
     showModal("modal-employee");
 }

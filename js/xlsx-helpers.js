@@ -101,12 +101,19 @@ function amsPickImportSheet(wb) {
 }
 
 function amsReadExcelArrayBuffer(buf) {
-    const wb = XLSX.read(new Uint8Array(buf), { type: "array" });
+    const wb = XLSX.read(new Uint8Array(buf), { type: "array", cellDates: true });
     const ws = amsPickImportSheet(wb);
-    const aoa = XLSX.utils.sheet_to_json(ws, { header: 1, defval: "", raw: false });
+    const aoa = XLSX.utils.sheet_to_json(ws, { header: 1, defval: "", raw: true, dateNF: "dd-mm-yyyy" });
     return aoa
-        .map(row => row.map(c => c == null ? "" : String(c)))
-        .filter(row => row.some(c => c.trim() !== ""));
+        .map(row => row.map(c => {
+            if (c == null || c === "") return "";
+            if (c instanceof Date && !isNaN(c.getTime())) {
+                const pad = n => String(n).padStart(2, "0");
+                return `${c.getFullYear()}-${pad(c.getMonth() + 1)}-${pad(c.getDate())}`;
+            }
+            return String(c);
+        }))
+        .filter(row => row.some(c => String(c).trim() !== ""));
 }
 
 /* Reads an uploaded file and resolves to a 2D array of strings (header row

@@ -29,7 +29,17 @@ window.AMS_MASTER_CONFIG = {
        Site, so the real identifier is an auto-generated ID, matched on import
        by Name+AssetType+Site instead. */
     autoIdField: "partId",
-    autoIdGenerate: () => `SP-${String(AMS_DUMMY_SPARE_PARTS.length + 1).padStart(6, "0")}`,
+    /* max+1 (not count+1): after a row is deleted a count-based sequence would
+       reuse an existing ID and collide on the server's natural key (record_key),
+       which makes the whole wholesale PUT fail with 409 so nothing persists. */
+    autoIdGenerate: () => {
+        let maxSeq = 0;
+        AMS_DUMMY_SPARE_PARTS.forEach(p => {
+            const m = String(p.partId || "").match(/^SP-(\d+)$/);
+            if (m) maxSeq = Math.max(maxSeq, parseInt(m[1], 10));
+        });
+        return `SP-${String(maxSeq + 1).padStart(6, "0")}`;
+    },
     importMatchKeys: ["name", "assetType", "site"],
     fields: [
         { key: "name", label: "Part Name", required: true },

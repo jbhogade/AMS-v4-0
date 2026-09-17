@@ -1,56 +1,92 @@
 /*==============================================================================
 #-------------- Start Code for : THEME SWITCHER (theme.js) --------------------
 #
-#  PURPOSE   : Handles switching between the 11 color themes in themes.css
-#              and the independent UI styles in ui-styles.css.
+#  PURPOSE   : One Theme dropdown. Color palettes live in themes.css.
+#              Surface look is always frosted glass (css/ui-styles.css).
 #
 #  HOW IT WORKS :
-#    - Theme name is saved in localStorage and applied as data-theme.
-#    - Style name is saved separately and applied as data-ui-style.
-#    - Theme = color palette. Style = surface look (glass, clay, etc.).
+#    - Theme name is saved per signed-in username (ams-theme-by-user).
+#    - Login page (no session) uses the shared ams-theme key.
+#    - Glass is always on. There is no separate Style control.
 #
 #  TO ADD A NEW THEME :
 #    1. Add the [data-theme="name"] block in css/themes.css
 #    2. Add { name: "...", label: "..." } to THEMES below
-#    3. It will automatically appear in the dropdown menu.
-#
-#  TO ADD A NEW STYLE :
-#    1. Add the [data-ui-style="name"] block in css/ui-styles.css
-#    2. Add { name, label, hint } to UI_STYLES below
+#    3. It will automatically appear in the dropdown and Settings gallery.
 #------------------------------------------------------------------------------*/
 
 /* ---- Available themes (must match the blocks in themes.css) ---------------- */
 const THEMES = [
-    { name: "dark-grey",  label: "Dark Grey" },
+    { name: "platinum",   label: "Platinum"  },
+    { name: "dark-gold",  label: "Dark Gold" },
     { name: "midnight",   label: "Midnight"  },
+    { name: "obsidian",   label: "Obsidian"  },
+    { name: "dark-grey",  label: "Dark Grey" },
     { name: "slate-blue", label: "Slate Blue" },
-    { name: "blue",       label: "Blue"      },
-    { name: "lite",       label: "Lite"      },
+    { name: "ice",        label: "Ice"       },
+    { name: "teal",       label: "Teal"      },
     { name: "forest",     label: "Forest"    },
+    { name: "emerald",    label: "Emerald"   },
     { name: "purple",     label: "Purple"    },
-    { name: "amber",      label: "Amber"     },
     { name: "violet",     label: "Violet"    },
+    { name: "wine",       label: "Wine"      },
     { name: "crimson",    label: "Crimson"   },
+    { name: "rose-gold",  label: "Rose Gold" },
+    { name: "amber",      label: "Amber"     },
+    { name: "copper",     label: "Copper"    },
+    { name: "lite",       label: "Lite"      },
     { name: "contrast",   label: "Contrast"  }
 ];
 
-const THEME_STORAGE_KEY = "ams-theme";   /* localStorage key that stores the theme */
+const THEME_STORAGE_KEY = "ams-theme";
+const THEME_BY_USER_KEY = "ams-theme-by-user";
+const DEFAULT_THEME = "platinum";
 
-/* ---- Default theme used on the very first visit ---------------------------- */
-const DEFAULT_THEME = "dark-grey";
+function amsThemeUserKey() {
+    const sess = (typeof amsGetSession === "function") ? amsGetSession() : null;
+    return (sess && sess.username) ? String(sess.username).trim().toLowerCase() : "";
+}
+
+function amsReadThemeMap() {
+    try { return JSON.parse(localStorage.getItem(THEME_BY_USER_KEY) || "{}") || {}; }
+    catch (e) { return {}; }
+}
+
+function amsWriteThemeMap(map) {
+    try { localStorage.setItem(THEME_BY_USER_KEY, JSON.stringify(map)); } catch (e) { /* storage unavailable */ }
+}
+
+function amsNormalizeThemeName(name) {
+    if (name === "blue") return DEFAULT_THEME;
+    return THEMES.some(t => t.name === name) ? name : DEFAULT_THEME;
+}
 
 /* ---- Apply a theme by name -------------------------------------------------- */
 function applyTheme(themeName) {
-    document.documentElement.setAttribute("data-theme", themeName);
-    try { localStorage.setItem(THEME_STORAGE_KEY, themeName); } catch (e) { /* storage unavailable */ }
-    document.querySelectorAll("#theme-select").forEach(sel => { sel.value = themeName; });
+    const name = amsNormalizeThemeName(themeName);
+    document.documentElement.setAttribute("data-theme", name);
+    document.documentElement.setAttribute("data-ui-style", "glass");
+    try { localStorage.setItem(THEME_STORAGE_KEY, name); } catch (e) { /* storage unavailable */ }
+    const user = amsThemeUserKey();
+    if (user) {
+        const map = amsReadThemeMap();
+        map[user] = name;
+        amsWriteThemeMap(map);
+    }
+    document.querySelectorAll("#theme-select").forEach(sel => { sel.value = name; });
 }
 
 /* ---- Load the saved theme, or fall back to the default ---------------------- */
 function loadSavedTheme() {
+    const user = amsThemeUserKey();
+    if (user) {
+        const map = amsReadThemeMap();
+        if (map[user]) return amsNormalizeThemeName(map[user]);
+        return DEFAULT_THEME;
+    }
     let saved = null;
     try { saved = localStorage.getItem(THEME_STORAGE_KEY); } catch (e) { saved = null; }
-    return THEMES.some(t => t.name === saved) ? saved : DEFAULT_THEME;
+    return amsNormalizeThemeName(saved);
 }
 
 /* ---- Build the theme dropdown menu options ---------------------------------- */
@@ -67,61 +103,35 @@ function buildThemeMenu(selectId) {
 
     select.value = loadSavedTheme();
 
-    /* Change theme when the user picks a new one from the dropdown */
     select.addEventListener("change", function () {
         applyTheme(this.value);
     });
 }
 
-/* ---- Available UI styles (must match the blocks in ui-styles.css) ---------- */
+/* ---- Style API kept as a no-op so older pages do not break ----------------- */
 const UI_STYLES = [
-    { name: "default",        label: "Default",        hint: "Current solid panels and shadows." },
-    { name: "liquid-glass",   label: "Liquid Glass",   hint: "High blur, light edges, more see-through." },
-    { name: "glassmorphism",  label: "Glassmorphism",  hint: "Frosted panels with a glass border." },
-    { name: "claymorphism",   label: "Claymorphism",   hint: "Soft clay: large radius, plump shadows." },
-    { name: "neomorphism",    label: "Neomorphism",    hint: "Extruded surfaces, no hard border." },
-    { name: "skeuomorphism",  label: "Skeuomorphism",  hint: "Beveled, physical highlight and drop." },
-    { name: "minimalism",     label: "Minimalism",     hint: "Thin border, no shadow, tight corners." }
+    { name: "glass", label: "Glass", hint: "Frosted glass. Always on." }
 ];
-
 const UI_STYLE_STORAGE_KEY = "ams-ui-style";
-const DEFAULT_UI_STYLE = "default";
+const DEFAULT_UI_STYLE = "glass";
 
-function applyUiStyle(styleName) {
-    const name = UI_STYLES.some(s => s.name === styleName) ? styleName : DEFAULT_UI_STYLE;
-    document.documentElement.setAttribute("data-ui-style", name);
-    try { localStorage.setItem(UI_STYLE_STORAGE_KEY, name); } catch (e) { /* storage unavailable */ }
-    document.querySelectorAll("#style-select").forEach(sel => { sel.value = name; });
+function applyUiStyle() {
+    document.documentElement.setAttribute("data-ui-style", "glass");
+    try { localStorage.setItem(UI_STYLE_STORAGE_KEY, "glass"); } catch (e) { /* storage unavailable */ }
 }
 
 function loadSavedUiStyle() {
-    let saved = null;
-    try { saved = localStorage.getItem(UI_STYLE_STORAGE_KEY); } catch (e) { saved = null; }
-    return UI_STYLES.some(s => s.name === saved) ? saved : DEFAULT_UI_STYLE;
+    return "glass";
 }
 
-function buildStyleMenu(selectId) {
-    const select = document.getElementById(selectId);
-    if (!select) return;
-
-    UI_STYLES.forEach(style => {
-        const option = document.createElement("option");
-        option.value = style.name;
-        option.textContent = style.label;
-        select.appendChild(option);
-    });
-
-    select.value = loadSavedUiStyle();
-
-    select.addEventListener("change", function () {
-        applyUiStyle(this.value);
-    });
+function buildStyleMenu() {
+    /* Style dropdown removed: Theme is the only appearance control. */
 }
 
-/* ---- Initialise theme + style when the page loads -------------------------- */
+/* ---- Initialise theme when the page loads ---------------------------------- */
 function initTheme() {
     applyTheme(loadSavedTheme());
-    applyUiStyle(loadSavedUiStyle());
+    applyUiStyle();
 }
 
 /*------------------------------------------------------------------------------

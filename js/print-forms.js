@@ -62,9 +62,15 @@ function amsBuildAdditionalRemarks(extraRemarks) {
 function amsSubordinateAssetsDetailed(amsId) {
     const list = [];
     getSubordinates(amsId).forEach(sub => {
-        getEmployeeAssets(sub.amsId).forEach(a => list.push({
-            ...a, subName: getEmployeeFullName(sub), subEmpId: amsGetEmployeeDisplayId(sub),
-        }));
+        getEmployeeAssets(sub.amsId).forEach(a => {
+            /* Only what the subordinate PERSONALLY holds - skip assets they are
+               merely custodian of (real user is a deeper subordinate). Otherwise
+               the same asset would appear on every manager's form up the chain. */
+            if (amsAssetIsDeptOrSub(a)) return;
+            list.push({
+                ...a, subName: getEmployeeFullName(sub), subEmpId: amsGetEmployeeDisplayId(sub),
+            });
+        });
     });
     return list;
 }
