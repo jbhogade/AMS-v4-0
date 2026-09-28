@@ -35,12 +35,6 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 
 builder.Services.AddAuthorization();
 
-builder.Services.AddCors(options =>
-{
-    options.AddPolicy("AMS", policy =>
-        policy.AllowAnyOrigin().AllowAnyHeader().AllowAnyMethod());
-});
-
 // Raise the JSON body size limit so large collections can be uploaded.
 builder.Services.Configure<Microsoft.AspNetCore.Server.Kestrel.Core.KestrelServerOptions>(o =>
     o.Limits.MaxRequestBodySize = 32_000_000);
@@ -55,15 +49,21 @@ app.UseExceptionHandler(errorApp =>
     errorApp.Run(async context =>
     {
         var ex = context.Features.Get<IExceptionHandlerFeature>()?.Error;
+        context.Response.ContentType = "application/json; charset=utf-8";
         if (ex is SqlException)
         {
             context.Response.StatusCode = StatusCodes.Status503ServiceUnavailable;
-            context.Response.ContentType = "application/json; charset=utf-8";
             await context.Response.WriteAsJsonAsync(new
             {
-                error = "Database unavailable. Check that SQL Server is running and run database/Setup-AMS-v4-0.bat, then restart the API.",
+                error = "Database unavailable. Check that SQL Server is running and run database/Setup-AMS-v4-0.bat, then restart the API. " + ex.Message,
             });
+            return;
         }
+        context.Response.StatusCode = StatusCodes.Status500InternalServerError;
+        await context.Response.WriteAsJsonAsync(new
+        {
+            error = ex?.Message ?? "Unexpected server error.",
+        });
     });
 });
 
@@ -93,7 +93,6 @@ if (Directory.Exists(webRoot))
     app.UseStaticFiles(new StaticFileOptions { FileProvider = fileProvider });
 }
 
-app.UseCors("AMS");
 app.UseAuthentication();
 app.UseAuthorization();
 

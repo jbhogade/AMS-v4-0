@@ -5,9 +5,7 @@
 #              employee actions (View, Edit, Assign, Reassign, Exit, and the
 #              Asset Issue / Handover forms).
 #
-#  DATA      : Reads + writes the in-memory dummy data in dummy-data.js.
-#              When SQL Server arrives, replace the data calls in this file
-#              with API calls that return the same shapes.
+#  DATA      : Reads + writes SQL collections cached in dummy-data.js.
 #
 #  ACTIONS (from the row menu) :
 #     1. View           - full employee profile (AMS ID only for Super Root)

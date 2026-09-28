@@ -32,20 +32,20 @@ const ICONS = {
 
 /* ---- Navigation menu definition (single source of truth) ------------------- */
 const NAV_ITEMS = [
-    { page: "dashboard",   label: "Dashboard",   href: "../index.html",       icon: ICONS.dashboard,   section: "Main" },
-    { page: "employees",   label: "Employees",   href: "../pages/employees.html",   icon: ICONS.people,  section: "People" },
-    { page: "assets",      label: "Assets",      href: "../pages/assets.html",      icon: ICONS.assets,      section: "Inventory" },
-    { page: "mobiles",     label: "Mobiles",     href: "../pages/mobiles.html",     icon: ICONS.simCards,    section: "Inventory" },
-    { page: "asset-distribution", label: "Asset Distribution", href: "../pages/asset-distribution.html", icon: ICONS.assets, section: "Inventory" },
-    { page: "consumables", label: "Consumables", href: "../pages/consumables.html", icon: ICONS.consumables, section: "Inventory" },
-    { page: "spare-parts", label: "Spare Parts", href: "../pages/spare-parts.html", icon: ICONS.spareParts,  section: "Inventory" },
-    { page: "accessories", label: "Accessories", href: "../pages/accessories.html", icon: ICONS.accessories, section: "Inventory" },
-    { page: "sim-cards",   label: "SIM Cards",   href: "../pages/sim-cards.html",   icon: ICONS.simCards,   section: "Inventory" },
-    { page: "vendors",     label: "Vendors",     href: "../pages/vendors.html",     icon: ICONS.vendors,     section: "Admin" },
-    { page: "reports",     label: "Reports",     href: "../pages/reports.html",     icon: ICONS.reports,     section: "Admin" },
-    { page: "system-admin",label: "System Admin", href: "../pages/system-admin.html", icon: ICONS.systemAdmin, section: "Admin" },
-    { page: "settings",    label: "Settings",    href: "../pages/settings.html",    icon: ICONS.settings,    section: "Admin" },
-    { page: "user-master", label: "User Master", href: "../pages/user-master.html", icon: ICONS.people,    section: "Admin" }
+    { page: "dashboard",   label: "Dashboard",   href: "index.html",       icon: ICONS.dashboard,   section: "Main" },
+    { page: "employees",   label: "Employees",   href: "pages/employees.html",   icon: ICONS.people,  section: "People" },
+    { page: "assets",      label: "Assets",      href: "pages/assets.html",      icon: ICONS.assets,      section: "Inventory" },
+    { page: "mobiles",     label: "Mobiles",     href: "pages/mobiles.html",     icon: ICONS.simCards,    section: "Inventory" },
+    { page: "asset-distribution", label: "Asset Distribution", href: "pages/asset-distribution.html", icon: ICONS.assets, section: "Inventory" },
+    { page: "consumables", label: "Consumables", href: "pages/consumables.html", icon: ICONS.consumables, section: "Inventory" },
+    { page: "spare-parts", label: "Spare Parts", href: "pages/spare-parts.html", icon: ICONS.spareParts,  section: "Inventory" },
+    { page: "accessories", label: "Accessories", href: "pages/accessories.html", icon: ICONS.accessories, section: "Inventory" },
+    { page: "sim-cards",   label: "SIM Cards",   href: "pages/sim-cards.html",   icon: ICONS.simCards,   section: "Inventory" },
+    { page: "vendors",     label: "Vendors",     href: "pages/vendors.html",     icon: ICONS.vendors,     section: "Admin" },
+    { page: "reports",     label: "Reports",     href: "pages/reports.html",     icon: ICONS.reports,     section: "Admin" },
+    { page: "system-admin",label: "System Admin", href: "pages/system-admin.html", icon: ICONS.systemAdmin, section: "Admin" },
+    { page: "settings",    label: "Settings",    href: "pages/settings.html",    icon: ICONS.settings,    section: "Admin" },
+    { page: "user-master", label: "User Master", href: "pages/user-master.html", icon: ICONS.people,    section: "Admin" }
 ];
 
 /* ---- Page title mapping (used by the top header bar) ----------------------- */
@@ -54,6 +54,8 @@ const PAGE_TITLES = {
     "employees":   { title: "Employees",       sub: "Employee master, assets & handover records" },
     "assets":      { title: "Assets",          sub: "Equipment, machinery & company items" },
     "mobiles":     { title: "Mobiles",         sub: "Mobile phones & handheld devices" },
+    "asset-distribution": { title: "Asset Distribution", sub: "Assets currently assigned to employees" },
+    "profile":     { title: "My Profile",      sub: "Display name, contact and password" },
     "consumables": { title: "Consumables",     sub: "Items consumed during operations" },
     "spare-parts": { title: "Spare Parts",     sub: "Replacement components in stores" },
     "accessories": { title: "Accessories",     sub: "Attachments & add-ons for assets" },
@@ -99,8 +101,9 @@ function renderSidebar(currentPage) {
         }
 
         const active = item.page === currentPage ? "active" : "";
+        const href = (typeof amsHref === "function") ? amsHref(item.href) : item.href;
         sectionsHtml += `
-            <a class="sidebar-link ${active}" href="${item.href}" data-page="${item.page}" title="${escapeHtml(item.label)}">
+            <a class="sidebar-link ${active}" href="${href}" data-page="${item.page}" title="${escapeHtml(item.label)}">
                 <span class="icon">${item.icon}</span>
                 <span class="sidebar-link-label">${escapeHtml(item.label)}</span>
             </a>
@@ -162,7 +165,7 @@ function renderTopbar(currentPage) {
                     <span class="user-chip-caret">${typeof amsUiIcon === "function" ? amsUiIcon("caret") : ""}</span>
                 </div>
                 <div class="user-chip-menu" id="user-chip-menu">
-                    <a class="user-chip-menu-item" href="../pages/profile.html">My Profile</a>
+                    <a class="user-chip-menu-item" href="${(typeof amsHref === "function") ? amsHref("pages/profile.html") : "pages/profile.html"}">My Profile</a>
                     <button type="button" class="user-chip-menu-item" id="user-chip-logout">Logout</button>
                 </div>
             </div>`;
@@ -298,7 +301,7 @@ function amsRequireSession() {
     if (session && session.token) return true;
     const path = window.location.pathname;
     if (path.indexOf("login.html") !== -1) return true;
-    window.location.replace("../login.html");
+    window.location.replace((typeof amsHref === "function") ? amsHref("login.html") : "login.html");
     return false;
 }
 
@@ -308,7 +311,7 @@ function amsLayoutRedirectIfDenied(currentPage) {
     if (typeof amsUserCanAccessNavPage !== "function") return;
     if (amsUserCanAccessNavPage(currentPage)) return;
     const fallback = NAV_ITEMS.find(i => i.page !== currentPage && amsUserCanAccessNavPage(i.page));
-    if (fallback) window.location.replace(fallback.href);
+    if (fallback) window.location.replace((typeof amsHref === "function") ? amsHref(fallback.href) : fallback.href);
 }
 
 function initLayout(currentPage) {
@@ -353,14 +356,20 @@ function initLayout(currentPage) {
    Native <input type="date"> calendars are drawn by the OS and ignore Theme.
    This panel is viewport-fixed, uses theme variables, and is wired to every
    date field (including ones added later by Add/Edit modals).
+   Type in the field as before. Open the glass calendar from the icon on the
+   right (or Alt+ArrowDown). Click the month or year in the header to jump.
    ----------------------------------------------------------------------------*/
 const AMS_DATE_MONTHS = ["January", "February", "March", "April", "May", "June",
     "July", "August", "September", "October", "November", "December"];
+const AMS_DATE_MONTHS_SHORT = ["Jan", "Feb", "Mar", "Apr", "May", "Jun",
+    "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 const AMS_DATE_DOW = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
+const AMS_DATE_ICON_PX = 36;
 
 let AMS_DATE_POP = null;
 let AMS_DATE_TARGET = null;
 let AMS_DATE_VIEW = { y: 0, m: 0 };
+let AMS_DATE_MODE = "day";
 
 function amsDateIso(d) {
     const y = d.getFullYear();
@@ -377,6 +386,15 @@ function amsDateParse(value) {
     return isNaN(d.getTime()) ? null : d;
 }
 
+function amsDateOnIcon(e, input) {
+    const r = input.getBoundingClientRect();
+    return e.clientX >= r.right - AMS_DATE_ICON_PX;
+}
+
+function amsDateYearStart(y) {
+    return Math.floor(y / 12) * 12;
+}
+
 function amsDateEnsurePop() {
     if (AMS_DATE_POP) return AMS_DATE_POP;
     const pop = document.createElement("div");
@@ -384,9 +402,12 @@ function amsDateEnsurePop() {
     pop.hidden = true;
     pop.innerHTML = `
         <div class="ams-date-pop-head">
-            <button type="button" class="ams-date-pop-nav" data-date-nav="-1" aria-label="Previous month">&lt;</button>
-            <div class="ams-date-pop-title"></div>
-            <button type="button" class="ams-date-pop-nav" data-date-nav="1" aria-label="Next month">&gt;</button>
+            <button type="button" class="ams-date-pop-nav" data-date-nav="-1" aria-label="Previous">&lt;</button>
+            <div class="ams-date-pop-title">
+                <button type="button" class="ams-date-pop-title-btn" data-date-mode="month"></button>
+                <button type="button" class="ams-date-pop-title-btn" data-date-mode="year"></button>
+            </div>
+            <button type="button" class="ams-date-pop-nav" data-date-nav="1" aria-label="Next">&gt;</button>
         </div>
         <div class="ams-date-pop-week">${AMS_DATE_DOW.map(d => "<span>" + d + "</span>").join("")}</div>
         <div class="ams-date-pop-grid"></div>
@@ -395,13 +416,26 @@ function amsDateEnsurePop() {
             <button type="button" data-date-today>Today</button>
         </div>`;
     document.body.appendChild(pop);
+    pop.addEventListener("mousedown", function (e) { e.preventDefault(); });
     pop.addEventListener("click", function (e) {
+        const modeBtn = e.target.closest("[data-date-mode]");
+        if (modeBtn) {
+            const next = modeBtn.getAttribute("data-date-mode");
+            AMS_DATE_MODE = (AMS_DATE_MODE === next) ? "day" : next;
+            amsDateRender();
+            return;
+        }
         const nav = e.target.closest("[data-date-nav]");
         if (nav) {
-            AMS_DATE_VIEW.m += Number(nav.getAttribute("data-date-nav"));
-            if (AMS_DATE_VIEW.m < 0) { AMS_DATE_VIEW.m = 11; AMS_DATE_VIEW.y -= 1; }
-            if (AMS_DATE_VIEW.m > 11) { AMS_DATE_VIEW.m = 0; AMS_DATE_VIEW.y += 1; }
-            amsDateRenderGrid();
+            const step = Number(nav.getAttribute("data-date-nav"));
+            if (AMS_DATE_MODE === "year") AMS_DATE_VIEW.y += step * 12;
+            else if (AMS_DATE_MODE === "month") AMS_DATE_VIEW.y += step;
+            else {
+                AMS_DATE_VIEW.m += step;
+                if (AMS_DATE_VIEW.m < 0) { AMS_DATE_VIEW.m = 11; AMS_DATE_VIEW.y -= 1; }
+                if (AMS_DATE_VIEW.m > 11) { AMS_DATE_VIEW.m = 0; AMS_DATE_VIEW.y += 1; }
+            }
+            amsDateRender();
             return;
         }
         if (e.target.closest("[data-date-clear]")) {
@@ -412,6 +446,20 @@ function amsDateEnsurePop() {
             amsDateApply(amsDateIso(new Date()));
             return;
         }
+        const yearBtn = e.target.closest("[data-date-year]");
+        if (yearBtn) {
+            AMS_DATE_VIEW.y = Number(yearBtn.getAttribute("data-date-year"));
+            AMS_DATE_MODE = "month";
+            amsDateRender();
+            return;
+        }
+        const monthBtn = e.target.closest("[data-date-month]");
+        if (monthBtn) {
+            AMS_DATE_VIEW.m = Number(monthBtn.getAttribute("data-date-month"));
+            AMS_DATE_MODE = "day";
+            amsDateRender();
+            return;
+        }
         const day = e.target.closest("[data-date-day]");
         if (day) amsDateApply(day.getAttribute("data-date-day"));
     });
@@ -419,10 +467,19 @@ function amsDateEnsurePop() {
     return pop;
 }
 
-function amsDateRenderGrid() {
+function amsDateRenderTitle() {
     const pop = amsDateEnsurePop();
-    pop.querySelector(".ams-date-pop-title").textContent =
-        AMS_DATE_MONTHS[AMS_DATE_VIEW.m] + " " + AMS_DATE_VIEW.y;
+    const monthBtn = pop.querySelector('[data-date-mode="month"]');
+    const yearBtn = pop.querySelector('[data-date-mode="year"]');
+    monthBtn.textContent = AMS_DATE_MONTHS[AMS_DATE_VIEW.m];
+    yearBtn.textContent = String(AMS_DATE_VIEW.y);
+    monthBtn.classList.toggle("is-active", AMS_DATE_MODE === "month");
+    yearBtn.classList.toggle("is-active", AMS_DATE_MODE === "year");
+    pop.querySelector(".ams-date-pop-week").hidden = AMS_DATE_MODE !== "day";
+}
+
+function amsDateRenderDayGrid() {
+    const pop = amsDateEnsurePop();
     const first = new Date(AMS_DATE_VIEW.y, AMS_DATE_VIEW.m, 1);
     const startDow = first.getDay();
     const daysInMonth = new Date(AMS_DATE_VIEW.y, AMS_DATE_VIEW.m + 1, 0).getDate();
@@ -452,7 +509,47 @@ function amsDateRenderGrid() {
             + (iso === today ? " today" : "");
         html += '<button type="button" class="' + cls + '" data-date-day="' + iso + '">' + d + "</button>";
     }
+    pop.querySelector(".ams-date-pop-grid").className = "ams-date-pop-grid";
     pop.querySelector(".ams-date-pop-grid").innerHTML = html;
+}
+
+function amsDateRenderMonthGrid() {
+    const pop = amsDateEnsurePop();
+    const selected = amsDateParse(AMS_DATE_TARGET ? AMS_DATE_TARGET.value : "");
+    const now = new Date();
+    let html = "";
+    for (let m = 0; m < 12; m++) {
+        const cls = "ams-date-pop-cell"
+            + (selected && selected.getFullYear() === AMS_DATE_VIEW.y && selected.getMonth() === m ? " selected" : "")
+            + (now.getFullYear() === AMS_DATE_VIEW.y && now.getMonth() === m ? " today" : "");
+        html += '<button type="button" class="' + cls + '" data-date-month="' + m + '">' + AMS_DATE_MONTHS_SHORT[m] + "</button>";
+    }
+    pop.querySelector(".ams-date-pop-grid").className = "ams-date-pop-grid ams-date-pop-grid-months";
+    pop.querySelector(".ams-date-pop-grid").innerHTML = html;
+}
+
+function amsDateRenderYearGrid() {
+    const pop = amsDateEnsurePop();
+    const start = amsDateYearStart(AMS_DATE_VIEW.y);
+    const selected = amsDateParse(AMS_DATE_TARGET ? AMS_DATE_TARGET.value : "");
+    const nowY = new Date().getFullYear();
+    let html = "";
+    for (let i = 0; i < 12; i++) {
+        const y = start + i;
+        const cls = "ams-date-pop-cell"
+            + (selected && selected.getFullYear() === y ? " selected" : "")
+            + (nowY === y ? " today" : "");
+        html += '<button type="button" class="' + cls + '" data-date-year="' + y + '">' + y + "</button>";
+    }
+    pop.querySelector(".ams-date-pop-grid").className = "ams-date-pop-grid ams-date-pop-grid-years";
+    pop.querySelector(".ams-date-pop-grid").innerHTML = html;
+}
+
+function amsDateRender() {
+    amsDateRenderTitle();
+    if (AMS_DATE_MODE === "month") amsDateRenderMonthGrid();
+    else if (AMS_DATE_MODE === "year") amsDateRenderYearGrid();
+    else amsDateRenderDayGrid();
 }
 
 function amsDatePlace() {
@@ -476,15 +573,17 @@ function amsDateOpen(input) {
     AMS_DATE_TARGET = input;
     const parsed = amsDateParse(input.value) || new Date();
     AMS_DATE_VIEW = { y: parsed.getFullYear(), m: parsed.getMonth() };
+    AMS_DATE_MODE = "day";
     const pop = amsDateEnsurePop();
     pop.hidden = false;
-    amsDateRenderGrid();
+    amsDateRender();
     amsDatePlace();
 }
 
 function amsDateClose() {
     if (AMS_DATE_POP) AMS_DATE_POP.hidden = true;
     AMS_DATE_TARGET = null;
+    AMS_DATE_MODE = "day";
 }
 
 function amsDateApply(iso) {
@@ -502,22 +601,24 @@ function amsInitDatePickers() {
     document.addEventListener("mousedown", function (e) {
         const input = e.target.closest && e.target.closest('input[type="date"]');
         if (!input) return;
+        if (!amsDateOnIcon(e, input)) return;
         e.preventDefault();
         e.stopPropagation();
         if (AMS_DATE_TARGET === input && AMS_DATE_POP && !AMS_DATE_POP.hidden) amsDateClose();
         else amsDateOpen(input);
     }, true);
     document.addEventListener("click", function (e) {
-        if (e.target.closest && e.target.closest('input[type="date"]')) {
+        const input = e.target.closest && e.target.closest('input[type="date"]');
+        if (input && amsDateOnIcon(e, input)) {
             e.preventDefault();
             e.stopPropagation();
             return;
         }
-        if (AMS_DATE_POP && !AMS_DATE_POP.hidden && !e.target.closest(".ams-date-pop")) amsDateClose();
+        if (AMS_DATE_POP && !AMS_DATE_POP.hidden && !e.target.closest(".ams-date-pop")) {
+            if (input && AMS_DATE_TARGET === input) return;
+            amsDateClose();
+        }
     }, true);
-    document.addEventListener("focusin", function (e) {
-        if (e.target && e.target.matches && e.target.matches('input[type="date"]')) amsDateOpen(e.target);
-    });
     document.addEventListener("scroll", function (e) {
         if (!AMS_DATE_TARGET) return;
         if (AMS_DATE_POP && (e.target === AMS_DATE_POP || AMS_DATE_POP.contains(e.target))) return;
@@ -526,6 +627,12 @@ function amsInitDatePickers() {
     window.addEventListener("resize", function () { if (AMS_DATE_TARGET) amsDateClose(); }, { passive: true });
     document.addEventListener("keydown", function (e) {
         if (e.key === "Escape") amsDateClose();
+        if ((e.altKey && e.key === "ArrowDown") || e.key === "F4") {
+            if (e.target && e.target.matches && e.target.matches('input[type="date"]')) {
+                e.preventDefault();
+                amsDateOpen(e.target);
+            }
+        }
     });
 }
 

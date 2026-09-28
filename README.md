@@ -4,7 +4,7 @@ A web portal for recording company **assets**, **consumables**, **spare parts** 
 
 > **This is AMS-v4-0** - the live portal backed by SQL Server database `AMS-v4-0`. Masters and business records start empty. Login accounts are seeded. Use **AMS-Test** (`AMS-TEST`) for testing and upgrades.
 
-## Live Mode (SQL Server + ASP.NET Core API + Django Server)
+## Live Mode (SQL Server + ASP.NET Core API + Django)
 
 The portal is gated by `login.html`. On a Windows machine with SQL Server:
 
@@ -20,7 +20,9 @@ The portal is gated by `login.html`. On a Windows machine with SQL Server:
    - `operator.sys` / `Sr#Ops@2026` (Supreme Root - for system administration)
    - `testadmin` / `Admin@#$12345` (Super Root - the everyday admin account; use this so end users never need the Supreme Root login)
 
-How it works: business data is stored as JSON documents in the `dbo.ams_collections` table; the frontend loads every collection at startup and PUTs a collection back whenever the in-memory data changes (`js/dummy-data.js` data layer). Login accounts live in the relational `dbo.ams_users` table (PBKDF2-SHA256 hashed passwords, JWT sessions).
+Live cut: lookups, employees, assets and other masters start empty. Only login accounts are seeded.
+
+How it works: business data is stored in per-entity SQL tables (plus `data_json` on each row). The frontend loads every collection at startup and PUTs a collection back whenever the in-memory data changes (`js/dummy-data.js` data layer). Login accounts live in `dbo.ams_users` (PBKDF2-SHA256 hashed passwords, JWT sessions). User profiles live in `dbo.ams_user_profiles`.
 
 Account management: the **User Master** page (`pages/user-master.html`) now has a password field - new accounts are synced to `dbo.ams_users` via the API so they can actually log in. The topbar user chip (display name, **My Profile**, **Logout**) opens the profile page (`pages/profile.html`) to edit profile fields or change the password.
 
@@ -34,6 +36,8 @@ AMS-v4-0/                       <- live portal (SQL Server database AMS-v4-0)
 │   ├── _page-template.html    <- Template / cheat-sheet for building new pages
 │   ├── employees.html         <- Employee Master (built)
 │   ├── assets.html            <- Asset Master (built - Phase 5)
+│   ├── mobiles.html           <- Mobile Master (phones / handhelds, linked to SIM)
+│   ├── asset-distribution.html<- Per-employee Direct vs Team asset holdings
 │   ├── consumables.html       <- Consumable Master (built - Phase 6A)
 │   ├── spare-parts.html       <- Spare Parts Master (built - Phase 6B)
 │   ├── accessories.html       <- Accessory Master (built - Phase 9A)
@@ -47,16 +51,19 @@ AMS-v4-0/                       <- live portal (SQL Server database AMS-v4-0)
 │   ├── log-report.html        <- Log Report - activity audit trail (Super Root / Supreme Root, hub tab)
 │   ├── reports.html           <- Report Master - 7 tabs (lifecycle, issue/handover forms, consumable & spare-parts stock reports)
 │   ├── vendors.html           <- Vendor Master - CRUD + "Used By" guard (built, hub tab)
+│   ├── profile.html           <- My Profile (display name, contact, password)
 │   └── settings.html          <- Settings - portal preferences hub (Appearance/General/Notifications/Data)
 ├── server/AMS.API/            <- ASP.NET Core Web API (net8.0, JWT, serves the UI too)
 │   ├── Program.cs             <- JWT + CORS + static file serving + health endpoint
 │   ├── Controllers/AuthController.cs
 │   ├── Controllers/CollectionsController.cs
 │   └── Data/AmsDb.cs          <- idempotent DB/schema/seed init + hashing
+├── server/ams_django/         <- Django twin of AMS.API (same SQL, same UI)
 ├── database/AMS-v4-0.sql      <- SSMS setup script (idempotent)
 ├── database/Setup-AMS-v4-0.bat<- sqlcmd setup script (Windows)
 ├── css/
-│   ├── themes.css          <- 11 color themes (the only file with colors)
+│   ├── themes.css          <- color palettes (Platinum default; Blue removed)
+│   ├── ui-styles.css       <- always-on frosted glass + geometric lattice
 │   ├── main.css            <- shared layout & components (incl. font-size attr)
 │   ├── dashboard.css       <- dashboard-only styles
 │   ├── master-table.css    <- generic master-table engine styles
@@ -70,13 +77,15 @@ AMS-v4-0/                       <- live portal (SQL Server database AMS-v4-0)
 │   ├── role-access.css     <- role-access matrix styles
 │   └── settings.css        <- Settings page tab strip, theme gallery, stat rows
 ├── js/
-│   ├── dummy-data.js       <- ALL dummy data + summary helpers (swap for SQL)
-│   ├── theme.js            <- theme switcher (saves choice in browser)
+│   ├── dummy-data.js       <- DB/API layer + in-memory cache + helpers
+│   ├── theme.js            <- Theme dropdown (per-user map; Platinum default)
+│   ├── login.js            <- login submit + session + first-login Theme seed
 │   ├── app.js              <- shared helpers (escape, badges, formatting)
-│   ├── layout.js           <- renders sidebar + header from one list
+│   ├── layout.js           <- sidebar + header; per-user sidebar Show/Hide pin
 │   ├── dashboard.js        <- renders the dashboard page
 │   ├── employees.js        <- Employee Master page logic
 │   ├── assets.js           <- Asset Master page logic
+│   ├── mobiles.js          <- Mobile Master page logic
 │   ├── master-table.js     <- generic CRUD engine for lookup masters
 │   ├── master-configs.js   <- AMS_MASTER_CONFIGS registry (drives masters.html)
 │   ├── consumables.js      <- Consumable Master config + Restock/Used/report actions
@@ -88,7 +97,7 @@ AMS-v4-0/                       <- live portal (SQL Server database AMS-v4-0)
 │   ├── access-rights.js    <- Access Rights Control Master logic (per-user allowedPages)
 │   ├── role-access.js      <- Role Access Master logic (Role x Page matrix)
 │   ├── log-report.js       <- Log Report logic (visibility split, filters, CSV, clear)
-│   └── reports.js          <- Report Master logic (7 report tabs, print/CSV/Excel export)
+│   ├── reports.js          <- Report Master logic (7 report tabs, print/CSV/Excel export)
 │   ├── settings.js         <- Settings hub logic (tabs, theme gallery, prefs)
 │   ├── print-docs.js       <- shared A4 print engine (open tab + .pf-* stylesheet)
 │   ├── print-forms.js      <- Asset Issue (AIF) / Handover (AHF) forms for print
@@ -133,11 +142,11 @@ venv\Scripts\activate          # Windows
 # 3. Install required packages
 pip install -r requirements.txt
 
-# 4. Apply Django's internal migrations (admin/auth/sessions only —
-#    NOT related to our asset data, which is still dummy data)
+# 4. Connect to SQL Server (ODBC Driver 18 needs TrustServerCertificate;
+#    that extra_params flag is already in ams_django/settings.py DATABASES)
 python manage.py migrate
 
-# 5. Run the local development server
+# 5. Run the local development server (schema/users are created on first request)
 python manage.py runserver
 
 # 6. Stop virtual environment
@@ -146,26 +155,39 @@ deactivate
 
 Then open your browser to: **http://127.0.0.1:8000/**
 
-You should see the Dashboard page load in Dark theme by default, with a theme
-switcher dropdown in the top-right corner (10 themes available).
+Sign in, then use the Theme dropdown (top-right, also on the login page). Default
+is **Platinum**. Frosted glass is always on. Theme and desktop sidebar Show/Hide
+are stored per signed-in username.
 
 ## Themes
 
-The portal ships with **11 themes** switchable from the dropdown in the top-right corner of the header. The choice is remembered by your browser.
+One Theme dropdown. Surface look is always frosted glass (`css/ui-styles.css`).
+Default is **Platinum**. Blue is removed (old `ams-theme=blue` maps to Platinum).
+Signed-in users keep their own Theme and sidebar pin (`ams-theme-by-user`,
+`ams-sidebar-show-by-user`). Login uses the shared Theme picker until someone
+signs in.
 
-| Theme      | Type  | Notes                              |
-| ---------- | ----- | ---------------------------------- |
-| Dark Grey  | dark  | **Default** - low glare, low power |
-| Midnight   | dark  | Very dark, high contrast           |
-| Slate Blue | dark  | Corporate blue-grey                |
-| Blue       | light | Bright blue accent (requested)     |
-| Lite       | light | Bright / light theme (requested)   |
-| Forest     | dark  | Dark green                         |
-| Purple     | dark  | Dark purple                        |
-| Amber      | dark  | Warm amber                         |
-| Violet     | dark  | Dark violet (v3-3)                 |
-| Crimson    | dark  | Dark crimson (v3-3)                |
-| Contrast   | dark  | High-contrast mono (v3-3)          |
+| Theme      | Type  | Notes                         |
+| ---------- | ----- | ----------------------------- |
+| Platinum   | light | **Default**                   |
+| Dark Gold  | dark  | Warm gold accent              |
+| Midnight   | dark  | Very dark, high contrast      |
+| Obsidian   | dark  | Near-black                    |
+| Dark Grey  | dark  | Low glare                     |
+| Slate Blue | dark  | Corporate blue-grey           |
+| Ice        | light | Cool pale                     |
+| Teal       | dark  | Teal accent                   |
+| Forest     | dark  | Dark green                    |
+| Emerald    | dark  | Green accent                  |
+| Purple     | dark  | Dark purple                   |
+| Violet     | dark  | Dark violet                   |
+| Wine       | dark  | Burgundy                      |
+| Crimson    | dark  | Dark crimson                  |
+| Rose Gold  | dark  | Rose metal                    |
+| Amber      | dark  | Warm amber                    |
+| Copper     | dark  | Copper accent                 |
+| Lite       | light | Bright / light                |
+| Contrast   | dark  | High-contrast mono            |
 
 ## Build Roadmap (step by step)
 
@@ -198,6 +220,12 @@ The portal ships with **11 themes** switchable from the dropdown in the top-righ
 - [x] 15.8 access-round (System Administrator's hub now hides the Supreme-Root-exclusive tabs - Access Rights Control Master + Role Access Master - from every non-Supreme role, and Log Report from everyone below Super Root, so a Super Root never sees a button that would lead to a lock-out; those two pages no longer show an "Access Denied" wall - a non-Supreme role opening them directly is sent back to the dashboard instead. Asset Issue Form asset IDs now always print with the department suffix via the shared `amsPrintAssetId()` helper - the full Smart ID (base + site + dept, e.g. `BKMP00001SLIT`) shows even when the stored id is an older base+site form, in both the Employee Master and Asset Master form generators)
 - [x] SIM Card Master (`pages/sim-cards.html` + `js/sim-cards.js`) - a separate record type for mobile SIM cards issued to employees, mirroring the Asset Master: auto SIM ID (`SIM-000001`), ICCID/serial, mobile number, operator + plan pick-lists, status (In Store / Issued / Blocked / Retired), assign/reassign/return/block/retire with lifecycle history in the View modal, stock summary tiles, search + status filter, CSV Template/Export/Import, and a DB-backed `simCards` collection (server whitelist updated)
 - [x] Department / Designation Master sync fix - the Department & Designation Masters now reflect lookups created anywhere in the system (Employee form quick-add, bulk Employee import, Import Report quick-add) instead of dropping them on the next page load: departments/designations live in ONE unified view across the hardcoded seeds and the DB-backed masters, every mutation persists to SQL Server, the Employee import reference check accepts lookups from either source, and newly imported employees register their department/designation into both masters automatically
+- [x] Mobile Master (`pages/mobiles.html` + `js/mobiles.js`) - phones / handhelds with SIM link via `amsAssetId`
+- [x] Glass Theme (always-on frosted glass, Platinum default, Blue removed, login Theme dropdown)
+- [x] Per-user Theme and desktop sidebar Show/Hide (keyed by signed-in username)
+- [x] Themed date picker (viewport-fixed glass calendar for every `input type="date"`)
+- [x] Actions menus under glass (card blur via `::before` so `position:fixed` stays on the viewport)
+- [x] Auto IDs = `max + 1`; import date parse (`amsParseDMY`); For Reference = direct subordinates only
 
 ## Code Comments Convention
 

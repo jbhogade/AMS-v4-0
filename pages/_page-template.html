@@ -9,8 +9,8 @@
 #  HOW TO CREATE A NEW PAGE :
 #    1. Copy this file to  pages/<your-page>.html
 #    2. Change the <title> and the two "TO EDIT" markers below.
-#    3. Replace the <div id="construction-content"> block with real content.
-#    4. Create pages/<your-page>.js in the js folder and load it.
+#    3. Replace the page-content block with real content.
+#    4. Create js/<your-page>.js and load it after layout.js.
 #    5. Register the page in js/layout.js NAV_ITEMS so it appears in the menu.
 #    6. At the bottom, replace initLayout("PAGE-KEY") and the init call.
 #
@@ -42,7 +42,10 @@
 
             <div class="app-content">
                 <!-- ==================== TO EDIT : PAGE CONTENT ==================== -->
-                <div id="construction-content"></div>
+                <div class="page-heading">
+                    <h1>New Page</h1>
+                    <p>Replace this block with the page content.</p>
+                </div>
                 <!-- ==================== END OF PAGE CONTENT ======================= -->
             </div>
         </main>
@@ -53,13 +56,11 @@
     <script defer src="../js/theme.js"></script>
     <script defer src="../js/app.js"></script>
     <script defer src="../js/layout.js"></script>
-    <script defer src="../js/under-construction.js"></script>
 
     <!-- Boot the page -->
     <script>
         document.addEventListener("DOMContentLoaded", function () {
             initLayout("PAGE-KEY");
-            renderUnderConstruction("New Page");
         });
     </script>
 </body>

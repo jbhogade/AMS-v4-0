@@ -1,13 +1,8 @@
 /*==============================================================================
 #-------------- Start Code for : DASHBOARD PAGE LOGIC (dashboard.js) ----------
 #
-#  PURPOSE   : Fills the Dashboard page with dummy data.
-#              All data comes from dummy-data.js, NOT from a database yet.
-#
-#  TO CONNECT SQL SERVER LATER :
-#    - Replace the calls like getAssetSummary() with fetch() / AJAX calls
-#      to your backend API, returning the exact same shape of data.
-#    - The rendering code below stays unchanged.
+#  PURPOSE   : Fills the Dashboard page from SQL collections cached in
+#              dummy-data.js (same in-memory arrays every page uses).
 #------------------------------------------------------------------------------*/
 
 /* ---- Build the 4 KPI cards at the top of the dashboard --------------------- */
