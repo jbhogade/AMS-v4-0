@@ -1,20 +1,20 @@
 {
   "format": 1,
   "restore": {
-    "D:\\Jairaj Bhogade\\OneDrive - OC Specialities Pvt.Ltd\\Study and Practice\\VS_Code_Practice\\Asset_Management_System_v4-0\\AMS-Test\\server\\AMS.API\\AMS.API.csproj": {}
+    "/workspace/AMS-v4-0/server/AMS.API/AMS.API.csproj": {}
   },
   "projects": {
-    "D:\\Jairaj Bhogade\\OneDrive - OC Specialities Pvt.Ltd\\Study and Practice\\VS_Code_Practice\\Asset_Management_System_v4-0\\AMS-Test\\server\\AMS.API\\AMS.API.csproj": {
+    "/workspace/AMS-v4-0/server/AMS.API/AMS.API.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "D:\\Jairaj Bhogade\\OneDrive - OC Specialities Pvt.Ltd\\Study and Practice\\VS_Code_Practice\\Asset_Management_System_v4-0\\AMS-Test\\server\\AMS.API\\AMS.API.csproj",
+        "projectUniqueName": "/workspace/AMS-v4-0/server/AMS.API/AMS.API.csproj",
         "projectName": "AMS.API",
-        "projectPath": "D:\\Jairaj Bhogade\\OneDrive - OC Specialities Pvt.Ltd\\Study and Practice\\VS_Code_Practice\\Asset_Management_System_v4-0\\AMS-Test\\server\\AMS.API\\AMS.API.csproj",
-        "packagesPath": "C:\\Users\\jairaj.b\\.nuget\\packages\\",
-        "outputPath": "D:\\Jairaj Bhogade\\OneDrive - OC Specialities Pvt.Ltd\\Study and Practice\\VS_Code_Practice\\Asset_Management_System_v4-0\\AMS-Test\\server\\AMS.API\\obj\\",
+        "projectPath": "/workspace/AMS-v4-0/server/AMS.API/AMS.API.csproj",
+        "packagesPath": "/root/.nuget/packages/",
+        "outputPath": "/workspace/AMS-v4-0/server/AMS.API/obj/",
         "projectStyle": "PackageReference",
         "configFilePaths": [
-          "C:\\Users\\jairaj.b\\AppData\\Roaming\\NuGet\\NuGet.Config"
+          "/root/.nuget/NuGet/NuGet.Config"
         ],
         "originalTargetFrameworks": [
           "net10.0"
@@ -39,7 +39,7 @@
           "auditLevel": "low",
           "auditMode": "all"
         },
-        "SdkAnalysisLevel": "10.0.300"
+        "SdkAnalysisLevel": "10.0.400"
       },
       "frameworks": {
         "net10.0": {
@@ -74,7 +74,7 @@
               "privateAssets": "all"
             }
           },
-          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\10.0.303/PortableRuntimeIdentifierGraph.json",
+          "runtimeIdentifierGraphPath": "/root/.dotnet/sdk/10.0.401/PortableRuntimeIdentifierGraph.json",
           "packagesToPrune": {
             "Microsoft.AspNetCore": "(,10.0.32767]",
             "Microsoft.AspNetCore.Antiforgery": "(,10.0.32767]",
