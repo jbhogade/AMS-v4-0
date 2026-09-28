@@ -5,13 +5,8 @@
 #              (reports-master-v1-0.js) and adapted to the v4-0 data model.
 #
 #  DATA SOURCE: reads DUMMY_ASSETS[].history[], DUMMY_EMPLOYEES,
-#               AMS_DUMMY_CONSUMABLE_LOG, and AMS_DUMMY_SPAREPART_LOG - the
-#               same seed data every page starts from. Since there's no shared
-#               backend/storage yet, edits made during a session on another
-#               page live only in that page's own memory and are lost on
-#               navigation - so this report reflects the SEED data, not live
-#               changes from a separate page session. This resolves naturally
-#               once SQL Server integration replaces the dummy data layer.
+#               AMS_DUMMY_CONSUMABLE_LOG, and AMS_DUMMY_SPAREPART_LOG from
+#               the SQL collection cache in dummy-data.js.
 #
 #  v4-0 ADAPTATIONS :
 #    - Assets now live in DUMMY_ASSETS (not AMS_DUMMY_ASSETS); the display ID

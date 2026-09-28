@@ -1,15 +1,8 @@
 /*==============================================================================
 #-------------- Start Code for : DUMMY DATA (dummy-data.js) -------------------
 #
-#  PURPOSE   : Provides sample / test data for the whole portal because we
-#              are NOT connected to SQL Server yet.
-#
-#  HOW TO USE IN FUTURE (SQL SERVER MIGRATION) :
-#    - Every data source below is a plain JavaScript array / object.
-#    - When you connect SQL Server, replace each section with an AJAX / fetch
-#      call that reads the same shape of data from your backend API.
-#    - KEEP the property names identical so the pages that consume this data
-#      do NOT need to change.
+#  PURPOSE   : In-memory cache of every SQL collection for the portal.
+#              SQL Server (via /api/collection/...) is the source of truth.
 #
 #  FILE MAP :
 #    1. SHARED HELPERS  - date formatting, toast, CSV helpers (from v3-3)
@@ -78,9 +71,15 @@ function amsLogout() {
     amsClearSession();
     amsLoginRedirect();
 }
+function amsInPagesFolder() {
+    return /\/pages\//.test(window.location.pathname || "");
+}
+function amsHref(rootPath) {
+    const p = String(rootPath || "").replace(/^\//, "");
+    return (amsInPagesFolder() ? "../" : "") + p;
+}
 function amsLoginRedirect() {
-    const isPages = /\/pages\//.test(window.location.pathname);
-    window.location.replace((isPages ? "../" : "") + "login.html");
+    window.location.replace(amsHref("login.html"));
 }
 
 /* ---- core API client ------------------------------------------------------- */
@@ -106,7 +105,12 @@ async function amsApiFetch(path, opts) {
     }
     if (!res.ok) {
         let msg = "API error " + res.status;
-        try { const j = await res.json(); if (j && j.error) msg = j.error; } catch (e) { /* non-JSON error */ }
+        try {
+            const j = await res.json();
+            if (j && (j.error || j.detail || j.title || j.message)) {
+                msg = j.error || j.detail || j.title || j.message;
+            }
+        } catch (e) { /* non-JSON error */ }
         throw new Error(msg);
     }
     const text = await res.text();
@@ -1073,10 +1077,22 @@ const DUMMY_MOBILES = [];
 /* Consumable Category Master - DB-backed (consumableCategories collection).
    Previously a hardcoded string list; now records with a description, managed
    from System Admin > Consumable Category Master. */
-const AMS_DUMMY_CONSUMABLE_CATEGORIES = [];
+const AMS_DUMMY_CONSUMABLE_CATEGORIES = [
+    { name: "Printer Supplies", description: "", active: true },
+    { name: "Cables",           description: "", active: true },
+    { name: "Peripherals",      description: "", active: true },
+    { name: "Stationery",       description: "", active: true },
+    { name: "IT Accessories",   description: "", active: true },
+];
 
 /* Unit of Measure Master - DB-backed (consumableUnits collection). */
-const AMS_DUMMY_CONSUMABLE_UNITS = [];
+const AMS_DUMMY_CONSUMABLE_UNITS = [
+    { name: "Nos",   description: "Number of pieces", active: true },
+    { name: "Box",   description: "", active: true },
+    { name: "Pack",  description: "", active: true },
+    { name: "Ream",  description: "", active: true },
+    { name: "Meter", description: "", active: true },
+];
 
 function amsGetActiveConsumableCategoryNames() {
     return AMS_DUMMY_CONSUMABLE_CATEGORIES.filter(c => c.active).map(c => c.name);
@@ -1115,7 +1131,11 @@ const AMS_DUMMY_CONSUMABLE_LOG = [];
 /* Spare Part Category Master - DB-backed (sparePartCategories collection).
    Previously a hardcoded string list; now records managed from System Admin >
    Spare Part Category Master. */
-const AMS_DUMMY_SPAREPART_CATEGORIES = [];
+const AMS_DUMMY_SPAREPART_CATEGORIES = [
+    { name: "Internal Component", description: "", active: true },
+    { name: "Toner / Ink",        description: "", active: true },
+    { name: "Mechanical Part",    description: "", active: true },
+];
 
 function amsGetActiveSparePartCategoryNames() {
     return AMS_DUMMY_SPAREPART_CATEGORIES.filter(c => c.active).map(c => c.name);
@@ -1152,11 +1172,21 @@ const AMS_SIM_STATUS_OPTIONS = ["In Store", "Issued", "Blocked", "Retired"];
    deactivated from the SIM Operator Master (System Admin > SIM Operator Master).
    The in-memory defaults below match the original hardcoded list so the form
    works even before the API is reachable; the DB is the source of truth. */
-const AMS_DUMMY_SIM_OPERATORS = [];
+const AMS_DUMMY_SIM_OPERATORS = [
+    { name: "Jio",           helpline: "198", website: "https://www.jio.com",  active: true },
+    { name: "Airtel",        helpline: "198", website: "https://www.airtel.in", active: true },
+    { name: "Vodafone Idea", helpline: "199", website: "https://www.myvi.in",  active: true },
+    { name: "BSNL",          helpline: "1503", website: "https://www.bsnl.co.in", active: true },
+    { name: "MTNL",          helpline: "1503", website: "https://www.mtnl.co.in", active: true },
+];
 
 /* SIM Plan Master - DB-backed (simPlans collection). Feeds the Plan datalist on
    the SIM Card form. */
-const AMS_DUMMY_SIM_PLANS = [];
+const AMS_DUMMY_SIM_PLANS = [
+    { name: "Prepaid",       planType: "Prepaid",  description: "", active: true },
+    { name: "Postpaid",      planType: "Postpaid", description: "", active: true },
+    { name: "Corporate Plan",planType: "Corporate",description: "", active: true },
+];
 
 const AMS_DUMMY_SIM_CARDS = [];
 
@@ -1432,7 +1462,13 @@ let AMS_VENDOR_SEQ = 12;
 /* Vendor Category Master - DB-backed (vendorCategories collection). Feeds the
    "Supplies" dropdown on the Vendor Master form. Previously a hardcoded string
    list; now managed from System Admin > Vendor Category Master. */
-const AMS_DUMMY_VENDOR_CATEGORIES = [];
+const AMS_DUMMY_VENDOR_CATEGORIES = [
+    { name: "Assets",       description: "Supplies assets / capital equipment", active: true },
+    { name: "Consumables",  description: "Supplies consumable items",           active: true },
+    { name: "Spare Parts",  description: "Supplies spare / repair parts",       active: true },
+    { name: "Services",     description: "Provides services (AMC, repair, etc.)", active: true },
+    { name: "All",          description: "General supplier - multiple categories", active: true },
+];
 
 function amsGetActiveVendorCategoryNames() {
     return AMS_DUMMY_VENDOR_CATEGORIES.filter(c => c.active).map(c => c.name);
@@ -2545,13 +2581,31 @@ function amsMigrateRoleAccessDocument() {
     amsDbSaveDocAsync("roleAccess");
 }
 
+function amsFillMissingRoleAccessKeys(map) {
+    const filled = map && typeof map === "object" ? map : {};
+    const defaults = amsDefaultRoleAccessMap();
+    AMS_USER_ROLES.forEach(role => {
+        if (!filled[role] || typeof filled[role] !== "object") filled[role] = {};
+        AMS_PAGE_REGISTRY.forEach(p => {
+            if (filled[role][p.key] === undefined) {
+                filled[role][p.key] = (defaults[role] && defaults[role][p.key]) || AMS_ACCESS_NONE;
+            }
+        });
+    });
+    return filled;
+}
+
 function amsGetRoleAccessDefaults() {
-    if (AMS_ROLE_ACCESS_DEFAULTS && Object.keys(AMS_ROLE_ACCESS_DEFAULTS).length) return AMS_ROLE_ACCESS_DEFAULTS;
-    try {
-        const raw = localStorage.getItem(AMS_ROLE_ACCESS_STORAGE_KEY);
-        if (raw) return JSON.parse(raw);
-    } catch (e) { /* corrupt storage - fall back to defaults */ }
-    return amsDefaultRoleAccessMap();
+    let map = null;
+    if (AMS_ROLE_ACCESS_DEFAULTS && Object.keys(AMS_ROLE_ACCESS_DEFAULTS).length) map = AMS_ROLE_ACCESS_DEFAULTS;
+    if (!map) {
+        try {
+            const raw = localStorage.getItem(AMS_ROLE_ACCESS_STORAGE_KEY);
+            if (raw) map = JSON.parse(raw);
+        } catch (e) { /* corrupt storage - fall back to defaults */ }
+    }
+    if (!map) map = amsDefaultRoleAccessMap();
+    return amsFillMissingRoleAccessKeys(map);
 }
 
 function amsAccessLevelForUserPage(user, registryKey) {
@@ -2833,26 +2887,6 @@ function amsSaveReportHeaderPrefs(prefs) {
     Object.assign(AMS_REPORT_HEADER_PREFS, prefs);
     try { localStorage.setItem(AMS_REPORT_HEADER_STORAGE_KEY, JSON.stringify(prefs)); } catch (e) { /* storage full */ }
     amsDbSaveDocAsync("reportPrefs");
-}
-
-/* Wipes every localStorage-backed demo preference + data (Settings > Data).
-   The in-memory seed arrays are untouched, so a page reload brings the demo
-   data back exactly as shipped. */
-function amsResetDemoData() {
-    ["ams-theme", "ams-theme-by-user", "ams-ui-style", "ams-sidebar-show", "ams-sidebar-show-by-user", "ams_notifications", "ams_activity_log", "ams_viewing_as_role",
-     "ams_role_access_defaults", "ams_company_details",
-     AMS_PORTAL_NAME_STORAGE_KEY, AMS_FONT_SIZE_STORAGE_KEY,
-     AMS_PAGE_SIZE_STORAGE_KEY, AMS_TOAST_STORAGE_KEY,
-     AMS_REPORT_HEADER_STORAGE_KEY].forEach(key => {
-        try { localStorage.removeItem(key); } catch (e) { /* storage unavailable */ }
-    });
-
-    /* Runtime doc globals hold whatever was loaded from the DB this page-session;
-       reset them too so "restore demo defaults" takes effect immediately without
-       a reload. */
-    Object.keys(AMS_REPORT_HEADER_PREFS).forEach(k => delete AMS_REPORT_HEADER_PREFS[k]);
-    Object.keys(AMS_ROLE_ACCESS_DEFAULTS).forEach(k => delete AMS_ROLE_ACCESS_DEFAULTS[k]);
-    Object.keys(AMS_DUMMY_COMPANY_DETAILS).forEach(k => delete AMS_DUMMY_COMPANY_DETAILS[k]);
 }
 
 /* =============================================================================

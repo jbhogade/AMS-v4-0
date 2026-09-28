@@ -9,7 +9,7 @@
 #                   page size, currency display note
 #                3. Notifications - toast popup toggle, clear the notification
 #                   bell history, clear the permanent activity log
-#                4. Data        - "Viewing As" role shortcut + Reset Demo Data
+#                4. Data        - signed-in role (read-only)
 #
 #  PERSISTENCE: every choice is localStorage-backed via the shared helpers in
 #               js/dummy-data.js (portal name, font size, page size, toast
@@ -160,13 +160,6 @@ function initNotificationsTab() {
 function initDataTab() {
     const roleInput = document.getElementById("settingsSignedInRole");
     if (roleInput) roleInput.value = amsGetViewingAsRole();
-
-    const resetBtn = document.getElementById("btnResetDemoData");
-    if (resetBtn) resetBtn.addEventListener("click", () => {
-        if (!confirm("Reset all demo data and preferences? Theme, company details, notifications, activity log, portal settings and preferences will be restored to defaults.")) return;
-        amsResetDemoData();
-        location.reload();
-    });
 }
 /*-------------- End of the code ----------------------------------------------*/
 

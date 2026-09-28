@@ -1321,13 +1321,15 @@ input[type="date"] {
     position: relative;
     color: var(--text-primary);
     accent-color: var(--accent);
+    padding-right: 2.4em;
 }
 input[type="date"]::-webkit-calendar-picker-indicator {
-    opacity: 0;
+    opacity: 1;
     pointer-events: none;
     display: block;
-    width: 1px;
-    height: 1px;
+    width: 18px;
+    height: 18px;
+    cursor: pointer;
 }
 input[type="date"]::-webkit-inner-spin-button {
     display: none;
@@ -1353,9 +1355,48 @@ input[type="date"]::-webkit-inner-spin-button {
 }
 .ams-date-pop-title {
     flex: 1;
-    text-align: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+}
+.ams-date-pop-title-btn {
+    border: none;
+    background: transparent;
+    color: var(--text-primary);
+    cursor: pointer;
     font-size: 13px;
     font-weight: 700;
+    font-family: inherit;
+    padding: 4px 8px;
+    border-radius: 8px;
+}
+.ams-date-pop-title-btn:hover,
+.ams-date-pop-title-btn.is-active {
+    background: var(--bg-elevated);
+}
+.ams-date-pop-grid-months,
+.ams-date-pop-grid-years {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 6px;
+    min-height: 196px;
+}
+.ams-date-pop-cell {
+    height: 40px;
+    border: none;
+    border-radius: 8px;
+    background: transparent;
+    color: var(--text-primary);
+    cursor: pointer;
+    font-size: 12.5px;
+    font-family: inherit;
+    font-weight: 600;
+}
+.ams-date-pop-cell:hover { background: var(--bg-elevated); }
+.ams-date-pop-cell.today { box-shadow: inset 0 0 0 1px var(--accent); }
+.ams-date-pop-cell.selected {
+    background: var(--accent);
+    color: var(--accent-contrast);
 }
 .ams-date-pop-nav {
     width: 28px;

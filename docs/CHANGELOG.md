@@ -1,5 +1,46 @@
 # AMS-v4-0 change log
 
+## 2026-09-27 — Unused connections and page links
+
+Sidebar, Profile, and login redirects now resolve from both the dashboard
+and `/pages/` (`amsHref`). Unused CORS policy removed (UI is same-origin).
+Settings no longer has Reset Demo Data. Stale "not connected" comments
+updated. Hard-refresh (Ctrl+F5).
+
+## 2026-09-24 — Vector glassy login pane, gold-to-charcoal backdrop
+
+Login card uses Vector pane glass (theme tokens, no Halo SVG field).
+Backdrop is a smooth accent-to-charcoal gradient instead of the lattice.
+Username / password only. Hard-refresh (Ctrl+F5).
+
+## 2026-09-23 — Platinum default, clearer glass, Django migrate
+
+Default Theme stays Platinum. Glass panels are more transparent.
+Django `DATABASES.OPTIONS` includes `extra_params: TrustServerCertificate=yes`
+so `python manage.py migrate` works with ODBC Driver 18. README Django
+steps include migrate. Hard-refresh (Ctrl+F5).
+
+## 2026-09-21 — Lookup seeds and role-locked Access Rights
+
+Empty master tables now seed SIM operators/plans, consumable
+categories/units, spare-part categories, and vendor categories (same
+lists as AMS-Test). Access Rights checklists lock Log / Access Rights /
+Role Access to the role floor. SQL backup stays off live. Hard-refresh
+(Ctrl+F5).
+
+## 2026-09-19 — Theme already live; API errors show server text
+
+Glass Platinum Theme stays the default. Failed API calls now show the
+server message instead of a bare "API error 500". Role Access fills
+missing page keys. SQL Database Backup is not on live. Hard-refresh
+(Ctrl+F5).
+
+## 2026-09-18 — Date field typing and month/year jump
+
+Glass calendar stays. Type in the date box as before. Open the calendar
+from the icon on the right (or Alt+ArrowDown). Click the month or year
+in the calendar header to jump, then pick a day. Hard-refresh (Ctrl+F5).
+
 ## 2026-09-17 — Port AMS-Test UI to live AMS-v4-0
 
 Glass Theme (Platinum default, Blue removed), login Theme dropdown,

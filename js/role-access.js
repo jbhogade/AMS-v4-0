@@ -39,7 +39,7 @@ function amsApplyRoleAccessGate() {
            being shown an "Access Denied" wall - the entry point (System Admin
            tab) is hidden for them anyway, so this only guards direct-URL
            access. */
-        window.location.replace("../index.html");
+        window.location.replace((typeof amsHref === "function") ? amsHref("index.html") : "../index.html");
         return;
     }
     document.getElementById("unlockedView").style.display = "block";

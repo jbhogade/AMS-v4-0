@@ -105,7 +105,7 @@
         document.addEventListener("DOMContentLoaded", function () {
             const cfg = amsResolveMasterConfig();
             window.AMS_MASTER_CONFIG = cfg;
-            initLayout("master-" + new URLSearchParams(location.search).get("type") || "asset-type");
+            initLayout("master-" + (new URLSearchParams(location.search).get("type") || "asset-type"));
         });
     </script>
 </body>
