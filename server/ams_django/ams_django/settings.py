@@ -5,14 +5,18 @@ Environment-driven configuration. Defaults mirror the .NET appsettings.json so
 the two backends behave identically out of the box.
 """
 
-import os
-from pathlib import Path
+from __future__ import annotations
 
+import os
+from collections.abc import Callable
+from pathlib import Path
+from typing import Any
+
+_load_env: Callable[..., bool] | None
 try:
-    from dotenv import load_dotenv
-    _HAS_DOTENV = True
+    from dotenv import load_dotenv as _load_env
 except ImportError:
-    _HAS_DOTENV = False
+    _load_env = None
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -23,9 +27,9 @@ FRONTEND_ROOT = BASE_DIR.parent.parent
 # Optional .env file next to manage.py (see .env.example). Values in the real
 # environment always win over the file. Best-effort so the app also runs when
 # python-dotenv has not been installed yet.
-if _HAS_DOTENV:
+if _load_env is not None:
     try:
-        load_dotenv(BASE_DIR / ".env")
+        _load_env(BASE_DIR / ".env")
     except Exception:
         pass
 
@@ -47,7 +51,7 @@ MIDDLEWARE = [
 
 ROOT_URLCONF = "ams_django.urls"
 
-TEMPLATES = [
+TEMPLATES: list[dict[str, Any]] = [
     {
         "BACKEND": "django.template.backends.django.DjangoTemplates",
         "DIRS": [],
@@ -88,11 +92,14 @@ def _build_connection_string() -> str:
     return ";".join(parts)
 
 
-DATABASES = {
+DATABASES: dict[str, dict[str, Any]] = {
     "default": {
         "ENGINE": "mssql",
         "NAME": os.environ.get("AMS_DB_NAME", "AMS-v4-0"),
-        "OPTIONS": {"conn_string": _build_connection_string(),'extra_params': 'TrustServerCertificate=yes'},
+        "OPTIONS": {
+            "conn_string": _build_connection_string(),
+            "extra_params": "TrustServerCertificate=yes",
+        },
     }
 }
 

@@ -1,0 +1,148 @@
+# Updated requirements  (checked against PyPI on 2026-09-20)
+# Target: Python 3.12+ (numpy 2.5 requires >=3.12, mssql-django requires >=3.10)
+#
+# Main change: Django 5.0.11 -> 5.2.17 (LTS, security-supported to April 2028).
+# Django 5.0 reached end-of-life in April 2025 and receives no security patches.
+#
+# zk==0.9.4 was removed — it was pinning setuptools and thriftpy2 to old
+# versions and blocked a clean install (see notes at bottom if you need it).
+# Deliberately not bumped to the newest major on a few others — see bottom.
+
+amqp==5.4.0
+anyio==4.15.1
+APScheduler==3.11.3
+arrow==1.4.0
+asgiref==3.12.1
+beautifulsoup4==4.15.0
+billiard==4.3.0
+binaryornot==0.6.0
+celery==5.6.3
+certifi==2026.7.22
+channels==4.3.2
+chardet==5.2.0
+charset-normalizer==3.5.1
+click==8.5.0
+click-didyoumean==0.3.1
+click-plugins==1.1.1.2
+click-repl==0.4.0
+colorama==0.4.6
+contourpy==1.4.0
+cookiecutter==2.7.1
+cron-descriptor==1.4.5
+cycler==0.12.1
+Cython==3.3.0
+diff-match-patch==20241021
+Django==5.2.17
+django-appconf==1.2.0
+django-apscheduler==0.7.0
+django-browser-reload==1.21.0
+django-celery-beat==2.9.0
+django-extensions==4.1
+django-import-export==4.4.1
+django-jazzmin==3.0.5
+django-select2==8.4.8
+django-timezone-field==7.2.2
+et_xmlfile==2.0.0
+fonttools==4.65.0
+future==1.0.0
+greenlet==3.5.6
+h11==0.16.0
+httptools==0.8.0
+humanize==4.16.0
+idna==3.20
+IMAPClient==3.1.0
+Jinja2==3.1.6
+kiwisolver==1.5.1
+kombu==5.6.2
+markdown-it-py==3.0.0
+MarkupSafe==3.0.3
+mdurl==0.1.2
+mssql-django==1.8.0
+narwhals==1.48.1
+numpy==2.5.3
+openpyxl==3.1.5
+packaging==25.0
+pandas==2.3.3
+pillow==12.3.0
+plotly==6.9.0
+ply==3.11
+prompt_toolkit==3.0.53
+Pygments==2.21.0
+pyodbc==5.3.0
+pyparsing==3.3.2
+python-crontab==3.4.0
+python-dateutil==2.9.0.post0
+python-dotenv==1.2.3
+python-slugify==8.0.4
+pytz==2026.3.post1
+pywin32==312 ; sys_platform == "win32"
+PyYAML==6.0.3
+pyzk==0.9
+pyzmail36==1.0.5
+redis==6.4.0
+reportlab==4.5.1
+requests==2.34.2
+rich==14.3.4
+setuptools==84.0.0
+six==1.17.0
+sniffio==1.3.1
+soupsieve==2.9.2
+SQLAlchemy==2.0.54
+sqlparse==0.6.0
+tablib==3.10.0
+text-unidecode==1.3
+thriftpy2==0.7.1
+types-python-dateutil==2.9.0.20260807
+typing_extensions==4.16.0
+tzdata==2026.4
+tzlocal==5.4.4
+urllib3==2.8.0
+uvicorn==0.53.0
+vine==5.1.0
+watchfiles==1.2.0
+wcwidth==0.8.4
+websockets==16.1.1
+whitenoise==6.12.0
+XlsxWriter==3.2.9
+
+# ---------------------------------------------------------------------------
+# REMOVED
+#   bs4==0.0.2          empty placeholder package; beautifulsoup4 is the real one
+#   zk==0.9.4           unmaintained ZKTeco device library; pinned
+#                       setuptools<76 and thriftpy2<0.6, blocking their
+#                       latest releases. If you actually use it, see the
+#                       compatible-but-older versions noted below.
+#
+# HELD BACK ON PURPOSE (newer major exists, but it breaks something else here)
+#   redis        6.4.0  -> 8.1.0   kombu pins redis<6.5; bumping breaks Celery
+#   Django       5.2.17 -> 6.1.1   django-celery-beat 2.9.0 pins Django<6.1
+#   mssql-django 1.8.0  -> 2.0.0   2.0 requires Django>=5.2 AND adds the new
+#                                  mssql-python driver dependency; 1.8.0 keeps
+#                                  the plain pyodbc backend you use today
+#   pandas       2.3.3  -> 3.0.6   3.0 changes string dtype + copy-on-write
+#   packaging    25.0   -> 26.3
+#   plotly       6.9.0  -> 7.1.0
+#   rich         14.3.4 -> 15.0.0
+#   reportlab    4.5.1  -> 5.0.1
+#   chardet      5.2.0  -> 7.6.0
+#   IMAPClient   3.1.0  -> 4.1.0
+#   websockets   16.1.1 -> 17.1
+#   markdown-it-py 3.0.0 -> 4.2.0
+#   cron-descriptor 1.4.5 -> 2.1.0  (django-celery-beat dependency)
+#   python-slugify 8.0.4 -> 9.1.0
+#
+# IF YOU STILL NEED zk (ZKTeco devices):
+#   add back  zk==0.9.4  and pin  setuptools==75.9.1  thriftpy2==0.5.2
+#   (that combination also resolves cleanly, just on older versions)
+#
+# WORTH A LOOK
+#   pyzmail36    last released 2022, Python 3.6 era, unmaintained
+#   pyzk 0.9 is a *different* ZKTeco library from the zk package removed
+#     above — confirm which one (if either) your code actually imports
+#   future==1.0.0 is a Python 2 compatibility shim
+#   contourpy / cycler / fonttools / kiwisolver / pyparsing are matplotlib
+#     dependencies, but matplotlib itself is not pinned in this file
+# ---------------------------------------------------------------------------
+#
+# VERIFIED: this exact file resolves cleanly with `pip install --dry-run`
+# on Python 3.12 (no dependency conflicts).

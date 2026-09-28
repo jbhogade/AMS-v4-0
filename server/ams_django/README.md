@@ -19,6 +19,7 @@ cp .env.example .env      # Windows: copy .env.example .env  (edit it)
 ## Run
 
 ```bash
+python manage.py migrate              # ODBC Driver 18: TrustServerCertificate via extra_params
 python manage.py runserver            # http://127.0.0.1:8000
 python manage.py initdb               # optional: create/seed the database
 ```

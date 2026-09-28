@@ -67,7 +67,12 @@ run-django.bat
 ```
 
 (Or manually: `python -m pip install -r requirements.txt` then
-`python manage.py runserver`.)
+`python manage.py migrate` then `python manage.py runserver`.)
+
+`python manage.py migrate` needs `TrustServerCertificate=yes` on ODBC Driver 18.
+That `extra_params` flag is already in `ams_django/settings.py` `DATABASES`.
+App tables are still created on first request (`initdb` / lazy bootstrap), not
+by Django model migrations.
 
 First launch installs the Python packages, then starts the server at
 **http://127.0.0.1:8000/**. The first request initializes the database
