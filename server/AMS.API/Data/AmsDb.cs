@@ -1337,7 +1337,47 @@ public class AmsDb
        Inserted only when the target table is empty (mirrors AMS-v4-0.sql).
        ========================================================================= */
 
-    private static readonly (string Key, string Json)[] SeedLookups = Array.Empty<(string, string)>();
+    private static readonly (string Key, string Json)[] SeedLookups =
+    {
+        ("simOperators", @"[
+            {""name"":""Jio"",""helpline"":""198"",""website"":""https://www.jio.com"",""active"":true},
+            {""name"":""Airtel"",""helpline"":""198"",""website"":""https://www.airtel.in"",""active"":true},
+            {""name"":""Vodafone Idea"",""helpline"":""199"",""website"":""https://www.myvi.in"",""active"":true},
+            {""name"":""BSNL"",""helpline"":""1503"",""website"":""https://www.bsnl.co.in"",""active"":true},
+            {""name"":""MTNL"",""helpline"":""1503"",""website"":""https://www.mtnl.co.in"",""active"":true}
+        ]"),
+        ("simPlans", @"[
+            {""name"":""Prepaid"",""planType"":""Prepaid"",""description"":"""",""active"":true},
+            {""name"":""Postpaid"",""planType"":""Postpaid"",""description"":"""",""active"":true},
+            {""name"":""Corporate Plan"",""planType"":""Corporate"",""description"":"""",""active"":true}
+        ]"),
+        ("consumableCategories", @"[
+            {""name"":""Printer Supplies"",""description"":"""",""active"":true},
+            {""name"":""Cables"",""description"":"""",""active"":true},
+            {""name"":""Peripherals"",""description"":"""",""active"":true},
+            {""name"":""Stationery"",""description"":"""",""active"":true},
+            {""name"":""IT Accessories"",""description"":"""",""active"":true}
+        ]"),
+        ("consumableUnits", @"[
+            {""name"":""Nos"",""description"":""Number of pieces"",""active"":true},
+            {""name"":""Box"",""description"":"""",""active"":true},
+            {""name"":""Pack"",""description"":"""",""active"":true},
+            {""name"":""Ream"",""description"":"""",""active"":true},
+            {""name"":""Meter"",""description"":"""",""active"":true}
+        ]"),
+        ("sparePartCategories", @"[
+            {""name"":""Internal Component"",""description"":"""",""active"":true},
+            {""name"":""Toner / Ink"",""description"":"""",""active"":true},
+            {""name"":""Mechanical Part"",""description"":"""",""active"":true}
+        ]"),
+        ("vendorCategories", @"[
+            {""name"":""Assets"",""description"":""Supplies assets / capital equipment"",""active"":true},
+            {""name"":""Consumables"",""description"":""Supplies consumable items"",""active"":true},
+            {""name"":""Spare Parts"",""description"":""Supplies spare / repair parts"",""active"":true},
+            {""name"":""Services"",""description"":""Provides services (AMC, repair, etc.)"",""active"":true},
+            {""name"":""All"",""description"":""General supplier - multiple categories"",""active"":true}
+        ]"),
+    };
 
     private async Task EnsureSeedLookupsAsync()
     {
