@@ -2024,6 +2024,39 @@ function exitEmployee(amsId, exitDate, remarks, facilitiesDisabled, exitReason, 
     return emp;
 }
 
+/* Restores an exited employee to Active. The original Exit Record snapshot
+   (Handover Form) and activity-log entries stay on file. Returned assets /
+   mobiles / SIMs stay In Store; team incharge transfer is not reversed. */
+function reactivateEmployee(amsId, remarks) {
+    const emp = findEmployee(amsId);
+    if (!emp) return null;
+    if (emp.status === "Active" && !emp.exitDate) return emp;
+    const rec = getExitRecord(amsId);
+    const today = new Date().toISOString().slice(0, 10);
+    const previousExitDate = emp.exitDate || (rec && rec.exitDate) || "";
+    const previousReason = emp.exitReason || (rec && rec.exitReason) || "";
+    emp.status = "Active";
+    emp.exitDate = null;
+    emp.exitRemarks = "";
+    emp.exitReason = "";
+    emp.reactivatedDate = today;
+    emp.reactivationRemarks = remarks || "";
+    if (rec) {
+        rec.reactivatedAt = new Date().toISOString();
+        rec.reactivatedDate = today;
+        rec.reactivationRemarks = remarks || "";
+        rec.employeeReactivated = true;
+    }
+    amsDbSaveAsync("employees");
+    amsDbSaveAsync("exitRecords");
+    return {
+        emp,
+        previousExitDate,
+        previousReason,
+        rec,
+    };
+}
+
 function amsExitReturnRemark(emp, exitDate, exitReason) {
     const name = emp ? getEmployeeFullName(emp) : "employee";
     const reason = (exitReason || "").trim();
@@ -2124,7 +2157,7 @@ function amsRepairExitedEmployeeHoldings() {
     if (!Array.isArray(DUMMY_EMPLOYEES)) return false;
     let changed = false;
     DUMMY_EMPLOYEES.forEach(emp => {
-        if (!emp || !(emp.status === "Inactive" || emp.exitDate)) return;
+        if (!emp || emp.status !== "Inactive") return;
         const amsId = emp.amsId;
         const returnDate = emp.exitDate || new Date().toISOString().slice(0, 10);
         const rec = typeof getExitRecord === "function" ? getExitRecord(amsId) : null;
@@ -2185,7 +2218,15 @@ function amsRepairExitedEmployeeHoldings() {
 
 /* Returns the permanent exit record (snapshot) for an employee, if one exists */
 function getExitRecord(amsId) {
-    return AMS_DUMMY_EXIT_RECORDS.find(r => r.amsId === amsId);
+    let latest = null;
+    AMS_DUMMY_EXIT_RECORDS.forEach(r => {
+        if (r && r.amsId === amsId) latest = r;
+    });
+    return latest;
+}
+
+function getExitRecordsForEmployee(amsId) {
+    return AMS_DUMMY_EXIT_RECORDS.filter(r => r && r.amsId === amsId);
 }
 
 /* Direct subordinates of an employee (via managerAmsId) */
