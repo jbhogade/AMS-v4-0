@@ -2040,7 +2040,7 @@ function amsHoldingHasExitReturnNote(item) {
 }
 
 function amsMarkHoldingReturnedOnExit(item, emp, returnDate, note, kind) {
-    if (!item) return false;
+    if (!item || !emp || item.assignedTo !== emp.amsId) return false;
     const alreadyNoted = amsHoldingHasExitReturnNote(item);
     if (!alreadyNoted) {
         if (!Array.isArray(item.history)) item.history = [];
@@ -2094,19 +2094,6 @@ function amsFindLiveHoldingForExitSnap(snap, kind) {
     ) || null;
 }
 
-function amsExitSnapKeys(snap) {
-    return [snap && snap.id, snap && snap.assetId, snap && snap.displayId, snap && snap.simId]
-        .filter(Boolean).map(String);
-}
-
-function amsHoldingMatchesExitSnap(item, snapKeys) {
-    if (!item || !snapKeys || !snapKeys.length) return false;
-    const keys = [item.id, item.displayId, item.simId,
-        (typeof amsBaseDisplayId === "function" ? amsBaseDisplayId(item) : "")]
-        .filter(Boolean).map(String);
-    return keys.some(k => snapKeys.indexOf(k) !== -1);
-}
-
 function amsEnrichExitSnapshotItem(snap, live, returnDate, withExitRemark) {
     if (!snap) return false;
     let changed = false;
@@ -2131,8 +2118,8 @@ function amsEnrichExitSnapshotItem(snap, live, returnDate, withExitRemark) {
 }
 
 /* One-time repair for employees already marked exited before auto-return landed.
-   Returns leftover direct holdings to In Store, stamps the exit remark / date,
-   and backfills accessories + remarks on existing handover snapshots. */
+   Returns leftover holdings still assigned directly to the exited employee.
+   Does not touch items later assigned to someone else or already In Store. */
 function amsRepairExitedEmployeeHoldings() {
     if (!Array.isArray(DUMMY_EMPLOYEES)) return false;
     let changed = false;
@@ -2147,23 +2134,14 @@ function amsRepairExitedEmployeeHoldings() {
             if (cur.indexOf("User has exited") !== -1) return cur;
             return cur ? `${cur} | ${returnNote}` : returnNote;
         };
-        const snapKeySet = [].concat(
-            rec ? rec.directAssetsHeld || [] : [],
-            rec ? rec.directMobilesHeld || [] : [],
-            rec ? rec.directSimCardsHeld || [] : []
-        ).reduce((keys, snap) => keys.concat(amsExitSnapKeys(snap)), []);
 
         const process = (list, kind) => {
             (list || []).forEach(item => {
-                if (!item) return;
-                const heldByExited = item.assignedTo === amsId;
-                const orphanFromSnap = !item.assignedTo && amsHoldingMatchesExitSnap(item, snapKeySet)
-                    && !amsHoldingHasExitReturnNote(item);
-                if (!heldByExited && !orphanFromSnap) return;
-                if (kind === "mobile" && heldByExited && typeof amsUnlinkMobileSim === "function") {
+                if (!item || item.assignedTo !== amsId) return;
+                if (kind === "mobile" && typeof amsUnlinkMobileSim === "function") {
                     amsUnlinkMobileSim(item, false);
                 }
-                if (kind === "sim" && heldByExited) {
+                if (kind === "sim") {
                     if (item.linkedMobileId && !item.personalMobile) {
                         const m = amsFindMobileByRef(item.linkedMobileId);
                         if (m && String(m.simMobileNo || "0") === String(item.mobileNumber || "")) m.simMobileNo = "0";
@@ -2171,8 +2149,7 @@ function amsRepairExitedEmployeeHoldings() {
                     item.linkedMobileId = null;
                     item.personalMobile = false;
                 }
-                amsMarkHoldingReturnedOnExit(item, emp, returnDate, returnNote, kind);
-                changed = true;
+                if (amsMarkHoldingReturnedOnExit(item, emp, returnDate, returnNote, kind)) changed = true;
             });
         };
         process(DUMMY_ASSETS, "asset");
@@ -2180,14 +2157,19 @@ function amsRepairExitedEmployeeHoldings() {
         process(AMS_DUMMY_SIM_CARDS, "sim");
 
         if (rec) {
+            const liveIfStillTheirs = (snap, kind) => {
+                const live = amsFindLiveHoldingForExitSnap(snap, kind);
+                if (live && live.assignedTo && live.assignedTo !== amsId) return null;
+                return live;
+            };
             (rec.directAssetsHeld || []).forEach(snap => {
-                if (amsEnrichExitSnapshotItem(snap, amsFindLiveHoldingForExitSnap(snap, "asset"), returnDate, withExitRemark)) changed = true;
+                if (amsEnrichExitSnapshotItem(snap, liveIfStillTheirs(snap, "asset"), returnDate, withExitRemark)) changed = true;
             });
             (rec.directMobilesHeld || []).forEach(snap => {
-                if (amsEnrichExitSnapshotItem(snap, amsFindLiveHoldingForExitSnap(snap, "mobile"), returnDate, withExitRemark)) changed = true;
+                if (amsEnrichExitSnapshotItem(snap, liveIfStillTheirs(snap, "mobile"), returnDate, withExitRemark)) changed = true;
             });
             (rec.directSimCardsHeld || []).forEach(snap => {
-                if (amsEnrichExitSnapshotItem(snap, amsFindLiveHoldingForExitSnap(snap, "sim"), returnDate, withExitRemark)) changed = true;
+                if (amsEnrichExitSnapshotItem(snap, liveIfStillTheirs(snap, "sim"), returnDate, withExitRemark)) changed = true;
             });
         }
     });
