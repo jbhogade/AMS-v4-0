@@ -186,10 +186,14 @@ function amsGenerateReport(amsId, type, extraRemarks) {
             </tbody>
         </table>`;
 
-    const accessoryItems = isIssue && (typeof amsPrintDirectHoldingsForAccessories === "function")
-        ? amsPrintDirectHoldingsForAccessories(amsId, directOwned)
-        : directOwned;
-    const accessoriesHtml = isIssue && (typeof amsBuildPrintAccessoriesHtml === "function")
+    const accessoryItems = isIssue
+        ? ((typeof amsPrintDirectHoldingsForAccessories === "function")
+            ? amsPrintDirectHoldingsForAccessories(amsId, directOwned)
+            : directOwned)
+        : (exitRecord
+            ? [].concat(exitRecord.directAssetsHeld || [], exitRecord.directMobilesHeld || [], exitRecord.directSimCardsHeld || [])
+            : directOwned);
+    const accessoriesHtml = (typeof amsBuildPrintAccessoriesHtml === "function")
         ? amsBuildPrintAccessoriesHtml(accessoryItems)
         : "";
 
@@ -261,7 +265,7 @@ function amsGenerateReport(amsId, type, extraRemarks) {
 
             <div class="pf-section-bar">Remarks / Notes</div>
             <div class="pf-notes-box">
-                ${amsBuildReportRemarks(directOwned)}
+                ${amsBuildReportRemarks(isIssue ? directOwned : accessoryItems)}
             </div>
 
             <div class="pf-section-bar pf-bar-accent">Additional Remarks/Notes (IT/HR/Admin)</div>
