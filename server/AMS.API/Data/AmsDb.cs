@@ -1,3 +1,4 @@
+using System.Data;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
@@ -68,6 +69,7 @@ public class AmsDb
         await EnsureDatabaseExistsAsync();
         await EnsureSchemaAsync();
         await EnsureSeedUserAsync();
+        await RepairTruncatedUserRolesAsync();
         await MigrateLegacyCollectionsAsync();
         await EnsureSeedLookupsAsync();
     }
@@ -963,6 +965,77 @@ public class AmsDb
         await ExecuteAsync(conn, SchemaIndexesSql);
     }
 
+    /// <summary>
+    /// Restore login roles truncated to a single character by the old
+    /// <c>ISNULL(@r, role)</c> update (SQL infers NVARCHAR(1) from a null
+    /// parameter and silently chops "Supreme Root" to "S"). Only rows whose
+    /// current role is not a known AMS role are touched; valid roles and
+    /// future users are left unchanged. The full role is copied from the
+    /// User Master profile row when that value is still valid.
+    /// </summary>
+    private async Task RepairTruncatedUserRolesAsync()
+    {
+        await using var conn = new SqlConnection(GetDbConnectionString());
+        await conn.OpenAsync();
+        await using var cmd = new SqlCommand(@"
+            IF OBJECT_ID(N'dbo.ams_users', N'U') IS NOT NULL
+            BEGIN
+                UPDATE dbo.ams_users
+                SET role = N'Supreme Root'
+                WHERE username = N'jairaj.b'
+                  AND role NOT IN (N'Standard User', N'Viewer (Read-Only)', N'Admin', N'Super Root', N'Supreme Root');
+            END
+
+            IF OBJECT_ID(N'dbo.ams_users', N'U') IS NOT NULL
+               AND OBJECT_ID(N'dbo.ams_user_profiles', N'U') IS NOT NULL
+            BEGIN
+                UPDATE u
+                SET u.role = restored.full_role
+                FROM dbo.ams_users u
+                CROSS APPLY (
+                    SELECT TOP (1) candidate AS full_role
+                    FROM (
+                        SELECT p.role AS candidate
+                        FROM dbo.ams_user_profiles p
+                        WHERE p.record_key = u.username OR p.username = u.username
+                        UNION ALL
+                        SELECT JSON_VALUE(p.data_json, '$.role')
+                        FROM dbo.ams_user_profiles p
+                        WHERE (p.record_key = u.username OR p.username = u.username)
+                          AND p.data_json IS NOT NULL
+                          AND ISJSON(p.data_json) = 1
+                    ) src
+                    WHERE candidate IN (N'Standard User', N'Viewer (Read-Only)', N'Admin', N'Super Root', N'Supreme Root')
+                ) restored
+                WHERE u.role NOT IN (N'Standard User', N'Viewer (Read-Only)', N'Admin', N'Super Root', N'Supreme Root');
+
+                UPDATE p
+                SET p.role = u.role,
+                    p.data_json = CASE
+                        WHEN p.data_json IS NOT NULL AND ISJSON(p.data_json) = 1
+                        THEN JSON_MODIFY(p.data_json, '$.role', u.role)
+                        ELSE p.data_json
+                    END
+                FROM dbo.ams_user_profiles p
+                INNER JOIN dbo.ams_users u ON p.record_key = u.username OR p.username = u.username
+                WHERE ISNULL(p.role, N'') NOT IN (N'Standard User', N'Viewer (Read-Only)', N'Admin', N'Super Root', N'Supreme Root')
+                  AND u.role IN (N'Standard User', N'Viewer (Read-Only)', N'Admin', N'Super Root', N'Supreme Root');
+            END", conn);
+        await cmd.ExecuteNonQueryAsync();
+    }
+
+    public static readonly string[] KnownUserRoles =
+    {
+        "Standard User",
+        "Viewer (Read-Only)",
+        "Admin",
+        "Super Root",
+        "Supreme Root",
+    };
+
+    public static bool IsValidUserRole(string? role) =>
+        !string.IsNullOrWhiteSpace(role) && Array.IndexOf(KnownUserRoles, role) >= 0;
+
     private async Task EnsureSeedUserAsync()
     {
         /* (username, password, role, email, remarks, displayName) */
@@ -997,7 +1070,7 @@ public class AmsDb
                     WHERE username = @u;", conn);
                 upd.Parameters.AddWithValue("@h", hash);
                 upd.Parameters.AddWithValue("@s", salt);
-                upd.Parameters.AddWithValue("@r", role);
+                upd.Parameters.Add("@r", SqlDbType.NVarChar, 50).Value = role;
                 upd.Parameters.AddWithValue("@u", username);
                 await upd.ExecuteNonQueryAsync();
                 continue;
@@ -1009,7 +1082,7 @@ public class AmsDb
             cmd.Parameters.AddWithValue("@u", username);
             cmd.Parameters.AddWithValue("@h", hash);
             cmd.Parameters.AddWithValue("@s", salt);
-            cmd.Parameters.AddWithValue("@r", role);
+            cmd.Parameters.Add("@r", SqlDbType.NVarChar, 50).Value = role;
             cmd.Parameters.AddWithValue("@e", email);
             cmd.Parameters.AddWithValue("@m", remarks);
             cmd.Parameters.AddWithValue("@dn", displayName);
@@ -1622,7 +1695,7 @@ public class AmsDb
         cmd.Parameters.AddWithValue("@u", username);
         cmd.Parameters.AddWithValue("@h", hash);
         cmd.Parameters.AddWithValue("@s", salt);
-        cmd.Parameters.AddWithValue("@r", role);
+        cmd.Parameters.Add("@r", SqlDbType.NVarChar, 50).Value = role;
         cmd.Parameters.AddWithValue("@le", (object?)linkedEmployee ?? DBNull.Value);
         cmd.Parameters.AddWithValue("@e", (object?)email ?? DBNull.Value);
         cmd.Parameters.AddWithValue("@m", (object?)remarks ?? DBNull.Value);
@@ -1637,26 +1710,42 @@ public class AmsDb
         await using var conn = new SqlConnection(GetDbConnectionString());
         await conn.OpenAsync();
 
-        var sql = new List<string> {
-            "role = ISNULL(@r, role)",
-            "linked_employee = ISNULL(@le, linked_employee)",
-            "email = @e",
-            "remarks = @m",
-            "active = ISNULL(@a, active)",
-            "display_name = @dn",
-            "contact_no = @c",
-            "address = @ad",
-            "dob = @d",
-            "gender = @g",
-        };
-        var ps = new List<(string, object?)>
+        var sql = new List<string>();
+        var cmd = new SqlCommand { Connection = conn };
+
+        /* Never use ISNULL(@p, col) with an untyped null parameter. AddWithValue
+           infers NVARCHAR(1) for C# null, so ISNULL(@r, role) truncated
+           "Supreme Root" / "Super Root" / "Standard User" to "S". Omit the
+           column when the caller did not send a value. */
+        if (!string.IsNullOrWhiteSpace(role))
         {
-            ("@r", role), ("@le", (object?)linkedEmployee ?? DBNull.Value),
-            ("@e", (object?)email ?? DBNull.Value), ("@m", (object?)remarks ?? DBNull.Value),
-            ("@a", active), ("@dn", (object?)displayName ?? DBNull.Value),
-            ("@c", (object?)contactNo ?? DBNull.Value), ("@ad", (object?)address ?? DBNull.Value),
-            ("@d", (object?)dob ?? DBNull.Value), ("@g", (object?)gender ?? DBNull.Value),
-        };
+            sql.Add("role = @r");
+            cmd.Parameters.Add("@r", SqlDbType.NVarChar, 50).Value = role;
+        }
+        if (linkedEmployee is not null)
+        {
+            sql.Add("linked_employee = @le");
+            cmd.Parameters.Add("@le", SqlDbType.NVarChar, 100).Value = linkedEmployee;
+        }
+        sql.Add("email = @e");
+        cmd.Parameters.Add("@e", SqlDbType.NVarChar, 200).Value = (object?)email ?? DBNull.Value;
+        sql.Add("remarks = @m");
+        cmd.Parameters.Add("@m", SqlDbType.NVarChar, 500).Value = (object?)remarks ?? DBNull.Value;
+        if (active is not null)
+        {
+            sql.Add("active = @a");
+            cmd.Parameters.Add("@a", SqlDbType.Bit).Value = active.Value;
+        }
+        sql.Add("display_name = @dn");
+        cmd.Parameters.Add("@dn", SqlDbType.NVarChar, 200).Value = (object?)displayName ?? DBNull.Value;
+        sql.Add("contact_no = @c");
+        cmd.Parameters.Add("@c", SqlDbType.NVarChar, 50).Value = (object?)contactNo ?? DBNull.Value;
+        sql.Add("address = @ad");
+        cmd.Parameters.Add("@ad", SqlDbType.NVarChar, 500).Value = (object?)address ?? DBNull.Value;
+        sql.Add("dob = @d");
+        cmd.Parameters.Add("@d", SqlDbType.NVarChar, 20).Value = (object?)dob ?? DBNull.Value;
+        sql.Add("gender = @g");
+        cmd.Parameters.Add("@g", SqlDbType.NVarChar, 20).Value = (object?)gender ?? DBNull.Value;
 
         if (!string.IsNullOrWhiteSpace(newPassword))
         {
@@ -1664,13 +1753,12 @@ public class AmsDb
             var hash = HashUtils.HashPassword(newPassword, salt);
             sql.Add("password_hash = @h");
             sql.Add("password_salt = @s");
-            ps.Add(("@h", hash));
-            ps.Add(("@s", salt));
+            cmd.Parameters.Add("@h", SqlDbType.NVarChar, 256).Value = hash;
+            cmd.Parameters.Add("@s", SqlDbType.NVarChar, 64).Value = salt;
         }
 
-        var cmd = new SqlCommand($"UPDATE dbo.ams_users SET {string.Join(", ", sql)} WHERE username = @u;", conn);
-        cmd.Parameters.AddWithValue("@u", username);
-        foreach (var (name, value) in ps) cmd.Parameters.AddWithValue(name, value);
+        cmd.Parameters.Add("@u", SqlDbType.NVarChar, 100).Value = username;
+        cmd.CommandText = $"UPDATE dbo.ams_users SET {string.Join(", ", sql)} WHERE username = @u;";
         await cmd.ExecuteNonQueryAsync();
     }
 

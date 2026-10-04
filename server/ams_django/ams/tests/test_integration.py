@@ -76,8 +76,10 @@ class UserIntegrationTests(unittest.TestCase):
         updated = DB.find_user(self.TEST_USER)
         self.assertEqual(updated["email"], "new@ams.local")
         self.assertEqual(updated["display_name"], "IT User")
-        # role not overwritten when None
+        # role / active not overwritten when None (profile save must not
+        # truncate "Super Root" / "Supreme Root" / "Standard User" to "S")
         self.assertEqual(updated["role"], "Super Root")
+        self.assertTrue(updated["active"])
 
         DB.update_user(self.TEST_USER, "NewPass@456", None, None, None, None, None,
                        None, None, None, None, None)

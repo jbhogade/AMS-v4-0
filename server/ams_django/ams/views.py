@@ -15,7 +15,7 @@ from django.conf import settings
 from django.http import FileResponse, Http404, HttpResponse, JsonResponse
 
 from . import crypto
-from .db import ALLOWED_KEYS, CollectionSaveError, get_db
+from .db import ALLOWED_KEYS, CollectionSaveError, get_db, is_valid_user_role
 
 logger = logging.getLogger(__name__)
 
@@ -206,6 +206,8 @@ def users(request):
     role = body.get("role") or ""
     if role == "Supreme Root" and request.role != "Supreme Root":
         return HttpResponse(status=403)
+    if not is_valid_user_role(role):
+        return JsonResponse({"error": "Role is not a valid AMS role."}, status=400)
 
     username = (body.get("username") or "").strip()
     if not username or not str(body.get("password") or "").strip():
@@ -249,6 +251,8 @@ def user_detail(request, username):
         role = body.get("role")
         if (user["role"] == "Supreme Root" or role == "Supreme Root") and request.role != "Supreme Root":
             return HttpResponse(status=403)
+        if role is not None and not is_valid_user_role(role):
+            return JsonResponse({"error": "Role is not a valid AMS role."}, status=400)
         try:
             db.update_user(
                 username=username,
