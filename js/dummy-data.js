@@ -27,11 +27,11 @@
    ===========================================================================*/
 
 /* =============================================================================
-   DATABASE / API LAYER  (AMS-v4-0)
+   DATABASE / API LAYER  (AMS-TEST)
    -----------------------------------------------------------------------------
-   The AMS-v4-0 portal is backed by the SQL Server database "AMS-v4-0" reached
-   through the ASP.NET Core API (server\AMS.API). Business data is stored as
-   JSON documents in the dbo.ams_collections table; this layer loads every
+   The AMS-Test portal is backed by the SQL Server database "AMS-TEST" reached
+   through the ASP.NET Core API (server\AMS.API). Business data lives in
+   per-entity SQL tables (plus data_json on each row). This layer loads every
    collection into the global arrays below at startup and PUTs a collection
    back to the API whenever the in-memory data changes. SQL Server is the
    single source of truth - the arrays are just a live cache of the documents.
@@ -96,7 +96,7 @@ async function amsApiFetch(path, opts) {
     try {
         res = await fetch(AMS_API_BASE + path, opts);
     } catch (e) {
-        throw new Error("Cannot reach the AMS-v4-0 API. Start server\\AMS.API (dotnet run) and refresh.");
+        throw new Error("Cannot reach the AMS-Test API. Start server\\AMS.API (dotnet run) and refresh.");
     }
     if (res.status === 401) {
         amsClearSession();
@@ -2634,19 +2634,25 @@ function amsBuildPrintSimCardsSectionHtml(directList, subList, opts) {
 
 function amsBuildPrintMobileSimHtml(amsId, opts) {
     const exitRecord = opts && opts.exitRecord;
+    const includeDirect = !(opts && opts.includeDirect === false);
+    const includeTeam = !(opts && opts.includeTeam === false);
     const mobiles = exitRecord
         ? { direct: exitRecord.directMobilesHeld || [], subordinate: exitRecord.subordinateMobilesHeld || [] }
         : amsCollectPrintMobilesForEmp(amsId);
     const sims = exitRecord
         ? { direct: exitRecord.directSimCardsHeld || [], subordinate: exitRecord.subordinateSimCardsHeld || [] }
         : amsCollectPrintSimsForEmp(amsId);
+    const mobileDirect = includeDirect ? mobiles.direct : [];
+    const mobileTeam = includeTeam ? mobiles.subordinate : [];
+    const simDirect = includeDirect ? sims.direct : [];
+    const simTeam = includeTeam ? sims.subordinate : [];
     return {
-        html: amsBuildPrintMobilesSectionHtml(mobiles.direct, mobiles.subordinate, opts)
-            + amsBuildPrintSimCardsSectionHtml(sims.direct, sims.subordinate, opts),
-        mobileDirect: mobiles.direct.length,
-        mobileTeam: mobiles.subordinate.length,
-        simDirect: sims.direct.length,
-        simTeam: sims.subordinate.length,
+        html: amsBuildPrintMobilesSectionHtml(mobileDirect, mobileTeam, opts)
+            + amsBuildPrintSimCardsSectionHtml(simDirect, simTeam, opts),
+        mobileDirect: mobileDirect.length,
+        mobileTeam: mobileTeam.length,
+        simDirect: simDirect.length,
+        simTeam: simTeam.length,
     };
 }
 
@@ -2687,6 +2693,7 @@ const AMS_PAGE_REGISTRY = [
     { key: "accessRights",  label: "Access Rights Control Master (Supreme Root only)" },
     { key: "roleAccess",    label: "Role Access Master (Supreme Root only)" },
     { key: "log",           label: "Log Report (Super Root and Supreme Root only)" },
+    { key: "sqlBackup",     label: "SQL Database Backup (hidden until host copy works)" },
     { key: "report.assetLifecycle",     label: "Report: Asset Lifecycle" },
     { key: "report.assetIssue",         label: "Report: Asset Issue Form" },
     { key: "report.assetHandover",      label: "Report: Asset Handover Form" },
@@ -2739,6 +2746,7 @@ const AMS_ROLE_ACCESS_RECOMMENDED = {
     accessRights:           { "Standard User": "none", "Viewer (Read-Only)": "none", "Admin": "none", "Super Root": "none", "Supreme Root": "full" },
     roleAccess:             { "Standard User": "none", "Viewer (Read-Only)": "none", "Admin": "none", "Super Root": "none", "Supreme Root": "full" },
     log:                    { "Standard User": "none", "Viewer (Read-Only)": "none", "Admin": "none", "Super Root": "full", "Supreme Root": "full" },
+    sqlBackup:              { "Standard User": "none", "Viewer (Read-Only)": "none", "Admin": "none", "Super Root": "none", "Supreme Root": "none" },
     "report.assetLifecycle":    { "Standard User": "full", "Viewer (Read-Only)": "view", "Admin": "full", "Super Root": "full", "Supreme Root": "full" },
     "report.assetIssue":        { "Standard User": "full", "Viewer (Read-Only)": "view", "Admin": "full", "Super Root": "full", "Supreme Root": "full" },
     "report.assetHandover":     { "Standard User": "full", "Viewer (Read-Only)": "view", "Admin": "full", "Super Root": "full", "Supreme Root": "full" },
@@ -2769,6 +2777,9 @@ function amsDefaultRoleAccessMap() {
             }
             if (p.key === "log") {
                 level = (role === "Super Root" || role === "Supreme Root") ? AMS_ACCESS_FULL : AMS_ACCESS_NONE;
+            }
+            if (p.key === "sqlBackup") {
+                level = AMS_ACCESS_NONE;
             }
             map[role][p.key] = level;
         });
@@ -2835,6 +2846,9 @@ function amsAccessLevelForUserPage(user, registryKey) {
     if (registryKey === "accessRights" || registryKey === "roleAccess") {
         if (role !== "Supreme Root") return AMS_ACCESS_NONE;
     }
+    if (registryKey === "sqlBackup") {
+        return AMS_ACCESS_NONE;
+    }
     if (registryKey === "log") {
         if (role !== "Supreme Root" && role !== "Super Root") return AMS_ACCESS_NONE;
     }
@@ -2875,6 +2889,7 @@ const AMS_NAV_TO_REGISTRY = {
     "access-rights": "accessRights",
     "role-access": "roleAccess",
     log: "log",
+    "sql-backup": "sqlBackup",
     "master-asset-type": "assetType",
     "master-asset-make": "assetMake",
     "master-asset-category": "assetCategory",

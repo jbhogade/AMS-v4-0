@@ -81,10 +81,13 @@ function amsSubordinateAssetsDetailed(amsId) {
    type         : "assign" (Asset Issue Form) | "exit" (Asset Handover Form)
    extraRemarks : optional note typed into the pre-print modal
    ===========================================================================*/
-function amsGenerateReport(amsId, type, extraRemarks) {
+function amsGenerateReport(amsId, type, extraRemarks, printScope) {
     const isIssue = type !== "exit";
     const emp = findEmployee(amsId);
     if (!emp) return;
+    const scope = isIssue ? (printScope || "both") : "both";
+    const includeDirect = scope !== "team";
+    const includeTeam = scope !== "direct";
 
     /* Exit Report reads the permanent snapshot so it reflects the exact state
        at the moment of exit; Issue Report uses live/current data. */
@@ -96,11 +99,17 @@ function amsGenerateReport(amsId, type, extraRemarks) {
     /* Split the employee's assets into directly-held vs subordinate/team-held,
        and derive the printed "Assignment Type" from that mix. */
     const splitOwned = isIssue ? amsSplitDirectVsSubordinateAssets(owned) : null;
-    const directOwned = splitOwned ? splitOwned.direct : owned;
-    const subOwned = splitOwned ? splitOwned.subordinate : [];
-    const subAssets = isIssue ? amsSubordinateAssetsDetailed(amsId) : [];
+    const directOwned = splitOwned ? (includeDirect ? splitOwned.direct : []) : owned;
+    const subOwned = splitOwned ? (includeTeam ? splitOwned.subordinate : []) : [];
+    const subAssets = isIssue && includeTeam ? amsSubordinateAssetsDetailed(amsId) : [];
     const mobileSimPreview = typeof amsBuildPrintMobileSimHtml === "function"
-        ? amsBuildPrintMobileSimHtml(amsId, { withCondition: isIssue, returnedLabel: !isIssue, exitRecord: isIssue ? null : exitRecord })
+        ? amsBuildPrintMobileSimHtml(amsId, {
+            withCondition: isIssue,
+            returnedLabel: !isIssue,
+            exitRecord: isIssue ? null : exitRecord,
+            includeDirect: includeDirect,
+            includeTeam: includeTeam,
+        })
         : { html: "", mobileDirect: 0, mobileTeam: 0, simDirect: 0, simTeam: 0 };
     const assignmentType = isIssue
         ? amsAssignmentTypeLabel(
@@ -187,9 +196,11 @@ function amsGenerateReport(amsId, type, extraRemarks) {
         </table>`;
 
     const accessoryItems = isIssue
-        ? ((typeof amsPrintDirectHoldingsForAccessories === "function")
-            ? amsPrintDirectHoldingsForAccessories(amsId, directOwned)
-            : directOwned)
+        ? (includeDirect
+            ? ((typeof amsPrintDirectHoldingsForAccessories === "function")
+                ? amsPrintDirectHoldingsForAccessories(amsId, directOwned)
+                : directOwned)
+            : [])
         : (exitRecord
             ? [].concat(exitRecord.directAssetsHeld || [], exitRecord.directMobilesHeld || [], exitRecord.directSimCardsHeld || [])
             : directOwned);
@@ -254,8 +265,8 @@ function amsGenerateReport(amsId, type, extraRemarks) {
             <div class="pf-section-bar">${isIssue ? "Issued To" : "Employee Details (Exiting)"}</div>
             ${infoBoxesHtml}
 
-            <div class="pf-section-bar ${isIssue ? "" : "pf-bar-accent"}">${isIssue ? "Assets Issued" : "Assets Returned (Direct Assignment Only)"}</div>
-            ${assetTableHtml}
+            ${isIssue && !includeDirect ? "" : `<div class="pf-section-bar ${isIssue ? "" : "pf-bar-accent"}">${isIssue ? "Assets Issued" : "Assets Returned (Direct Assignment Only)"}</div>
+            ${assetTableHtml}`}
 
             ${accessoriesHtml}
             ${subordinateHtml}

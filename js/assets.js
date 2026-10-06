@@ -26,6 +26,8 @@ const AST_STATE = {
     formCounters: {},     /* per-form sequence counters for generated form numbers */
     viewKey: null,        /* asset.id whose details are open in modalView */
     historyKey: null,     /* asset.id whose ID record is open in modalHistory */
+    actionDateKind: null, /* "return" | "notworking" | "retire" while modalActionDate is open */
+    printIssueKey: null,  /* asset.id used when picking Asset Issue Form print scope */
     replAwaitingAdd: false, /* true while the Add Asset modal is open from the Replace modal */
     replOldKey: null,       /* asset.id of the asset being replaced while adding from Replace */
     replNewKey: null,       /* asset.id of the asset just added from the Replace modal */
@@ -333,11 +335,11 @@ function amsWireRowActions() {
         else if (action === "edit") amsOpenEditModal(key);
         else if (action === "assign") amsOpenAssignModal(key, "assign");
         else if (action === "editAssign") amsOpenAssignModal(key, "edit");
-        else if (action === "return") amsReturnAsset(key);
+        else if (action === "return") amsOpenActionDateModal("return", key);
         else if (action === "transfer") amsOpenTransferModal(key);
-        else if (action === "notworking") amsMarkNotWorking(key);
+        else if (action === "notworking") amsOpenActionDateModal("notworking", key);
         else if (action === "replace") amsOpenReplaceModal(key);
-        else if (action === "retire") amsRetireAsset(key);
+        else if (action === "retire") amsOpenActionDateModal("retire", key);
         else if (action === "printIssue") amsPrintAssetIssueForm(key);
         else if (action === "history") amsOpenHistoryModal(key);
     });
@@ -874,14 +876,48 @@ function amsConfirmAssign() {
 /* =============================================================================
    15) RETURN ASSET
    ===========================================================================*/
-function amsReturnAsset(key) {
+function amsOpenActionDateModal(kind, key) {
+    const a = AST_STATE.assets.find(x => x.id === key);
+    if (!a) return;
+    AST_STATE.editingId = key;
+    AST_STATE.actionDateKind = kind;
+    const titles = {
+        return: "Return Asset",
+        notworking: "Mark Not Working",
+        retire: "Retire / Scrap Asset",
+    };
+    const hints = {
+        return: "This date is recorded on the Asset ID Record as the Return date.",
+        notworking: "This date is recorded on the Asset ID Record as the Not Working date.",
+        retire: "This date is recorded on the Asset ID Record as the Retire / Scrap date.",
+    };
+    document.getElementById("actionDateTitle").textContent = titles[kind] || "Confirm Action";
+    document.getElementById("actionDateAssetLabel").textContent = amsComputeFullId(a)
+        + (a.type ? ` (${a.type}${a.make ? " - " + a.make : ""}${a.model ? " " + a.model : ""})` : "");
+    document.getElementById("actionDateHint").textContent = hints[kind] || "This date is recorded on the Asset ID Record.";
+    document.getElementById("actionDateValue").value = new Date().toISOString().slice(0, 10);
+    amsOpenModal("modalActionDate");
+}
+
+function amsConfirmActionDate() {
+    const date = document.getElementById("actionDateValue").value;
+    if (!date) { alert("Please select a date."); return; }
+    const key = AST_STATE.editingId;
+    const kind = AST_STATE.actionDateKind;
+    amsCloseModal("modalActionDate");
+    if (kind === "return") amsReturnAsset(key, date);
+    else if (kind === "notworking") amsMarkNotWorking(key, date);
+    else if (kind === "retire") amsRetireAsset(key, date);
+}
+
+function amsReturnAsset(key, actionDate) {
     const a = AST_STATE.assets.find(x => x.id === key);
     if (!a) return;
     const prevEmp = a.assignedTo ? amsGetEmployeeByAmsId(a.assignedTo) : null;
-    if (!confirm(`Mark "${amsComputeFullId(a)}" as Returned (In Store)?`)) return;
+    const eventDate = actionDate || new Date().toISOString().slice(0, 10);
 
     a.history.push({
-        date: new Date().toISOString().slice(0, 10), action: "Returned",
+        date: eventDate, action: "Returned",
         empId: prevEmp ? prevEmp.empId : "", empName: prevEmp ? prevEmp.name : "", empDept: prevEmp ? prevEmp.dept : "",
         assetIdFull: amsBaseDisplayId(a), statusLabel: "In Store",
     });
@@ -936,16 +972,16 @@ function amsConfirmTransfer() {
 /* =============================================================================
    17) NOT WORKING + RETIRE / SCRAP
    ===========================================================================*/
-function amsMarkNotWorking(key) {
+function amsMarkNotWorking(key, actionDate) {
     const a = AST_STATE.assets.find(x => x.id === key);
     if (!a) return;
-    if (!confirm(`Mark "${amsComputeFullId(a)}" as Not Working?`)) return;
     const emp = a.assignedTo ? amsGetEmployeeByAmsId(a.assignedTo) : null;
+    const eventDate = actionDate || new Date().toISOString().slice(0, 10);
     a.status = "Not Working";
     a.assignedTo = null; a.assignedToSubordinate = null; a.assignedSubText = null; a.assignedDepartment = null; a.assignedDeptText = null; a.usageNote = null; a.dept = "";
     a.id = amsComputeFullId(a);
     a.history.push({
-        date: new Date().toISOString().slice(0, 10), action: "Not Working",
+        date: eventDate, action: "Not Working",
         empId: emp ? emp.empId : "", empName: emp ? emp.name : "", empDept: emp ? emp.dept : "",
         assetIdFull: a.id, statusLabel: "Not Working",
     });
@@ -954,16 +990,16 @@ function amsMarkNotWorking(key) {
     renderAssetTable();
 }
 
-function amsRetireAsset(key) {
+function amsRetireAsset(key, actionDate) {
     const a = AST_STATE.assets.find(x => x.id === key);
     if (!a) return;
-    if (!confirm(`Retire / Scrap "${amsComputeFullId(a)}"? This is normally the end of its lifecycle.`)) return;
     const emp = a.assignedTo ? amsGetEmployeeByAmsId(a.assignedTo) : null;
+    const eventDate = actionDate || new Date().toISOString().slice(0, 10);
     a.status = "Retired / Scrapped";
     a.assignedTo = null; a.assignedToSubordinate = null; a.assignedSubText = null; a.assignedDepartment = null; a.assignedDeptText = null; a.usageNote = null; a.dept = "";
     a.id = amsComputeFullId(a);
     a.history.push({
-        date: new Date().toISOString().slice(0, 10), action: "Retired / Scrapped",
+        date: eventDate, action: "Retired / Scrapped",
         empId: emp ? emp.empId : "", empName: emp ? emp.name : "", empDept: emp ? emp.dept : "",
         assetIdFull: a.id, statusLabel: "Retired / Scrapped",
     });
@@ -1081,6 +1117,7 @@ function amsSubmitReplaceForm(e) {
 
     const today = new Date().toISOString().slice(0, 10);
     const issueDate = document.getElementById("replIssueDate").value || today;
+    const replaceDate = issueDate;
     const replacesReason = document.getElementById("replReason").value;
     const replacesNote = document.getElementById("replNote").value.trim();
     const replDetail = `Reason: ${replacesReason}${replacesNote ? ` - ${replacesNote}` : ""}`;
@@ -1115,7 +1152,7 @@ function amsSubmitReplaceForm(e) {
     old.replacedByAssetId = amsBaseDisplayId(newAsset);
     old.id = amsComputeFullId(old);
     old.history.push({
-        date: today, action: `Replaced by ${amsBaseDisplayId(newAsset)}`, note: replDetail,
+        date: replaceDate, action: `Replaced by ${amsBaseDisplayId(newAsset)}`, note: replDetail,
         empId: oldPrevEmp ? oldPrevEmp.empId : "", empName: oldPrevEmp ? oldPrevEmp.name : "", empDept: oldPrevEmp ? oldPrevEmp.dept : "",
         assetIdFull: old.id, statusLabel: "Replaced",
     });
@@ -1240,10 +1277,45 @@ function amsPrintAssetIssueForm(key) {
     }
     const emp = amsGetEmployeeByAmsId(a.assignedTo);
     if (!emp) return;
-    amsGenerateAssetIssueFormPrint(key, "");
+    AST_STATE.printIssueKey = key;
+    document.getElementById("printScopeEmpLabel").textContent = emp.name || getEmployeeFullName(emp);
+    const directRadio = document.querySelector('#modalPrintScope input[name="printScopeChoice"][value="direct"]');
+    if (directRadio) directRadio.checked = true;
+    amsOpenModal("modalPrintScope");
 }
 
-function amsGenerateAssetIssueFormPrint(key, extraRemarks) {
+function amsConfirmPrintScope() {
+    const chosen = document.querySelector('#modalPrintScope input[name="printScopeChoice"]:checked');
+    const scope = chosen ? chosen.value : "direct";
+    const key = AST_STATE.printIssueKey;
+    const a = AST_STATE.assets.find(x => x.id === key);
+    const emp = a && a.assignedTo ? amsGetEmployeeByAmsId(a.assignedTo) : null;
+    if (!emp) {
+        amsCloseModal("modalPrintScope");
+        return;
+    }
+    const includeDirect = scope !== "team";
+    const includeTeam = scope !== "direct";
+    const owned = amsOwnedAssetsForEmp(emp.empId);
+    const splitOwned = amsSplitDirectVsSubordinateAssets(owned);
+    const directCount = includeDirect ? splitOwned.direct.length : 0;
+    const teamCount = includeTeam
+        ? (splitOwned.subordinate.length + amsSubordinateAssetsForEmpDetailed(emp.empId).length)
+        : 0;
+    const mobileSim = typeof amsBuildPrintMobileSimHtml === "function"
+        ? amsBuildPrintMobileSimHtml(emp.amsId || emp.empId, { includeDirect: includeDirect, includeTeam: includeTeam })
+        : { html: "", mobileDirect: 0, mobileTeam: 0, simDirect: 0, simTeam: 0 };
+    const mobileSimCount = (includeDirect ? (mobileSim.mobileDirect + mobileSim.simDirect) : 0)
+        + (includeTeam ? (mobileSim.mobileTeam + mobileSim.simTeam) : 0);
+    if (directCount + teamCount + mobileSimCount === 0) {
+        alert("No holdings match the selected print scope for " + (emp.name || getEmployeeFullName(emp)) + ".");
+        return;
+    }
+    amsCloseModal("modalPrintScope");
+    amsGenerateAssetIssueFormPrint(key, "", scope);
+}
+
+function amsGenerateAssetIssueFormPrint(key, extraRemarks, printScope) {
     const a = AST_STATE.assets.find(x => x.id === key);
     if (!a || a.status !== "Assigned" || !a.assignedTo) {
         alert("Asset Issue Form is only available for assets currently marked Assigned.");
@@ -1251,8 +1323,11 @@ function amsGenerateAssetIssueFormPrint(key, extraRemarks) {
     }
     const emp = amsGetEmployeeByAmsId(a.assignedTo);
     if (!emp) return;
+    const scope = printScope || "both";
+    const includeDirect = scope !== "team";
+    const includeTeam = scope !== "direct";
     const owned = amsOwnedAssetsForEmp(emp.empId);
-    const subAssets = amsSubordinateAssetsForEmpDetailed(emp.empId);
+    const subAssetsAll = amsSubordinateAssetsForEmpDetailed(emp.empId);
 
     /* Assets issued directly to the employee (assigned to them with no
        subordinate/team actual user) stay in "Assets Issued". Assets whose actual
@@ -1260,10 +1335,15 @@ function amsGenerateAssetIssueFormPrint(key, extraRemarks) {
        in the "For Reference" section instead, since they are not personally held
        by the employee. */
     const splitOwned = amsSplitDirectVsSubordinateAssets(owned);
-    const directOwned = splitOwned.direct;
-    const subOwned = splitOwned.subordinate;
+    const directOwned = includeDirect ? splitOwned.direct : [];
+    const subOwned = includeTeam ? splitOwned.subordinate : [];
+    const subAssets = includeTeam ? subAssetsAll : [];
     const mobileSimPreview = typeof amsBuildPrintMobileSimHtml === "function"
-        ? amsBuildPrintMobileSimHtml(emp.amsId || emp.empId, { withCondition: true })
+        ? amsBuildPrintMobileSimHtml(emp.amsId || emp.empId, {
+            withCondition: true,
+            includeDirect: includeDirect,
+            includeTeam: includeTeam,
+        })
         : { html: "", mobileDirect: 0, mobileTeam: 0, simDirect: 0, simTeam: 0 };
     const assignmentType = amsAssignmentTypeLabel(
         directOwned.length + mobileSimPreview.mobileDirect + mobileSimPreview.simDirect,
@@ -1317,9 +1397,11 @@ function amsGenerateAssetIssueFormPrint(key, extraRemarks) {
             </tbody>
         </table>`;
 
-    const accessoryItems = (typeof amsPrintDirectHoldingsForAccessories === "function")
-        ? amsPrintDirectHoldingsForAccessories(emp.amsId || emp.empId, directOwned)
-        : directOwned;
+    const accessoryItems = includeDirect
+        ? ((typeof amsPrintDirectHoldingsForAccessories === "function")
+            ? amsPrintDirectHoldingsForAccessories(emp.amsId || emp.empId, directOwned)
+            : directOwned)
+        : [];
     const accessoriesHtml = (typeof amsBuildPrintAccessoriesHtml === "function")
         ? amsBuildPrintAccessoriesHtml(accessoryItems)
         : "";
@@ -1361,8 +1443,8 @@ function amsGenerateAssetIssueFormPrint(key, extraRemarks) {
             <div class="pf-section-bar">Issued To</div>
             ${infoBoxesHtml}
 
-            <div class="pf-section-bar">Assets Issued</div>
-            ${assetTableHtml}
+            ${includeDirect ? `<div class="pf-section-bar">Assets Issued</div>
+            ${assetTableHtml}` : ""}
 
             ${accessoriesHtml}
             ${subordinateHtml}
@@ -1628,6 +1710,8 @@ async function initAssets() {
 
     /* Transfer */
     document.getElementById("btnConfirmTransfer").addEventListener("click", amsConfirmTransfer);
+    document.getElementById("btnConfirmActionDate").addEventListener("click", amsConfirmActionDate);
+    document.getElementById("btnConfirmPrintScope").addEventListener("click", amsConfirmPrintScope);
 
     /* Replace */
     document.getElementById("replType").addEventListener("change", amsPopulateReplaceSource);

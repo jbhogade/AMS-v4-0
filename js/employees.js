@@ -717,7 +717,39 @@ function openIssueForm(amsId) {
         alert("No Assign Report (Asset Issue Form) can be generated for " + getEmployeeFullName(emp) + " because they are not currently holding any assets.");
         return;
     }
-    amsGenerateReport(amsId, "assign");
+    currentEmployeeAmsId = amsId;
+    document.getElementById("emp-print-scope-name").textContent = getEmployeeFullName(emp);
+    const directRadio = document.querySelector('#modal-print-scope input[name="empPrintScopeChoice"][value="direct"]');
+    if (directRadio) directRadio.checked = true;
+    showModal("modal-print-scope");
+}
+
+function confirmIssueFormScope() {
+    const chosen = document.querySelector('#modal-print-scope input[name="empPrintScopeChoice"]:checked');
+    const scope = chosen ? chosen.value : "direct";
+    const amsId = currentEmployeeAmsId;
+    const emp = findEmployee(amsId);
+    const owned = getEmployeeAssets(amsId);
+    const splitOwned = typeof amsSplitDirectVsSubordinateAssets === "function"
+        ? amsSplitDirectVsSubordinateAssets(owned)
+        : { direct: owned, subordinate: [] };
+    const includeDirect = scope !== "team";
+    const includeTeam = scope !== "direct";
+    const directCount = includeDirect ? splitOwned.direct.length : 0;
+    const teamCount = includeTeam
+        ? (splitOwned.subordinate.length + getSubordinateAssets(amsId).length)
+        : 0;
+    const mobileSim = typeof amsBuildPrintMobileSimHtml === "function"
+        ? amsBuildPrintMobileSimHtml(amsId, { includeDirect: includeDirect, includeTeam: includeTeam })
+        : { html: "", mobileDirect: 0, mobileTeam: 0, simDirect: 0, simTeam: 0 };
+    const mobileSimCount = (includeDirect ? (mobileSim.mobileDirect + mobileSim.simDirect) : 0)
+        + (includeTeam ? (mobileSim.mobileTeam + mobileSim.simTeam) : 0);
+    if (directCount + teamCount + mobileSimCount === 0) {
+        alert("No holdings match the selected print scope for " + (emp ? getEmployeeFullName(emp) : "this employee") + ".");
+        return;
+    }
+    hideModal("modal-print-scope");
+    amsGenerateReport(amsId, "assign", "", scope);
 }
 
 /* =============================================================================
@@ -1151,6 +1183,7 @@ async function initEmployees() {
     /* Exit events */
     document.getElementById("exit-confirm").addEventListener("click", confirmExit);
     document.getElementById("reactivate-confirm").addEventListener("click", confirmReactivate);
+    document.getElementById("emp-print-scope-confirm").addEventListener("click", confirmIssueFormScope);
 
     /* Close buttons inside modals */
     document.querySelectorAll(".modal [data-close]").forEach(btn => {
