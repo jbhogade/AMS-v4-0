@@ -340,7 +340,8 @@ function distExportDetail() {
    6) PAGE INIT
    ===========================================================================*/
 function initAssetDistribution() {
-    amsDbEnsureLoaded().then(() => {
+    amsDbEnsureLoaded().then(async () => {
+        if (typeof amsYieldToBrowser === "function") await amsYieldToBrowser();
         DIST_STATE.rows = distBuildRows();
         DIST_STATE.loaded = true;
 

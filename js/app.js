@@ -24,9 +24,12 @@ function closeSidebar() {
 
 /* ---- 2) ESCAPE TEXT : safely display user data in the HTML ------------------ */
 function escapeHtml(value) {
-    const div = document.createElement("div");
-    div.textContent = value == null ? "" : String(value);
-    return div.innerHTML;
+    return String(value == null ? "" : value)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#39;");
 }
 
 /* Small inline SVG icons for chrome (menu, bell, lock, warn). Stroke uses

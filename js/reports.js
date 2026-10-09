@@ -531,7 +531,8 @@ document.addEventListener("DOMContentLoaded", () => {
     amsWireReportTabs();
     amsWireReportAppearance();
     amsWireReportButtons();
-    (typeof amsDbEnsureLoaded === "function" ? amsDbEnsureLoaded() : Promise.resolve()).then(() => {
+    (typeof amsDbEnsureLoaded === "function" ? amsDbEnsureLoaded() : Promise.resolve()).then(async () => {
+        if (typeof amsYieldToBrowser === "function") await amsYieldToBrowser();
         amsApplyReportTabAccess();
         amsPopulateSiteFilters();
         amsPopulateIssueHandoverExtraFilters();

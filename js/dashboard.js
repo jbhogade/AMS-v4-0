@@ -244,6 +244,7 @@ function renderRecentAssets() {
 /* ---- Kick off all dashboard rendering -------------------------------------- */
 async function initDashboard() {
     if (typeof amsDbEnsureLoaded === "function") await amsDbEnsureLoaded();
+    if (typeof amsYieldToBrowser === "function") await amsYieldToBrowser();
 
     /* Personalise the welcome heading with the signed-in user's display name. */
     const welcome = document.getElementById("welcome-greeting");

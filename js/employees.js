@@ -81,8 +81,8 @@ function renderEmployeeTable() {
         designation: emp => emp.designation,
         contact: emp => emp.contact || "",
         email: emp => emp.email || "",
-        owned: emp => amsOwnedEmployeeHoldings(emp.amsId).length,
-        team: emp => amsTeamEmployeeHoldings(emp.amsId).length,
+        owned: emp => amsOwnedEmployeeHoldingsCount(emp.amsId),
+        team: emp => amsTeamEmployeeHoldingsCount(emp.amsId),
         site: emp => emp.site || "",
         status: emp => emp.status,
     };
@@ -126,8 +126,8 @@ function renderEmployeeTable() {
     }
 
     tbody.innerHTML = sorted.map(emp => {
-        const owned = amsOwnedEmployeeHoldings(emp.amsId).length;
-        const team = amsTeamEmployeeHoldings(emp.amsId).length;
+        const owned = amsOwnedEmployeeHoldingsCount(emp.amsId);
+        const team = amsTeamEmployeeHoldingsCount(emp.amsId);
         const badge = badgeClassFor(emp.status);
         const amsCell = amsVisible
             ? `<td class="muted" title="Internal AMS ID (Supreme Root only)">${escapeHtml(emp.amsId)}</td>`
@@ -165,9 +165,7 @@ function buildActionsMenu(emp) {
     const active = emp.status === "Active";
     const exitRecord = typeof getExitRecord === "function" ? getExitRecord(emp.amsId) : null;
     const exited = emp.status === "Inactive" && !!exitRecord;
-    const holdsAssets = getEmployeeAssets(emp.amsId).length > 0 || getSubordinateAssets(emp.amsId).length > 0
-        || getEmployeeMobiles(emp.amsId).length > 0 || getSubordinateMobiles(emp.amsId).length > 0
-        || getEmployeeSimCards(emp.amsId).length > 0 || getSubordinateSimCards(emp.amsId).length > 0;
+    const holdsAssets = amsOwnedEmployeeHoldingsCount(emp.amsId) + amsTeamEmployeeHoldingsCount(emp.amsId) > 0;
     const exitReportLink = exitRecord
         ? `<a onclick="openHandoverForm('${emp.amsId}')">Exit Report (Handover Form)</a>`
         : "";
@@ -971,8 +969,8 @@ function amsExportEmployees() {
         designation: emp => emp.designation,
         contact: emp => emp.contact || "",
         email: emp => emp.email || "",
-        owned: emp => amsOwnedEmployeeHoldings(emp.amsId).length,
-        team: emp => amsTeamEmployeeHoldings(emp.amsId).length,
+        owned: emp => amsOwnedEmployeeHoldingsCount(emp.amsId),
+        team: emp => amsTeamEmployeeHoldingsCount(emp.amsId),
         site: emp => emp.site || "",
         status: emp => emp.status,
     };
@@ -1137,6 +1135,7 @@ function amsImportEmployeesFile(file) {
 /* Initialises the whole page */
 async function initEmployees() {
     if (typeof amsDbEnsureLoaded === "function") await amsDbEnsureLoaded();
+    if (typeof amsYieldToBrowser === "function") await amsYieldToBrowser();
     amsResolvePendingManagers();
     amsSortRegisterRenderer("employeeTable", renderEmployeeTable);
     populateSelects();

@@ -200,12 +200,25 @@ async function amsDbLoadAll() {
         const makesBackfilled = amsBackfillAssetMakeCodes();
         amsMigrateEmployeeNames();
         await amsMergeLoginUsersIntoProfiles();
+        amsInvalidateLookupCaches();
         AMS_DB_READY = true;
         if (typeof amsMigrateRoleAccessDocument === "function") amsMigrateRoleAccessDocument();
         if (makesBackfilled) amsDbSaveAsync("assetMakes");
-        if (typeof amsRepairExitedEmployeeHoldings === "function") amsRepairExitedEmployeeHoldings();
+        await amsYieldToBrowser();
+        if (typeof amsRepairExitedEmployeeHoldings === "function") {
+            const repair = () => { try { amsRepairExitedEmployeeHoldings(); } catch (e) { /* ignore */ } };
+            if (typeof requestIdleCallback === "function") requestIdleCallback(repair, { timeout: 1500 });
+            else setTimeout(repair, 0);
+        }
     })();
     return AMS_DB_LOADING;
+}
+function amsYieldToBrowser() {
+    return new Promise(resolve => {
+        const done = () => setTimeout(resolve, 0);
+        if (typeof requestAnimationFrame === "function") requestAnimationFrame(done);
+        else done();
+    });
 }
 function amsDbEnsureLoaded() { return amsDbLoadAll(); }
 function amsDbIsReady() { return AMS_DB_READY; }
@@ -258,6 +271,7 @@ function amsDbResumeSaves() { if (AMS_DB_SAVE_SUSPEND > 0) AMS_DB_SAVE_SUSPEND -
 function amsDbSavesSuspended() { return AMS_DB_SAVE_SUSPEND > 0; }
 
 function amsDbSaveAsync(key) {
+    amsInvalidateLookupCaches();
     if (!amsDbIsReady() || AMS_DB_SAVE_SUSPEND > 0) return;
     amsDbSave(key).catch(() => {});
 }
@@ -568,9 +582,12 @@ function amsQuickAddDesigFromReport(name, btn) {
 
 /* Escapes text for safe HTML insertion */
 function amsEsc(str) {
-    const div = document.createElement("div");
-    div.textContent = str || "";
-    return div.innerHTML;
+    return String(str == null ? "" : str)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#39;");
 }
 
 /* Unique, trimmed, case-insensitive values for toolbar filter dropdowns. */
@@ -991,14 +1008,53 @@ function amsEnsureDesignation(name) {
    Master and Reports. Lookup shortforms come from the masters above.)
    ===========================================================================*/
 
+let AMS_EMP_BY_AMS_ID = null;
+let AMS_TYPE_SHORT_MAP = null;
+let AMS_SITE_SHORT_MAP = null;
+let AMS_DEPT_SHORT_MAP = null;
+let AMS_ASSETS_BY_TO = null;
+let AMS_MOBILES_BY_TO = null;
+let AMS_SIMS_BY_TO = null;
+let AMS_SUBS_BY_MGR = null;
+let AMS_EXIT_BY_AMS = null;
+
+function amsInvalidateLookupCaches() {
+    AMS_EMP_BY_AMS_ID = null;
+    AMS_TYPE_SHORT_MAP = null;
+    AMS_SITE_SHORT_MAP = null;
+    AMS_DEPT_SHORT_MAP = null;
+    AMS_ASSETS_BY_TO = null;
+    AMS_MOBILES_BY_TO = null;
+    AMS_SIMS_BY_TO = null;
+    AMS_SUBS_BY_MGR = null;
+    AMS_EXIT_BY_AMS = null;
+}
+
+function amsNameShortMap(list) {
+    const map = Object.create(null);
+    (list || []).forEach(item => {
+        if (item && item.name) map[item.name] = item.shortform || "";
+    });
+    return map;
+}
+
 /* shortform segment for an Asset Type (e.g. "Laptop" -> "LT") */
-function amsTypeShort(typeName) { return (AMS_DUMMY_ASSET_TYPES.find(t => t.name === typeName) || {}).shortform || ""; }
+function amsTypeShort(typeName) {
+    if (!AMS_TYPE_SHORT_MAP) AMS_TYPE_SHORT_MAP = amsNameShortMap(AMS_DUMMY_ASSET_TYPES);
+    return AMS_TYPE_SHORT_MAP[typeName] || "";
+}
 
 /* shortform segment for a Site (e.g. "Mumbai HO" -> "HO") */
-function amsSiteShort(siteName) { return (AMS_DUMMY_SITES.find(s => s.name === siteName) || {}).shortform || ""; }
+function amsSiteShort(siteName) {
+    if (!AMS_SITE_SHORT_MAP) AMS_SITE_SHORT_MAP = amsNameShortMap(AMS_DUMMY_SITES);
+    return AMS_SITE_SHORT_MAP[siteName] || "";
+}
 
 /* shortform segment for a Department (e.g. "IT" -> "IT") */
-function amsDeptShort(deptName) { return (AMS_DUMMY_DEPARTMENTS.find(d => d.name === deptName) || {}).shortform || ""; }
+function amsDeptShort(deptName) {
+    if (!AMS_DEPT_SHORT_MAP) AMS_DEPT_SHORT_MAP = amsNameShortMap(AMS_DUMMY_DEPARTMENTS);
+    return AMS_DEPT_SHORT_MAP[deptName] || "";
+}
 
 /* Base Display ID - the permanent type+sequence part (e.g. "LT00007") that does
    NOT change when the asset is assigned/transferred. Works even for records that
@@ -1754,9 +1810,18 @@ function getEmployees(statusFilter) {
     return DUMMY_EMPLOYEES.filter(e => e.status === statusFilter);
 }
 
+function amsEmpByAmsIdMap() {
+    if (AMS_EMP_BY_AMS_ID) return AMS_EMP_BY_AMS_ID;
+    const map = Object.create(null);
+    DUMMY_EMPLOYEES.forEach(e => { if (e && e.amsId) map[e.amsId] = e; });
+    AMS_EMP_BY_AMS_ID = map;
+    return map;
+}
+
 /* Finds one employee by AMS ID */
 function findEmployee(amsId) {
-    return DUMMY_EMPLOYEES.find(e => e.amsId === amsId);
+    if (!amsId) return undefined;
+    return amsEmpByAmsIdMap()[amsId];
 }
 
 /* Finds one employee by AMS ID OR company ID */
@@ -1804,6 +1869,7 @@ function addEmployee(data) {
         exitDate: null
     };
     DUMMY_EMPLOYEES.push(emp);
+    amsInvalidateLookupCaches();
     amsDbSaveAsync("employees");
     amsResolvePendingManagers();
     return emp;
@@ -2226,13 +2292,39 @@ function amsRepairExitedEmployeeHoldings() {
     return changed;
 }
 
+function amsIndexByAssigned(list) {
+    const map = Object.create(null);
+    (list || []).forEach(item => {
+        const id = item && item.assignedTo;
+        if (!id) return;
+        (map[id] || (map[id] = [])).push(item);
+    });
+    return map;
+}
+
+function amsAssetsByAssigned() {
+    if (!AMS_ASSETS_BY_TO) AMS_ASSETS_BY_TO = amsIndexByAssigned(DUMMY_ASSETS);
+    return AMS_ASSETS_BY_TO;
+}
+function amsMobilesByAssigned() {
+    if (!AMS_MOBILES_BY_TO) AMS_MOBILES_BY_TO = amsIndexByAssigned(DUMMY_MOBILES);
+    return AMS_MOBILES_BY_TO;
+}
+function amsSimsByAssigned() {
+    if (!AMS_SIMS_BY_TO) AMS_SIMS_BY_TO = amsIndexByAssigned(AMS_DUMMY_SIM_CARDS);
+    return AMS_SIMS_BY_TO;
+}
+
 /* Returns the permanent exit record (snapshot) for an employee, if one exists */
 function getExitRecord(amsId) {
-    let latest = null;
-    AMS_DUMMY_EXIT_RECORDS.forEach(r => {
-        if (r && r.amsId === amsId) latest = r;
-    });
-    return latest;
+    if (!AMS_EXIT_BY_AMS) {
+        const map = Object.create(null);
+        AMS_DUMMY_EXIT_RECORDS.forEach(r => {
+            if (r && r.amsId) map[r.amsId] = r;
+        });
+        AMS_EXIT_BY_AMS = map;
+    }
+    return AMS_EXIT_BY_AMS[amsId] || null;
 }
 
 function getExitRecordsForEmployee(amsId) {
@@ -2241,22 +2333,30 @@ function getExitRecordsForEmployee(amsId) {
 
 /* Direct subordinates of an employee (via managerAmsId) */
 function getSubordinates(amsId) {
-    return DUMMY_EMPLOYEES.filter(e => e.managerAmsId === amsId && e.status === "Active");
+    if (!AMS_SUBS_BY_MGR) {
+        const map = Object.create(null);
+        DUMMY_EMPLOYEES.forEach(e => {
+            if (!e || e.status !== "Active" || !e.managerAmsId) return;
+            (map[e.managerAmsId] || (map[e.managerAmsId] = [])).push(e);
+        });
+        AMS_SUBS_BY_MGR = map;
+    }
+    return (AMS_SUBS_BY_MGR[amsId] || []).slice();
 }
 
 /* Assets directly assigned to an employee */
 function getEmployeeAssets(amsId) {
-    return DUMMY_ASSETS.filter(a => a.assignedTo === amsId);
+    return (amsAssetsByAssigned()[amsId] || []).slice();
 }
 
 /* Mobiles directly assigned to an employee (Mobile Master collection) */
 function getEmployeeMobiles(amsId) {
-    return DUMMY_MOBILES.filter(a => a.assignedTo === amsId);
+    return (amsMobilesByAssigned()[amsId] || []).slice();
 }
 
 /* SIM cards currently assigned to an employee */
 function getEmployeeSimCards(amsId) {
-    return AMS_DUMMY_SIM_CARDS.filter(s => s.assignedTo === amsId);
+    return (amsSimsByAssigned()[amsId] || []).slice();
 }
 
 function amsSimPrintUsedIn(s) {
@@ -2273,20 +2373,29 @@ function amsSimPrintUsedIn(s) {
    already represented on that subordinate's own form, so including them here
    would make them cascade onto every manager further up the chain. */
 function getSubordinateAssets(amsId) {
-    const subIds = getSubordinates(amsId).map(s => s.amsId);
-    return DUMMY_ASSETS.filter(a => subIds.includes(a.assignedTo) && !amsAssetIsDeptOrSub(a));
+    const out = [];
+    getSubordinates(amsId).forEach(s => {
+        getEmployeeAssets(s.amsId).forEach(a => { if (!amsAssetIsDeptOrSub(a)) out.push(a); });
+    });
+    return out;
 }
 
 /* Mobiles PERSONALLY held by an employee's direct subordinates (see above). */
 function getSubordinateMobiles(amsId) {
-    const subIds = getSubordinates(amsId).map(s => s.amsId);
-    return DUMMY_MOBILES.filter(a => subIds.includes(a.assignedTo) && !amsAssetIsDeptOrSub(a));
+    const out = [];
+    getSubordinates(amsId).forEach(s => {
+        getEmployeeMobiles(s.amsId).forEach(a => { if (!amsAssetIsDeptOrSub(a)) out.push(a); });
+    });
+    return out;
 }
 
 /* SIM cards owned by an employee's direct subordinates */
 function getSubordinateSimCards(amsId) {
-    const subIds = getSubordinates(amsId).map(s => s.amsId);
-    return AMS_DUMMY_SIM_CARDS.filter(s => subIds.includes(s.assignedTo));
+    const out = [];
+    getSubordinates(amsId).forEach(s => {
+        getEmployeeSimCards(s.amsId).forEach(sim => out.push(sim));
+    });
+    return out;
 }
 
 /* Assets not assigned to anyone yet */
@@ -2373,7 +2482,27 @@ function amsTeamEmployeeAssets(amsId) {
 }
 
 /* Owned / Team lists that include assigned Mobiles and SIM cards so Employee
-   Master counters, distribution, and reports count every held device. */
+    Master counters, distribution, and reports count every held device. */
+function amsOwnedEmployeeHoldingsCount(amsId) {
+    let n = 0;
+    (amsAssetsByAssigned()[amsId] || []).forEach(a => { if (!amsAssetIsDeptOrSub(a)) n++; });
+    (amsMobilesByAssigned()[amsId] || []).forEach(a => { if (!amsAssetIsDeptOrSub(a)) n++; });
+    n += (amsSimsByAssigned()[amsId] || []).length;
+    return n;
+}
+
+function amsTeamEmployeeHoldingsCount(amsId) {
+    let n = 0;
+    getSubordinates(amsId).forEach(s => {
+        (amsAssetsByAssigned()[s.amsId] || []).forEach(a => { if (!amsAssetIsDeptOrSub(a)) n++; });
+        (amsMobilesByAssigned()[s.amsId] || []).forEach(a => { if (!amsAssetIsDeptOrSub(a)) n++; });
+        n += (amsSimsByAssigned()[s.amsId] || []).length;
+    });
+    (amsAssetsByAssigned()[amsId] || []).forEach(a => { if (amsAssetIsDeptOrSub(a)) n++; });
+    (amsMobilesByAssigned()[amsId] || []).forEach(a => { if (amsAssetIsDeptOrSub(a)) n++; });
+    return n;
+}
+
 function amsOwnedEmployeeHoldings(amsId) {
     const assets = amsOwnedEmployeeAssets(amsId);
     const mobiles = getEmployeeMobiles(amsId).filter(a => !amsAssetIsDeptOrSub(a));

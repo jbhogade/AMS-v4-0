@@ -106,6 +106,7 @@ function amsWireCompanySave() {
 async function initCompany() {
     initLayout("company");
     if (typeof amsDbEnsureLoaded === "function") await amsDbEnsureLoaded();
+    if (typeof amsYieldToBrowser === "function") await amsYieldToBrowser();
     amsLoadCompanyForm();
     amsWireImageControls();
     amsWireCompanySave();

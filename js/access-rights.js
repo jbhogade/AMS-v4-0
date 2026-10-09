@@ -169,7 +169,10 @@ document.addEventListener("DOMContentLoaded", () => {
     if (accessClear) accessClear.addEventListener("click", () => amsFilterClearAndRender("accessTable"));
 
     amsWireAccessGate();
-    (typeof amsDbEnsureLoaded === "function" ? amsDbEnsureLoaded() : Promise.resolve()).then(() => amsApplyAccessGate());
+    (typeof amsDbEnsureLoaded === "function" ? amsDbEnsureLoaded() : Promise.resolve()).then(async () => {
+        if (typeof amsYieldToBrowser === "function") await amsYieldToBrowser();
+        amsApplyAccessGate();
+    });
 });
 /*-------------- End of the code ------------------------------------------------*/
 /*==============================================================================

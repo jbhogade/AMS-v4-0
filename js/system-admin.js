@@ -58,6 +58,7 @@ function amsLoadAdminTab(tabKey) {
 async function initSystemAdmin() {
     initLayout("system-admin");
     if (typeof amsDbEnsureLoaded === "function") await amsDbEnsureLoaded();
+    if (typeof amsYieldToBrowser === "function") await amsYieldToBrowser();
 
     document.querySelectorAll(".admin-tab").forEach(btn => {
         btn.addEventListener("click", () => amsLoadAdminTab(btn.getAttribute("data-admin-tab")));

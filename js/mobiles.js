@@ -1736,6 +1736,7 @@ function hideFormError(id) {
 async function initMobiles() {
     /* Initial render (waits for the DB-backed collections to load first) */
     if (typeof amsDbEnsureLoaded === "function") await amsDbEnsureLoaded();
+    if (typeof amsYieldToBrowser === "function") await amsYieldToBrowser();
     amsSortRegisterRenderer("assetTable", renderAssetTable);
     renderAssetTable();
 
