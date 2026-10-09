@@ -6,8 +6,8 @@
 #              separate Style picker.
 #
 #  LOOK      : Halo-style near-clear glass (1.5% fill, 1.5px blur,
-#              saturate 115%, inset glass edge). Color still comes from
-#              data-theme. Portal pages keep the geometric lattice.
+#              saturate 115%, inset glass edge) over Halo-style diagonal
+#              streaks. Streaks use theme accent / text tokens, not Halo red.
 #
 #  DROPDOWNS : backdrop-filter on an ancestor makes position:fixed attach to
 #              that ancestor (and overflow clips it). Cards / modals therefore
@@ -22,17 +22,74 @@
 #------------------------------------------------------------------------------*/
 
 /* =============================================================================
-   GEOMETRIC FIELD  (portal pages only; login has its own backdrop)
+   HALO STREAK FIELD  (portal + login; theme tokens only)
+   Diagonal glow strokes from the Halo sample, masked so accent / ink
+   follow data-theme. No Halo burgundy palette.
    ===========================================================================*/
 html:not(.login-page) body {
     background-color: var(--bg-body);
     background-image:
         radial-gradient(ellipse at 14% 0%, color-mix(in srgb, var(--accent) 22%, transparent), transparent 44%),
-        radial-gradient(ellipse at 86% 100%, color-mix(in srgb, var(--accent) 14%, transparent), transparent 50%),
-        repeating-linear-gradient(60deg, transparent 0 26px, color-mix(in srgb, var(--accent) 9%, transparent) 26px 27px),
-        repeating-linear-gradient(-60deg, transparent 0 26px, color-mix(in srgb, var(--accent) 6%, transparent) 26px 27px),
-        repeating-linear-gradient(0deg, transparent 0 44px, color-mix(in srgb, var(--text-primary) 4%, transparent) 44px 45px);
+        radial-gradient(ellipse at 86% 100%, color-mix(in srgb, var(--accent) 14%, transparent), transparent 50%);
     background-attachment: fixed;
+}
+
+html:not(.login-page) .app {
+    position: relative;
+    z-index: 1;
+}
+
+html:not(.login-page) body::before,
+html:not(.login-page) body::after,
+html.login-page .login-wrap::before,
+html.login-page .login-wrap::after {
+    content: "";
+    pointer-events: none;
+    z-index: 0;
+    background-repeat: no-repeat;
+    background-position: center;
+    background-size: cover;
+}
+
+html:not(.login-page) body::before,
+html:not(.login-page) body::after {
+    position: fixed;
+    inset: 0;
+}
+
+html.login-page .login-wrap::before,
+html.login-page .login-wrap::after {
+    position: absolute;
+    inset: 0;
+}
+
+html:not(.login-page) body::before,
+html.login-page .login-wrap::before {
+    background-color: var(--accent);
+    opacity: 0.55;
+    filter: blur(6px);
+    -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1080 1920' preserveAspectRatio='xMidYMid slice'%3E%3Cg fill='none' stroke='%23fff' stroke-linecap='round'%3E%3Cline x1='60' y1='1900' x2='1020' y2='-40' stroke-width='2.5' opacity='.35'/%3E%3Cline x1='180' y1='1920' x2='1040' y2='60' stroke-width='3' opacity='.5'/%3E%3Cline x1='320' y1='1920' x2='980' y2='260' stroke-width='2' opacity='.6'/%3E%3Cline x1='420' y1='1920' x2='920' y2='420' stroke-width='2' opacity='.4'/%3E%3C/g%3E%3C/svg%3E");
+    mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1080 1920' preserveAspectRatio='xMidYMid slice'%3E%3Cg fill='none' stroke='%23fff' stroke-linecap='round'%3E%3Cline x1='60' y1='1900' x2='1020' y2='-40' stroke-width='2.5' opacity='.35'/%3E%3Cline x1='180' y1='1920' x2='1040' y2='60' stroke-width='3' opacity='.5'/%3E%3Cline x1='320' y1='1920' x2='980' y2='260' stroke-width='2' opacity='.6'/%3E%3Cline x1='420' y1='1920' x2='920' y2='420' stroke-width='2' opacity='.4'/%3E%3C/g%3E%3C/svg%3E");
+    -webkit-mask-size: cover;
+    mask-size: cover;
+    -webkit-mask-repeat: no-repeat;
+    mask-repeat: no-repeat;
+    -webkit-mask-position: center;
+    mask-position: center;
+}
+
+html:not(.login-page) body::after,
+html.login-page .login-wrap::after {
+    background-color: var(--text-primary);
+    opacity: 0.8;
+    -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1080 1920' preserveAspectRatio='xMidYMid slice'%3E%3Cg fill='none' stroke='%23fff' stroke-linecap='round'%3E%3Cline x1='280' y1='1920' x2='1000' y2='180' stroke-width='4' opacity='.8'/%3E%3Cpath d='M-40 760 C 300 620, 420 400, 560 -40' stroke-width='1.5' opacity='.3'/%3E%3C/g%3E%3C/svg%3E");
+    mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1080 1920' preserveAspectRatio='xMidYMid slice'%3E%3Cg fill='none' stroke='%23fff' stroke-linecap='round'%3E%3Cline x1='280' y1='1920' x2='1000' y2='180' stroke-width='4' opacity='.8'/%3E%3Cpath d='M-40 760 C 300 620, 420 400, 560 -40' stroke-width='1.5' opacity='.3'/%3E%3C/g%3E%3C/svg%3E");
+    -webkit-mask-size: cover;
+    mask-size: cover;
+    -webkit-mask-repeat: no-repeat;
+    mask-repeat: no-repeat;
+    -webkit-mask-position: center;
+    mask-position: center;
 }
 
 /* =============================================================================
@@ -186,6 +243,13 @@ html.login-page[data-ui-style="glass"] .login-card {
    REDUCED TRANSPARENCY
    ===========================================================================*/
 @media (prefers-reduced-transparency: reduce) {
+    html:not(.login-page) body::before,
+    html:not(.login-page) body::after,
+    html.login-page .login-wrap::before,
+    html.login-page .login-wrap::after {
+        display: none;
+    }
+
     html[data-ui-style="glass"] .sidebar,
     html[data-ui-style="glass"] .topbar,
     html[data-ui-style="glass"] .card,

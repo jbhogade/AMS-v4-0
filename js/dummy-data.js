@@ -99,9 +99,19 @@ async function amsApiFetch(path, opts) {
         throw new Error("Cannot reach the AMS-Test API. Start server\\AMS.API (dotnet run) and refresh.");
     }
     if (res.status === 401) {
-        amsClearSession();
-        amsLoginRedirect();
-        throw new Error("Session expired. Redirecting to login.");
+        const skipRedirect = !!(opts.skipAuthRedirect || /\/api\/auth\/login(?:\?|$)/.test(String(path || "")));
+        let msg = skipRedirect ? "Invalid User ID or Password." : "Session expired. Redirecting to login.";
+        try {
+            const j = await res.json();
+            if (!skipRedirect && j && (j.error || j.detail || j.title || j.message)) {
+                msg = j.error || j.detail || j.title || j.message;
+            }
+        } catch (e) { /* non-JSON error */ }
+        if (!skipRedirect) {
+            amsClearSession();
+            amsLoginRedirect();
+        }
+        throw new Error(msg);
     }
     if (!res.ok) {
         let msg = "API error " + res.status;

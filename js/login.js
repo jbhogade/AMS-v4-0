@@ -70,10 +70,11 @@
 
         amsApiFetch("/api/auth/login", {
             method: "POST",
+            skipAuthRedirect: true,
             body: { username: username, password: password }
         }).then(function (result) {
             if (!result || !result.token) {
-                setMsg("Login failed. Check your username and password.", true);
+                setMsg("Invalid User ID or Password.", true);
                 setBusy(false);
                 return;
             }
@@ -104,8 +105,10 @@
             }
             window.location.replace("index.html");
         }).catch(function (err) {
-            var msg = (err && err.message) ? err.message : "Could not reach the server.";
-            setMsg(msg, true);
+            var raw = (err && err.message) ? String(err.message) : "";
+            var isNet = /cannot reach|failed to fetch|network/i.test(raw);
+            var isCred = !raw || /invalid user|invalid username|unauthorized|401|session expired/i.test(raw);
+            setMsg(isNet ? raw : (isCred ? "Invalid User ID or Password." : raw), true);
             setBusy(false);
         });
     });
