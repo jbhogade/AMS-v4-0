@@ -244,6 +244,7 @@ function amsMtEnsureFilters() {
 /* ---- RENDER: the master table ---------------------------------------------- */
 async function amsRenderMasterTable() {
     if (typeof amsDbEnsureLoaded === "function") await amsDbEnsureLoaded();
+    if (typeof amsYieldToBrowser === "function") await amsYieldToBrowser();
     const cfg = AMS_MASTER_CONFIG;
     const searchTerm = (document.getElementById("searchBox").value || "").toLowerCase();
     amsMtEnsureFilters();

@@ -263,6 +263,7 @@ function amsOpenStockReport(item, type) {
 async function initSpareParts() {
     initLayout("spare-parts");
     if (typeof amsDbEnsureLoaded === "function") await amsDbEnsureLoaded();
+    if (typeof amsYieldToBrowser === "function") await amsYieldToBrowser();
 
     document.getElementById("btnConfirmRestock").addEventListener("click", amsConfirmRestock);
     document.getElementById("btnConfirmUsed").addEventListener("click", amsConfirmUsed);

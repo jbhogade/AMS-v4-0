@@ -425,6 +425,85 @@
         </div>
     </div>
 
+    <!-- ====================================================================
+         MODAL : REACTIVATE EMPLOYEE
+         (clears the Exit mark; keeps Exit Report snapshot + activity log)
+         ==================================================================== -->
+    <div class="modal-overlay" id="modal-reactivate">
+        <div class="modal">
+            <div class="modal-header">
+                <h3>Reactivate Employee</h3>
+                <button class="modal-close" data-close>&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-info">This will mark the employee as <strong>Active</strong> again. The original Exit Report and activity log stay on record. Returned assets remain In Store and are not reassigned.</div>
+                <div class="detail-grid">
+                    <div class="detail-item">
+                        <label>Employee</label>
+                        <span id="reactivate-name">-</span>
+                    </div>
+                    <div class="detail-item">
+                        <label>Designation - Department</label>
+                        <span id="reactivate-meta">-</span>
+                    </div>
+                    <div class="detail-item">
+                        <label>AMS ID</label>
+                        <span id="reactivate-emp-ams">-</span>
+                    </div>
+                    <div class="detail-item">
+                        <label>Original Exit Date</label>
+                        <span id="reactivate-exit-date">-</span>
+                    </div>
+                    <div class="detail-item">
+                        <label>Original Exit Reason</label>
+                        <span id="reactivate-exit-reason">-</span>
+                    </div>
+                </div>
+                <div class="field mt-16">
+                    <label>Reactivation Remarks</label>
+                    <textarea class="textarea" id="reactivate-remarks" placeholder="Why this employee is being reactivated..."></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn" data-close>Cancel</button>
+                <button class="btn btn-primary" id="reactivate-confirm">Confirm Reactivate</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ====================================================================
+         MODAL : ASSET ISSUE FORM PRINT SCOPE
+         ==================================================================== -->
+    <div class="modal-overlay" id="modal-print-scope">
+        <div class="modal">
+            <div class="modal-header">
+                <h3>Asset Issue Form</h3>
+                <button class="modal-close" data-close>&times;</button>
+            </div>
+            <div class="modal-body">
+                <p class="ams-hint" style="margin-bottom:12px;">Choose which holdings to include for <strong id="emp-print-scope-name"></strong>.</p>
+                <div class="field">
+                    <label class="pf-check-block" style="display:block;margin-bottom:10px;">
+                        <input type="radio" name="empPrintScopeChoice" value="direct" checked>
+                        Directly assigned assets only
+                    </label>
+                    <label class="pf-check-block" style="display:block;margin-bottom:10px;">
+                        <input type="radio" name="empPrintScopeChoice" value="both">
+                        Directly assigned assets plus team assets
+                    </label>
+                    <label class="pf-check-block" style="display:block;">
+                        <input type="radio" name="empPrintScopeChoice" value="team">
+                        Team assets only
+                    </label>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn" data-close>Cancel</button>
+                <button class="btn btn-primary" id="emp-print-scope-confirm">Print</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Scripts -->
     <script defer src="../js/dummy-data.js"></script>
     <script defer src="../js/theme.js"></script>

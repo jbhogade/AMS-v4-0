@@ -13,8 +13,9 @@
 #     3. Assign Asset   - give an unassigned asset to this employee
 #     4. Reassign Asset - move one of his assets to another employee
 #     5. Exit           - off-boarding with facility check-off + asset return
-#     6. Assign Report  - prints / opens the professional Asset Issue Form
-#     7. Exit Report    - prints / opens the Asset Handover / Return Form
+#     6. Reactivate     - restore an exited employee to Active (keeps Exit Report + log)
+#     7. Assign Report  - prints / opens the professional Asset Issue Form
+#     8. Exit Report    - prints / opens the Asset Handover / Return Form
 #------------------------------------------------------------------------------*/
 
 /* =============================================================================
@@ -80,8 +81,8 @@ function renderEmployeeTable() {
         designation: emp => emp.designation,
         contact: emp => emp.contact || "",
         email: emp => emp.email || "",
-        owned: emp => amsOwnedEmployeeHoldings(emp.amsId).length,
-        team: emp => amsTeamEmployeeHoldings(emp.amsId).length,
+        owned: emp => amsOwnedEmployeeHoldingsCount(emp.amsId),
+        team: emp => amsTeamEmployeeHoldingsCount(emp.amsId),
         site: emp => emp.site || "",
         status: emp => emp.status,
     };
@@ -125,8 +126,8 @@ function renderEmployeeTable() {
     }
 
     tbody.innerHTML = sorted.map(emp => {
-        const owned = amsOwnedEmployeeHoldings(emp.amsId).length;
-        const team = amsTeamEmployeeHoldings(emp.amsId).length;
+        const owned = amsOwnedEmployeeHoldingsCount(emp.amsId);
+        const team = amsTeamEmployeeHoldingsCount(emp.amsId);
         const badge = badgeClassFor(emp.status);
         const amsCell = amsVisible
             ? `<td class="muted" title="Internal AMS ID (Supreme Root only)">${escapeHtml(emp.amsId)}</td>`
@@ -162,10 +163,12 @@ function renderEmployeeTable() {
 /* Builds the "Actions" dropdown for one employee row */
 function buildActionsMenu(emp) {
     const active = emp.status === "Active";
-    const exited = emp.status === "Inactive" && !!getExitRecord(emp.amsId);
-    const holdsAssets = getEmployeeAssets(emp.amsId).length > 0 || getSubordinateAssets(emp.amsId).length > 0
-        || getEmployeeMobiles(emp.amsId).length > 0 || getSubordinateMobiles(emp.amsId).length > 0
-        || getEmployeeSimCards(emp.amsId).length > 0 || getSubordinateSimCards(emp.amsId).length > 0;
+    const exitRecord = typeof getExitRecord === "function" ? getExitRecord(emp.amsId) : null;
+    const exited = emp.status === "Inactive" && !!exitRecord;
+    const holdsAssets = amsOwnedEmployeeHoldingsCount(emp.amsId) + amsTeamEmployeeHoldingsCount(emp.amsId) > 0;
+    const exitReportLink = exitRecord
+        ? `<a onclick="openHandoverForm('${emp.amsId}')">Exit Report (Handover Form)</a>`
+        : "";
     return `
         <div class="row-actions">
             <button class="actions-btn" onclick="toggleRowActions(this)">Actions ${typeof amsUiIcon === "function" ? amsUiIcon("caret") : ""}</button>
@@ -174,10 +177,13 @@ function buildActionsMenu(emp) {
                 <a onclick="openEditModal('${emp.amsId}')">Edit</a>
                 ${active ? `<div class="menu-sep"></div>
                 <a class="${holdsAssets ? "" : "menu-disabled"}" onclick="${holdsAssets ? `openIssueForm('${emp.amsId}')` : `alert('No Assign Report can be generated - this employee is not holding any assets.')`}">Assign Report (Asset Issue Form)</a>
+                ${exitRecord ? `<div class="menu-sep"></div>${exitReportLink}` : ""}
                 <div class="menu-sep"></div>
                 <a class="danger" onclick="openExitModal('${emp.amsId}')">Exit</a>`
                 : exited ? `<div class="menu-sep"></div>
-                <a onclick="openHandoverForm('${emp.amsId}')">Exit Report (Handover Form)</a>` : ""}
+                ${exitReportLink}
+                <div class="menu-sep"></div>
+                <a onclick="openReactivateModal('${emp.amsId}')">Reactivate</a>` : ""}
             </div>
         </div>
     `;
@@ -359,8 +365,17 @@ function viewEmployee(amsId) {
     document.getElementById("view-email").textContent = emp.email || "-";
     document.getElementById("view-status").innerHTML =
         `<span class="badge ${badgeClassFor(emp.status)}"><span class="badge-dot"></span>${escapeHtml(emp.status)}</span>`;
-    document.getElementById("view-exit").style.display = emp.exitDate ? "" : "none";
-    document.getElementById("view-exit").textContent = "Exited on: " + emp.exitDate;
+    const viewExit = document.getElementById("view-exit");
+    if (emp.status === "Inactive" && emp.exitDate) {
+        viewExit.style.display = "";
+        viewExit.textContent = "Exited on: " + emp.exitDate;
+    } else if (emp.status === "Active" && emp.reactivatedDate) {
+        viewExit.style.display = "";
+        viewExit.textContent = "Reactivated on: " + emp.reactivatedDate;
+    } else {
+        viewExit.style.display = "none";
+        viewExit.textContent = "";
+    }
 
     /* Assets owned list */
     const ownedList = document.getElementById("view-owned-list");
@@ -644,6 +659,43 @@ function confirmExit() {
 }
 
 /* =============================================================================
+   9b) REACTIVATE  (undo Exit mark, keep Exit Report + activity log)
+   ===========================================================================*/
+function openReactivateModal(amsId) {
+    const emp = findEmployee(amsId);
+    if (!emp) return;
+    const rec = typeof getExitRecord === "function" ? getExitRecord(amsId) : null;
+    if (emp.status !== "Inactive" || !rec) {
+        alert("Reactivate is only available for employees currently marked as exited.");
+        return;
+    }
+    document.getElementById("reactivate-name").textContent = getEmployeeFullName(emp);
+    document.getElementById("reactivate-meta").textContent = emp.designation + " - " + emp.department;
+    document.getElementById("reactivate-emp-ams").textContent = isAmsVisible() ? emp.amsId : "*****";
+    document.getElementById("reactivate-exit-date").textContent = emp.exitDate || rec.exitDate || "-";
+    document.getElementById("reactivate-exit-reason").textContent = emp.exitReason || rec.exitReason || "-";
+    document.getElementById("reactivate-remarks").value = "";
+    currentEmployeeAmsId = amsId;
+    showModal("modal-reactivate");
+}
+
+function confirmReactivate() {
+    const emp = findEmployee(currentEmployeeAmsId);
+    if (!emp) return;
+    const remarks = (document.getElementById("reactivate-remarks").value || "").trim();
+    const result = reactivateEmployee(currentEmployeeAmsId, remarks);
+    if (!result || !result.emp) return;
+    const logPieces = ["Previous exit date: " + (result.previousExitDate || "-")];
+    if (result.previousReason) logPieces.push("Original reason: " + result.previousReason);
+    if (remarks) logPieces.push("Reactivation remarks: " + remarks);
+    logPieces.push("Exit Report and activity log retained");
+    amsNotify(getEmployeeFullName(result.emp) + " reactivated. " + logPieces.join(" | "), "success");
+    hideModal("modal-reactivate");
+    renderEmployeeTable();
+    renderEmpStats();
+}
+
+/* =============================================================================
    10) ASSIGN REPORT  (Asset Issue Form) - professional printable document
        Available only for ACTIVE employees. Lists every asset the employee
        currently holds (live data), then opens the shared print-remarks modal.
@@ -663,7 +715,39 @@ function openIssueForm(amsId) {
         alert("No Assign Report (Asset Issue Form) can be generated for " + getEmployeeFullName(emp) + " because they are not currently holding any assets.");
         return;
     }
-    amsGenerateReport(amsId, "assign");
+    currentEmployeeAmsId = amsId;
+    document.getElementById("emp-print-scope-name").textContent = getEmployeeFullName(emp);
+    const directRadio = document.querySelector('#modal-print-scope input[name="empPrintScopeChoice"][value="direct"]');
+    if (directRadio) directRadio.checked = true;
+    showModal("modal-print-scope");
+}
+
+function confirmIssueFormScope() {
+    const chosen = document.querySelector('#modal-print-scope input[name="empPrintScopeChoice"]:checked');
+    const scope = chosen ? chosen.value : "direct";
+    const amsId = currentEmployeeAmsId;
+    const emp = findEmployee(amsId);
+    const owned = getEmployeeAssets(amsId);
+    const splitOwned = typeof amsSplitDirectVsSubordinateAssets === "function"
+        ? amsSplitDirectVsSubordinateAssets(owned)
+        : { direct: owned, subordinate: [] };
+    const includeDirect = scope !== "team";
+    const includeTeam = scope !== "direct";
+    const directCount = includeDirect ? splitOwned.direct.length : 0;
+    const teamCount = includeTeam
+        ? (splitOwned.subordinate.length + getSubordinateAssets(amsId).length)
+        : 0;
+    const mobileSim = typeof amsBuildPrintMobileSimHtml === "function"
+        ? amsBuildPrintMobileSimHtml(amsId, { includeDirect: includeDirect, includeTeam: includeTeam })
+        : { html: "", mobileDirect: 0, mobileTeam: 0, simDirect: 0, simTeam: 0 };
+    const mobileSimCount = (includeDirect ? (mobileSim.mobileDirect + mobileSim.simDirect) : 0)
+        + (includeTeam ? (mobileSim.mobileTeam + mobileSim.simTeam) : 0);
+    if (directCount + teamCount + mobileSimCount === 0) {
+        alert("No holdings match the selected print scope for " + (emp ? getEmployeeFullName(emp) : "this employee") + ".");
+        return;
+    }
+    hideModal("modal-print-scope");
+    amsGenerateReport(amsId, "assign", "", scope);
 }
 
 /* =============================================================================
@@ -677,7 +761,7 @@ function openHandoverForm(amsId) {
     const emp = findEmployee(amsId);
     if (!emp) return;
     const exitRecord = getExitRecord(amsId);
-    if (emp.status !== "Inactive" || !exitRecord) {
+    if (!exitRecord) {
         alert("The Exit Report (Handover Form) is only available after the employee has been exited.");
         return;
     }
@@ -885,8 +969,8 @@ function amsExportEmployees() {
         designation: emp => emp.designation,
         contact: emp => emp.contact || "",
         email: emp => emp.email || "",
-        owned: emp => amsOwnedEmployeeHoldings(emp.amsId).length,
-        team: emp => amsTeamEmployeeHoldings(emp.amsId).length,
+        owned: emp => amsOwnedEmployeeHoldingsCount(emp.amsId),
+        team: emp => amsTeamEmployeeHoldingsCount(emp.amsId),
         site: emp => emp.site || "",
         status: emp => emp.status,
     };
@@ -1051,6 +1135,7 @@ function amsImportEmployeesFile(file) {
 /* Initialises the whole page */
 async function initEmployees() {
     if (typeof amsDbEnsureLoaded === "function") await amsDbEnsureLoaded();
+    if (typeof amsYieldToBrowser === "function") await amsYieldToBrowser();
     amsResolvePendingManagers();
     amsSortRegisterRenderer("employeeTable", renderEmployeeTable);
     populateSelects();
@@ -1096,6 +1181,8 @@ async function initEmployees() {
 
     /* Exit events */
     document.getElementById("exit-confirm").addEventListener("click", confirmExit);
+    document.getElementById("reactivate-confirm").addEventListener("click", confirmReactivate);
+    document.getElementById("emp-print-scope-confirm").addEventListener("click", confirmIssueFormScope);
 
     /* Close buttons inside modals */
     document.querySelectorAll(".modal [data-close]").forEach(btn => {

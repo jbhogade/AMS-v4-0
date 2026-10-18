@@ -130,7 +130,10 @@ document.addEventListener("DOMContentLoaded", () => {
     if (typeof initLayout === "function") initLayout("role-access");
     const roleInput = document.getElementById("viewingAsRole");
     if (roleInput) roleInput.value = amsGetViewingAsRole();
-    (typeof amsDbEnsureLoaded === "function" ? amsDbEnsureLoaded() : Promise.resolve()).then(() => amsApplyRoleAccessGate());
+    (typeof amsDbEnsureLoaded === "function" ? amsDbEnsureLoaded() : Promise.resolve()).then(async () => {
+        if (typeof amsYieldToBrowser === "function") await amsYieldToBrowser();
+        amsApplyRoleAccessGate();
+    });
 });
 /*-------------- End of the code ------------------------------------------------*/
 /*==============================================================================

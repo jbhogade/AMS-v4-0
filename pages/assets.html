@@ -436,9 +436,9 @@
                             <div id="replSelectedInfo"></div>
                         </div>
                         <div class="field">
-                            <label>Issue Date</label>
-                            <input type="date" id="replIssueDate" class="input">
-                            <div class="form-hint">Defaults to today - when the replacement was handed over.</div>
+                            <label>Replacement Date <span class="req">*</span></label>
+                            <input type="date" id="replIssueDate" class="input" required>
+                            <div class="form-hint">Recorded on both Asset ID Records as the Replace date. Defaults to today.</div>
                         </div>
                         <div class="field">
                             <label>Reason for Replacement <span class="req">*</span></label>
@@ -463,6 +463,63 @@
                     <button type="submit" class="btn btn-primary">Confirm Replacement</button>
                 </div>
             </form>
+        </div>
+    </div>
+
+    <!-- ====================================================================
+         MODAL : ACTION DATE (Return / Not Working / Retire / Scrap)
+         ==================================================================== -->
+    <div class="modal-overlay" id="modalActionDate">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 id="actionDateTitle">Confirm Action</h3>
+                <button class="modal-close" data-close="modalActionDate">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p class="form-hint" style="margin-bottom:12px;">Asset: <strong id="actionDateAssetLabel"></strong></p>
+                <div class="field">
+                    <label>Date <span class="req">*</span></label>
+                    <input type="date" id="actionDateValue" class="input" required>
+                    <div class="form-hint" id="actionDateHint">This date is recorded on the Asset ID Record.</div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-close="modalActionDate">Cancel</button>
+                <button type="button" class="btn btn-primary" id="btnConfirmActionDate">Confirm</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ====================================================================
+         MODAL : ASSET ISSUE FORM PRINT SCOPE
+         ==================================================================== -->
+    <div class="modal-overlay" id="modalPrintScope">
+        <div class="modal">
+            <div class="modal-header">
+                <h3>Asset Issue Form</h3>
+                <button class="modal-close" data-close="modalPrintScope">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p class="form-hint" style="margin-bottom:12px;">Choose which holdings to include for <strong id="printScopeEmpLabel"></strong>.</p>
+                <div class="field">
+                    <label class="pf-check-block" style="display:block;margin-bottom:10px;">
+                        <input type="radio" name="printScopeChoice" value="direct" checked>
+                        Directly assigned assets only
+                    </label>
+                    <label class="pf-check-block" style="display:block;margin-bottom:10px;">
+                        <input type="radio" name="printScopeChoice" value="both">
+                        Directly assigned assets plus team assets
+                    </label>
+                    <label class="pf-check-block" style="display:block;">
+                        <input type="radio" name="printScopeChoice" value="team">
+                        Team assets only
+                    </label>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-close="modalPrintScope">Cancel</button>
+                <button type="button" class="btn btn-primary" id="btnConfirmPrintScope">Print</button>
+            </div>
         </div>
     </div>
 

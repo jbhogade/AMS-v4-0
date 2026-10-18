@@ -88,6 +88,17 @@ function renderSidebar(currentPage) {
     const mount = document.getElementById("sidebar-mount");
     if (!mount) return;
 
+    const allowedPages = NAV_ITEMS
+        .filter(item => typeof amsUserCanAccessNavPage !== "function" || amsUserCanAccessNavPage(item.page))
+        .map(item => item.page);
+    const existing = Array.prototype.map.call(mount.querySelectorAll(".sidebar-link"), a => a.getAttribute("data-page"));
+    if (existing.length && existing.length === allowedPages.length && existing.every((p, i) => p === allowedPages[i])) {
+        mount.querySelectorAll(".sidebar-link").forEach(link => {
+            link.classList.toggle("active", link.getAttribute("data-page") === currentPage);
+        });
+        return;
+    }
+
     let sectionsHtml = "";
     let lastSection = "";
 
@@ -340,7 +351,8 @@ function initLayout(currentPage) {
     /* Page access (including Supreme Root per-user assignments) is on the
        user profile loaded from SQL. Re-apply the sidebar once that lands. */
     if (typeof amsDbEnsureLoaded === "function") {
-        amsDbEnsureLoaded().then(() => {
+        amsDbEnsureLoaded().then(async () => {
+            if (typeof amsYieldToBrowser === "function") await amsYieldToBrowser();
             if (typeof amsEnsureSessionUserProfile === "function") amsEnsureSessionUserProfile();
             amsLayoutRedirectIfDenied(currentPage);
             renderSidebar(currentPage);

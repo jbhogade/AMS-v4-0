@@ -996,6 +996,7 @@ function amsImportSimsFile(file) {
    ===========================================================================*/
 async function initSimCards() {
     if (typeof amsDbEnsureLoaded === "function") await amsDbEnsureLoaded();
+    if (typeof amsYieldToBrowser === "function") await amsYieldToBrowser();
     amsSortRegisterRenderer("simTable", renderSimTable);
     amsPopulateSimFormSelects();
     renderSimTable();

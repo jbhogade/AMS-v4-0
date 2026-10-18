@@ -1196,3 +1196,57 @@ BEGIN
     VALUES (N'testadmin', N'<hash-set-by-api>', N'<salt-set-by-api>', N'Super Root', NULL, N'testadmin@ams.local', N'Super Root account for creating other users (cannot create Supreme Root).', 1, N'Test Admin');
 END
 GO
+
+/* =============================================================================
+   8) REPAIR TRUNCATED LOGIN ROLES
+   -----------------------------------------------------------------------------
+   Older profile-save SQL used ISNULL(@r, role) with a null NVARCHAR parameter.
+   SQL Server infers NVARCHAR(1) for that null, so "Supreme Root" / "Super Root"
+   / "Standard User" were chopped to "S". Restore from the User Master profile
+   when that copy is still a known role. Only unknown roles are rewritten.
+   =========================================================================== */
+IF OBJECT_ID(N'dbo.ams_users', N'U') IS NOT NULL
+BEGIN
+    UPDATE dbo.ams_users
+    SET role = N'Supreme Root'
+    WHERE username = N'jairaj.b'
+      AND role NOT IN (N'Standard User', N'Viewer (Read-Only)', N'Admin', N'Super Root', N'Supreme Root');
+END
+GO
+
+IF OBJECT_ID(N'dbo.ams_users', N'U') IS NOT NULL
+   AND OBJECT_ID(N'dbo.ams_user_profiles', N'U') IS NOT NULL
+BEGIN
+    UPDATE u
+    SET u.role = restored.full_role
+    FROM dbo.ams_users u
+    CROSS APPLY (
+        SELECT TOP (1) candidate AS full_role
+        FROM (
+            SELECT p.role AS candidate
+            FROM dbo.ams_user_profiles p
+            WHERE p.record_key = u.username OR p.username = u.username
+            UNION ALL
+            SELECT JSON_VALUE(p.data_json, '$.role')
+            FROM dbo.ams_user_profiles p
+            WHERE (p.record_key = u.username OR p.username = u.username)
+              AND p.data_json IS NOT NULL
+              AND ISJSON(p.data_json) = 1
+        ) src
+        WHERE candidate IN (N'Standard User', N'Viewer (Read-Only)', N'Admin', N'Super Root', N'Supreme Root')
+    ) restored
+    WHERE u.role NOT IN (N'Standard User', N'Viewer (Read-Only)', N'Admin', N'Super Root', N'Supreme Root');
+
+    UPDATE p
+    SET p.role = u.role,
+        p.data_json = CASE
+            WHEN p.data_json IS NOT NULL AND ISJSON(p.data_json) = 1
+            THEN JSON_MODIFY(p.data_json, '$.role', u.role)
+            ELSE p.data_json
+        END
+    FROM dbo.ams_user_profiles p
+    INNER JOIN dbo.ams_users u ON p.record_key = u.username OR p.username = u.username
+    WHERE ISNULL(p.role, N'') NOT IN (N'Standard User', N'Viewer (Read-Only)', N'Admin', N'Super Root', N'Supreme Root')
+      AND u.role IN (N'Standard User', N'Viewer (Read-Only)', N'Admin', N'Super Root', N'Supreme Root');
+END
+GO
