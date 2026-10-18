@@ -6,9 +6,11 @@ from ams.db import (
     ALLOWED_KEYS,
     TABLE_DEFS,
     KEY_INDEX,
+    KNOWN_USER_ROLES,
     ColumnDef,
     TableDef,
     _full_name_compute,
+    is_valid_user_role,
     AmsDb,
 )
 
@@ -126,6 +128,16 @@ class RecordKeyTests(unittest.TestCase):
         d = TableDef("consumableLog", "ams_consumable_log", key_field=None)
         key = DB._resolve_record_key({"note": "x"}, d)
         self.assertEqual(len(key), 32)
+
+
+class UserRoleTests(unittest.TestCase):
+    def test_known_roles_are_valid(self):
+        for role in KNOWN_USER_ROLES:
+            self.assertTrue(is_valid_user_role(role))
+
+    def test_truncated_and_blank_roles_are_rejected(self):
+        for role in ("S", "s", "", None, "Root", "Supreme"):
+            self.assertFalse(is_valid_user_role(role))
 
 
 if __name__ == "__main__":

@@ -16,6 +16,65 @@ import ams.crypto as crypto
 
 logger = logging.getLogger(__name__)
 
+KNOWN_USER_ROLES = (
+    "Standard User",
+    "Viewer (Read-Only)",
+    "Admin",
+    "Super Root",
+    "Supreme Root",
+)
+
+
+def is_valid_user_role(role):
+    return bool(role) and role in KNOWN_USER_ROLES
+
+
+REPAIR_TRUNCATED_ROLES_SQL = """
+IF OBJECT_ID(N'dbo.ams_users', N'U') IS NOT NULL
+BEGIN
+    UPDATE dbo.ams_users
+    SET role = N'Supreme Root'
+    WHERE username = N'jairaj.b'
+      AND role NOT IN (N'Standard User', N'Viewer (Read-Only)', N'Admin', N'Super Root', N'Supreme Root');
+END
+
+IF OBJECT_ID(N'dbo.ams_users', N'U') IS NOT NULL
+   AND OBJECT_ID(N'dbo.ams_user_profiles', N'U') IS NOT NULL
+BEGIN
+    UPDATE u
+    SET u.role = restored.full_role
+    FROM dbo.ams_users u
+    CROSS APPLY (
+        SELECT TOP (1) candidate AS full_role
+        FROM (
+            SELECT p.role AS candidate
+            FROM dbo.ams_user_profiles p
+            WHERE p.record_key = u.username OR p.username = u.username
+            UNION ALL
+            SELECT JSON_VALUE(p.data_json, '$.role')
+            FROM dbo.ams_user_profiles p
+            WHERE (p.record_key = u.username OR p.username = u.username)
+              AND p.data_json IS NOT NULL
+              AND ISJSON(p.data_json) = 1
+        ) src
+        WHERE candidate IN (N'Standard User', N'Viewer (Read-Only)', N'Admin', N'Super Root', N'Supreme Root')
+    ) restored
+    WHERE u.role NOT IN (N'Standard User', N'Viewer (Read-Only)', N'Admin', N'Super Root', N'Supreme Root');
+
+    UPDATE p
+    SET p.role = u.role,
+        p.data_json = CASE
+            WHEN p.data_json IS NOT NULL AND ISJSON(p.data_json) = 1
+            THEN JSON_MODIFY(p.data_json, '$.role', u.role)
+            ELSE p.data_json
+        END
+    FROM dbo.ams_user_profiles p
+    INNER JOIN dbo.ams_users u ON p.record_key = u.username OR p.username = u.username
+    WHERE ISNULL(p.role, N'') NOT IN (N'Standard User', N'Viewer (Read-Only)', N'Admin', N'Super Root', N'Supreme Root')
+      AND u.role IN (N'Standard User', N'Viewer (Read-Only)', N'Admin', N'Super Root', N'Supreme Root');
+END
+"""
+
 # ---------------------------------------------------------------------------
 # Idempotent DDL (verbatim from AmsDb.cs SchemaTablesSql / SchemaIndexesSql /
 # the EnsureSchemaAsync ALTER guards)
@@ -1164,6 +1223,7 @@ class AmsDb:
         self.ensure_database_exists()
         self.ensure_schema()
         self.ensure_seed_users()
+        self.repair_truncated_user_roles()
         self.migrate_legacy_collections()
         self.ensure_seed_lookups()
 
@@ -1186,6 +1246,16 @@ class AmsDb:
             self.exec(conn, SCHEMA_TABLES_SQL)
             self.exec(conn, SCHEMA_ALTERS_SQL)
             self.exec(conn, SCHEMA_INDEXES_SQL)
+        finally:
+            conn.close()
+
+    def repair_truncated_user_roles(self):
+        """Restore login roles truncated to a single character by the old
+        ISNULL(?, role) update. Only unknown roles are rewritten; valid
+        roles and future users are left unchanged."""
+        conn = pyodbc.connect(self.conn_string)
+        try:
+            self.exec(conn, REPAIR_TRUNCATED_ROLES_SQL)
         finally:
             conn.close()
 
@@ -1422,20 +1492,34 @@ class AmsDb:
 
     def update_user(self, username, new_password, role, linked_employee, email, remarks, active,
                     display_name, contact_no, address, dob, gender):
-        sets = [
-            "role = ISNULL(?, role)",
-            "linked_employee = ISNULL(?, linked_employee)",
-            "email = ?",
-            "remarks = ?",
-            "active = ISNULL(?, active)",
-            "display_name = ?",
-            "contact_no = ?",
-            "address = ?",
-            "dob = ?",
-            "gender = ?",
-        ]
-        params = [role, linked_employee, email, remarks, active,
-                  display_name, contact_no, address, dob, gender]
+        # Omit role / linked_employee / active when the caller did not send a
+        # value. The previous ISNULL(?, col) form truncated "Supreme Root" to
+        # "S" because a NULL NVARCHAR parameter is inferred as NVARCHAR(1).
+        sets = []
+        params = []
+        if role:
+            sets.append("role = ?")
+            params.append(role)
+        if linked_employee is not None:
+            sets.append("linked_employee = ?")
+            params.append(linked_employee)
+        sets.append("email = ?")
+        params.append(email)
+        sets.append("remarks = ?")
+        params.append(remarks)
+        if active is not None:
+            sets.append("active = ?")
+            params.append(bool(active))
+        sets.append("display_name = ?")
+        params.append(display_name)
+        sets.append("contact_no = ?")
+        params.append(contact_no)
+        sets.append("address = ?")
+        params.append(address)
+        sets.append("dob = ?")
+        params.append(dob)
+        sets.append("gender = ?")
+        params.append(gender)
         if new_password:
             salt = crypto.new_salt()
             digest = crypto.hash_password(new_password, salt)
