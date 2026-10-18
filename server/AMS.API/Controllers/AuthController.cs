@@ -116,6 +116,9 @@ public class AuthController : ControllerBase
         if (req.Role == "Supreme Root" && callerRole != "Supreme Root")
             return Forbid();
 
+        if (!AmsDb.IsValidUserRole(req.Role))
+            return BadRequest(new { error = "Role is not a valid AMS role." });
+
         if (username.Length == 0 || string.IsNullOrWhiteSpace(req.Password))
             return BadRequest(new { error = "Username and password are required." });
 
@@ -146,6 +149,9 @@ public class AuthController : ControllerBase
         // Supreme Root account can only be changed by a Supreme Root.
         if ((user.Role == "Supreme Root" || req.Role == "Supreme Root") && callerRole != "Supreme Root")
             return Forbid();
+
+        if (req.Role is not null && !AmsDb.IsValidUserRole(req.Role))
+            return BadRequest(new { error = "Role is not a valid AMS role." });
 
         await _db.UpdateUserAsync(username, req.Password, req.Role, req.LinkedEmployee,
             req.Email, req.Remarks, req.Active, req.DisplayName, req.ContactNo,
