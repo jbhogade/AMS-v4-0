@@ -27,9 +27,9 @@
    ===========================================================================*/
 
 /* =============================================================================
-   DATABASE / API LAYER  (AMS-TEST)
+   DATABASE / API LAYER  (AMS-v4-0)
    -----------------------------------------------------------------------------
-   The AMS-Test portal is backed by the SQL Server database "AMS-TEST" reached
+   The AMS-v4-0 portal is backed by the SQL Server database "AMS-v4-0" reached
    through the ASP.NET Core API (server\AMS.API). Business data lives in
    per-entity SQL tables (plus data_json on each row). This layer loads every
    collection into the global arrays below at startup and PUTs a collection
@@ -54,6 +54,12 @@ function amsSetSession(s) {
     try { localStorage.setItem(AMS_SESSION_KEY, JSON.stringify(s)); } catch (e) { /* storage unavailable */ }
 }
 function amsClearSession() {
+    try {
+        const cur = amsGetSession();
+        if (cur && cur.username) {
+            sessionStorage.removeItem("ams_collections_cache_v1:" + String(cur.username).toLowerCase());
+        }
+    } catch (e) { /* storage unavailable */ }
     try { localStorage.removeItem(AMS_SESSION_KEY); } catch (e) { /* storage unavailable */ }
 }
 
@@ -96,7 +102,7 @@ async function amsApiFetch(path, opts) {
     try {
         res = await fetch(AMS_API_BASE + path, opts);
     } catch (e) {
-        throw new Error("Cannot reach the AMS-Test API. Start server\\AMS.API (dotnet run) and refresh.");
+        throw new Error("Cannot reach the AMS-v4-0 API. Start server\\AMS.API (dotnet run) and refresh.");
     }
     if (res.status === 401) {
         const skipRedirect = !!(opts.skipAuthRedirect || /\/api\/auth\/login(?:\?|$)/.test(String(path || "")));
@@ -172,25 +178,109 @@ const AMS_DOC_COLLECTIONS = {
 let AMS_DB_LOADING = null;   /* idempotent load promise */
 let AMS_DB_READY   = false;
 
+function amsDbApplyPayload(payload) {
+    if (!payload || typeof payload !== "object") return false;
+    Object.keys(AMS_COLLECTIONS).forEach(key => {
+        const arr = AMS_COLLECTIONS[key]();
+        arr.length = 0;
+        if (Array.isArray(payload[key])) arr.push.apply(arr, payload[key]);
+    });
+    Object.keys(AMS_DOC_COLLECTIONS).forEach(key => {
+        const doc = payload[key];
+        const target = AMS_DOC_COLLECTIONS[key]();
+        if (doc && typeof doc === "object" && !Array.isArray(doc)) Object.assign(target, doc);
+    });
+    amsInvalidateLookupCaches();
+    return true;
+}
+
+/* ---- collections payload cache (survives page navigation) ------------------ */
+function amsCollectionsCacheKey() {
+    const sess = amsGetSession();
+    const who = sess && sess.username ? String(sess.username).toLowerCase() : "anon";
+    return "ams_collections_cache_v1:" + who;
+}
+
+function amsReadCollectionsCache() {
+    try {
+        const raw = sessionStorage.getItem(amsCollectionsCacheKey());
+        if (!raw) return null;
+        const parsed = JSON.parse(raw);
+        if (!parsed || !parsed.etag || !parsed.data || typeof parsed.data !== "object") return null;
+        return parsed;
+    } catch (e) {
+        return null;
+    }
+}
+
+function amsWriteCollectionsCache(etag, data) {
+    try {
+        sessionStorage.setItem(amsCollectionsCacheKey(),
+            JSON.stringify({ etag: etag, data: data, at: Date.now() }));
+    } catch (e) {
+        /* storage unavailable / quota exceeded - caching is optional */
+    }
+}
+
+/* Fetch /api/collections with a conditional request. Returns the parsed payload
+   even when the API answers 304 (from the session cache). */
+async function amsFetchAllCollections() {
+    const cache = amsReadCollectionsCache();
+    const headers = {};
+    if (cache) headers["If-None-Match"] = cache.etag;
+    const sess = amsGetSession();
+    if (sess && sess.token) headers["Authorization"] = "Bearer " + sess.token;
+
+    let res;
+    try {
+        res = await fetch(AMS_API_BASE + "/api/collections", { method: "GET", headers: headers });
+    } catch (e) {
+        throw new Error("Cannot reach the AMS-v4-0 API. Start server\\AMS.API (dotnet run) and refresh.");
+    }
+    if (res.status === 304 && cache) return cache.data;
+    if (!res.ok) {
+        /* Let the shared client handle 401 redirects and error messages. */
+        return await amsApiGet("/api/collections");
+    }
+    const etag = res.headers.get("ETag") || "";
+    const text = await res.text();
+    let data = null;
+    try { data = text ? JSON.parse(text) : null; } catch (e) { data = null; }
+    if (etag) amsWriteCollectionsCache(etag, data);
+    return data;
+}
+
 async function amsDbLoadAll() {
     if (AMS_DB_READY) return;
     if (AMS_DB_LOADING) return AMS_DB_LOADING;
     AMS_DB_LOADING = (async () => {
-        await Promise.all(Object.keys(AMS_COLLECTIONS).map(async key => {
-            let items = [];
-            try { items = await amsApiGet("/api/collection/" + key); }
-            catch (e) { console.warn("[amsDb] load " + key + " failed: " + e.message); }
-            const arr = AMS_COLLECTIONS[key]();
-            arr.length = 0;
-            if (Array.isArray(items)) arr.push.apply(arr, items);
-        }));
-        await Promise.all(Object.keys(AMS_DOC_COLLECTIONS).map(async key => {
-            let doc = null;
-            try { doc = await amsApiGet("/api/collection/" + key); }
-            catch (e) { console.warn("[amsDb] load " + key + " failed: " + e.message); }
-            const target = AMS_DOC_COLLECTIONS[key]();
-            if (doc && typeof doc === "object") Object.assign(target, doc);
-        }));
+        /* Fetch the account list at the same time as the data payload - the
+           two requests are independent, so running them in parallel saves one
+           full round-trip on every page load. */
+        const loginUsersPromise = amsFetchLoginUsers();
+        let loaded = false;
+        try {
+            loaded = amsDbApplyPayload(await amsFetchAllCollections());
+        } catch (e) {
+            console.warn("[amsDb] bulk load failed, falling back: " + (e && e.message ? e.message : e));
+        }
+        if (!loaded) {
+            await Promise.all(Object.keys(AMS_COLLECTIONS).map(async key => {
+                let items = [];
+                try { items = await amsApiGet("/api/collection/" + key); }
+                catch (e) { console.warn("[amsDb] load " + key + " failed: " + e.message); }
+                const arr = AMS_COLLECTIONS[key]();
+                arr.length = 0;
+                if (Array.isArray(items)) arr.push.apply(arr, items);
+            }));
+            await Promise.all(Object.keys(AMS_DOC_COLLECTIONS).map(async key => {
+                let doc = null;
+                try { doc = await amsApiGet("/api/collection/" + key); }
+                catch (e) { console.warn("[amsDb] load " + key + " failed: " + e.message); }
+                const target = AMS_DOC_COLLECTIONS[key]();
+                if (doc && typeof doc === "object") Object.assign(target, doc);
+            }));
+        }
         const accMax = AMS_DUMMY_ACCESSORIES.reduce((m, a) =>
             Math.max(m, parseInt(String(a.accCode || "0").replace(/\D/g, ""), 10) || 0), 0);
         if (accMax >= AMS_ACC_SEQ) AMS_ACC_SEQ = accMax + 1;
@@ -199,7 +289,9 @@ async function amsDbLoadAll() {
         if (venMax >= AMS_VENDOR_SEQ) AMS_VENDOR_SEQ = venMax + 1;
         const makesBackfilled = amsBackfillAssetMakeCodes();
         amsMigrateEmployeeNames();
-        await amsMergeLoginUsersIntoProfiles();
+        amsEnsureSessionUserProfile();
+        const loginUsers = await loginUsersPromise;
+        if (loginUsers) amsMergeLoginUsers(loginUsers);
         amsInvalidateLookupCaches();
         AMS_DB_READY = true;
         if (typeof amsMigrateRoleAccessDocument === "function") amsMigrateRoleAccessDocument();
@@ -287,6 +379,30 @@ function amsFormatDate(iso) {
     if (!canonical) return iso ? String(iso) : "";
     const [y, m, d] = canonical.split("-");
     return `${d}-${m}-${y}`;
+}
+
+/* Last assignment / issue date stored on an asset, mobile, or SIM. Prefers
+   assignedDate / issueDate, then the newest history row whose action is an
+   assignment. Used by printed Issue Forms so Date of Issue is the real
+   handover date, not the day the form is generated. */
+function amsItemLastIssueDate(item) {
+    if (!item) return "";
+    if (item.assignedDate) return item.assignedDate;
+    if (item.issueDate) return item.issueDate;
+    const hist = item.history;
+    if (!Array.isArray(hist) || !hist.length) return "";
+    for (let i = hist.length - 1; i >= 0; i--) {
+        const act = String(hist[i].action || "");
+        if (act.indexOf("Assigned") === 0 || act.indexOf("Reassigned") === 0 || act.indexOf("Assignment updated") === 0) {
+            return hist[i].date || "";
+        }
+    }
+    return "";
+}
+
+function amsPrintItemIssueDate(item) {
+    const formatted = amsFormatDate(amsItemLastIssueDate(item));
+    return formatted || "-";
 }
 
 /* Normalises any imported / stored date to ISO yyyy-mm-dd for <input type="date">.
@@ -1116,12 +1232,24 @@ function amsComputeFullId(asset) {
    reports) that have no live assignment, falls back to the stored id. */
 function amsPrintAssetId(oa) {
     if (!oa) return "";
+    if (oa.simId && !oa.displayId && !oa.amsAssetId) return oa.simId;
     const stored = oa.id || oa.assetId || "";
+    if (oa.isLegacyId) return oa.displayId || amsBaseDisplayId(oa) || stored;
     if (oa.assignedTo || (typeof oa.id === "string" && oa.id && (oa.displayId || oa.currentSite || oa.site))) {
         const full = amsComputeFullId(oa);
         if (full) return full;
     }
     return stored;
+}
+
+function amsPrintRemarkId(oa) {
+    if (!oa) return "";
+    if (oa.simId) return oa.simId;
+    if (typeof amsBaseDisplayId === "function") {
+        const base = amsBaseDisplayId(oa);
+        if (base) return base;
+    }
+    return oa.displayId || oa.id || oa.assetId || "";
 }
 
 /* =============================================================================
@@ -1346,6 +1474,27 @@ function amsSimMatchesMobile(s, m) {
     return sid === m.amsAssetId || sid === m.id || sid === m.displayId;
 }
 
+function amsSimTakenByOtherMobile(s, exceptMobile) {
+    if (!s || s.personalMobile) return false;
+    const num = String(s.mobileNumber || "").trim();
+    if (!num || num === "0") return false;
+    if (exceptMobile && amsSimMatchesMobile(s, exceptMobile)) return false;
+    if (s.linkedMobileId) {
+        const linked = amsFindMobileByRef(s.linkedMobileId);
+        if (linked && linked !== exceptMobile) {
+            const exceptKey = exceptMobile ? amsMobileStableId(exceptMobile) : "";
+            if (!exceptKey || (linked.amsAssetId !== exceptKey && linked.id !== exceptKey && linked.displayId !== exceptKey)) return true;
+        }
+    }
+    const mobiles = (typeof DUMMY_MOBILES !== "undefined" && Array.isArray(DUMMY_MOBILES)) ? DUMMY_MOBILES : [];
+    const exceptKey = exceptMobile ? amsMobileStableId(exceptMobile) : "";
+    return mobiles.some(m => {
+        if (!m || m === exceptMobile) return false;
+        if (exceptKey && (m.amsAssetId === exceptKey || m.id === exceptKey || m.displayId === exceptKey)) return false;
+        return String(m.simMobileNo || "0").trim() === num;
+    });
+}
+
 function amsUnlinkSimFromMobile(s) {
     if (!s) return false;
     let changed = false;
@@ -1438,16 +1587,20 @@ function amsSyncMobileToSimNumber(mobile, simNumber, empId, assignDate) {
             simsChanged = true;
         }
     });
-    mobile.simMobileNo = num;
-    if (num === "0") return simsChanged;
-    const s = amsFindSimByMobileNumber(num);
-    if (!s || s.status === "Retired") return simsChanged;
-    if (s.linkedMobileId && !s.personalMobile) {
-        const prev = amsFindMobileByRef(s.linkedMobileId);
-        if (prev && prev !== mobile && String(prev.simMobileNo || "0") === String(s.mobileNumber || "")) {
-            prev.simMobileNo = "0";
-        }
+    if (num === "0") {
+        mobile.simMobileNo = "0";
+        return simsChanged;
     }
+    const s = amsFindSimByMobileNumber(num);
+    if (!s || s.status === "Retired") {
+        mobile.simMobileNo = num;
+        return simsChanged;
+    }
+    if (amsSimTakenByOtherMobile(s, mobile)) {
+        mobile.simMobileNo = "0";
+        return simsChanged;
+    }
+    mobile.simMobileNo = num;
     s.linkedMobileId = amsMobileStableId(mobile);
     s.personalMobile = false;
     simsChanged = true;
@@ -1956,14 +2109,14 @@ function exitEmployee(amsId, exitDate, remarks, facilitiesDisabled, exitReason, 
             site: a.currentSite || a.site, currentSite: a.currentSite || a.site,
             assignedDepartment: a.assignedDepartment,
             remarks: withExitRemark(a.remarks), usageNote: a.usageNote,
-            assignedTo: a.assignedTo, displayId: a.displayId,
+            assignedTo: a.assignedTo, displayId: a.displayId, isLegacyId: !!a.isLegacyId,
             accessories: Array.isArray(a.accessories) ? a.accessories.slice() : [],
             returnDate,
         }));
     const directMobilesHeld = DUMMY_MOBILES
         .filter(a => a.assignedTo === amsId)
         .map(a => ({
-            id: a.id, displayId: a.displayId, type: a.type, make: a.make, model: a.model,
+            id: a.id, displayId: a.displayId, isLegacyId: !!a.isLegacyId, type: a.type, make: a.make, model: a.model,
             makeModel: amsAssetMakeModel(a),
             imei1: a.imei1, imei2: a.imei2, batteryNo: a.batteryNo, chargerNo: a.chargerNo,
             simMobileNo: a.simMobileNo || "0",
@@ -1978,6 +2131,7 @@ function exitEmployee(amsId, exitDate, remarks, facilitiesDisabled, exitReason, 
         .map(s => ({
             simId: s.simId, mobileNumber: s.mobileNumber, operator: s.operator,
             plan: s.plan, status: s.status, assignedTo: s.assignedTo,
+            assignedToSubordinate: s.assignedToSubordinate, assignedSubText: s.assignedSubText,
             linkedMobileId: s.linkedMobileId || null, personalMobile: !!s.personalMobile,
             accessories: Array.isArray(s.accessories) ? s.accessories.slice() : [],
             remarks: withExitRemark(s.remarks), returnDate,
@@ -2041,10 +2195,13 @@ function exitEmployee(amsId, exitDate, remarks, facilitiesDisabled, exitReason, 
                 site: a.currentSite || a.site, subName: getEmployeeFullName(sub), subEmpId: amsGetEmployeeDisplayId(sub),
             });
         });
-        getEmployeeSimCards(sub.amsId).forEach(s => subordinateSimCardsHeld.push({
-            ...s, holder: getEmployeeFullName(sub), holderId: amsGetEmployeeDisplayId(sub),
-            subName: getEmployeeFullName(sub), subEmpId: amsGetEmployeeDisplayId(sub),
-        }));
+        getEmployeeSimCards(sub.amsId).forEach(s => {
+            if (amsAssetIsDeptOrSub(s)) return;
+            subordinateSimCardsHeld.push({
+                ...s, holder: getEmployeeFullName(sub), holderId: amsGetEmployeeDisplayId(sub),
+                subName: getEmployeeFullName(sub), subEmpId: amsGetEmployeeDisplayId(sub),
+            });
+        });
     });
 
     AMS_DUMMY_EXIT_RECORDS.push({
@@ -2184,6 +2341,8 @@ function amsMarkHoldingReturnedOnExit(item, emp, returnDate, note, kind) {
         item.status = "In Store";
         if (typeof amsComputeFullId === "function") item.id = amsComputeFullId(item);
     } else {
+        item.assignedToSubordinate = null;
+        item.assignedSubText = null;
         item.assignedDate = "";
         item.status = "In Store";
     }
@@ -2393,7 +2552,7 @@ function getSubordinateMobiles(amsId) {
 function getSubordinateSimCards(amsId) {
     const out = [];
     getSubordinates(amsId).forEach(s => {
-        getEmployeeSimCards(s.amsId).forEach(sim => out.push(sim));
+        getEmployeeSimCards(s.amsId).forEach(sim => { if (!amsAssetIsDeptOrSub(sim)) out.push(sim); });
     });
     return out;
 }
@@ -2482,12 +2641,12 @@ function amsTeamEmployeeAssets(amsId) {
 }
 
 /* Owned / Team lists that include assigned Mobiles and SIM cards so Employee
-    Master counters, distribution, and reports count every held device. */
+   Master counters, distribution, and reports count every held device. */
 function amsOwnedEmployeeHoldingsCount(amsId) {
     let n = 0;
     (amsAssetsByAssigned()[amsId] || []).forEach(a => { if (!amsAssetIsDeptOrSub(a)) n++; });
     (amsMobilesByAssigned()[amsId] || []).forEach(a => { if (!amsAssetIsDeptOrSub(a)) n++; });
-    n += (amsSimsByAssigned()[amsId] || []).length;
+    (amsSimsByAssigned()[amsId] || []).forEach(s => { if (!amsAssetIsDeptOrSub(s)) n++; });
     return n;
 }
 
@@ -2496,17 +2655,18 @@ function amsTeamEmployeeHoldingsCount(amsId) {
     getSubordinates(amsId).forEach(s => {
         (amsAssetsByAssigned()[s.amsId] || []).forEach(a => { if (!amsAssetIsDeptOrSub(a)) n++; });
         (amsMobilesByAssigned()[s.amsId] || []).forEach(a => { if (!amsAssetIsDeptOrSub(a)) n++; });
-        n += (amsSimsByAssigned()[s.amsId] || []).length;
+        (amsSimsByAssigned()[s.amsId] || []).forEach(sim => { if (!amsAssetIsDeptOrSub(sim)) n++; });
     });
     (amsAssetsByAssigned()[amsId] || []).forEach(a => { if (amsAssetIsDeptOrSub(a)) n++; });
     (amsMobilesByAssigned()[amsId] || []).forEach(a => { if (amsAssetIsDeptOrSub(a)) n++; });
+    (amsSimsByAssigned()[amsId] || []).forEach(s => { if (amsAssetIsDeptOrSub(s)) n++; });
     return n;
 }
 
 function amsOwnedEmployeeHoldings(amsId) {
     const assets = amsOwnedEmployeeAssets(amsId);
     const mobiles = getEmployeeMobiles(amsId).filter(a => !amsAssetIsDeptOrSub(a));
-    const sims = getEmployeeSimCards(amsId);
+    const sims = getEmployeeSimCards(amsId).filter(s => !amsAssetIsDeptOrSub(s));
     return assets.concat(mobiles, sims);
 }
 
@@ -2515,6 +2675,7 @@ function amsTeamEmployeeHoldings(amsId) {
     getSubordinateMobiles(amsId).forEach(a => team.push(a));
     getEmployeeMobiles(amsId).forEach(a => { if (amsAssetIsDeptOrSub(a)) team.push(a); });
     getSubordinateSimCards(amsId).forEach(s => team.push(s));
+    getEmployeeSimCards(amsId).forEach(s => { if (amsAssetIsDeptOrSub(s)) team.push(s); });
     return team;
 }
 
@@ -2546,42 +2707,24 @@ function amsAssignmentTypeLabel(directCount, teamCount) {
 
 /* Builds the "Accessories / Items Included" section of a printed form.
    Uses only items issued DIRECTLY to the employee (assets, mobiles, SIMs).
-   Lists unique Accessory Master options for those item types (plus recorded
-   accessories even if no longer in the master), pre-checking issued ones.
-   If nothing is issued, the section is omitted (no default checklist). */
+   Lists only accessories ticked in Assign / Replace "Common / Supportive
+   Accessories (optional)", not the full Accessory Master for those types.
+   If none were selected, the section is omitted. */
 function amsBuildPrintAccessoriesHtml(items) {
     const list = (items || []).filter(oa => oa);
     if (!list.length) return "";
 
-    const types = [];
-    list.forEach(oa => { if (oa.type && !types.includes(oa.type)) types.push(oa.type); });
-
-    const masterOptions = [];
-    types.forEach(t => {
-        amsGetAccessoryOptions(t).forEach(name => {
-            if (!masterOptions.includes(name)) masterOptions.push(name);
-        });
-    });
-
     const issued = [];
     list.forEach(oa => {
         (Array.isArray(oa.accessories) ? oa.accessories : []).forEach(name => {
-            if (name && !issued.includes(name)) issued.push(name);
+            const label = String(name || "").trim();
+            if (label && !issued.includes(label)) issued.push(label);
         });
     });
+    if (!issued.length) return "";
 
-    const rows = [];
-    masterOptions.forEach(name => {
-        const checked = issued.includes(name) ? "checked" : "";
-        rows.push(`<label class="pf-check-block"><input type="checkbox" ${checked}> ${amsEsc(name)}</label>`);
-    });
-    issued.forEach(name => {
-        if (!masterOptions.includes(name)) {
-            rows.push(`<label class="pf-check-block"><input type="checkbox" checked> ${amsEsc(name)}</label>`);
-        }
-    });
-    if (!rows.length) return "";
-    rows.push(`<label class="pf-check-block" style="grid-column:1 / -1;">Other: ________________________________</label>`);
+    const rows = issued.map(name =>
+        `<label class="pf-check-block"><input type="checkbox" checked disabled> ${amsEsc(name)}</label>`);
     return `
         <div class="pf-section-bar">Accessories / Items Included</div>
         <div class="pf-checklist-grid">
@@ -2598,6 +2741,24 @@ function amsPrintDirectHoldingsForAccessories(amsId, extraAssets) {
         ? (amsCollectPrintSimsForEmp(amsId).direct || [])
         : [];
     return assets.concat(mobiles, sims);
+}
+
+function amsPrintDirectHoldingsForRemarks(amsId, extraAssets) {
+    const assets = extraAssets || [];
+    const mobiles = (typeof amsCollectPrintMobilesForEmp === "function")
+        ? (amsCollectPrintMobilesForEmp(amsId).direct || [])
+        : [];
+    const seen = new Set();
+    const out = [];
+    assets.concat(mobiles).forEach(item => {
+        if (!item) return;
+        const key = (typeof amsPrintAssetId === "function" ? amsPrintAssetId(item) : "")
+            || item.amsAssetId || item.id || "";
+        if (key && seen.has(key)) return;
+        if (key) seen.add(key);
+        out.push(item);
+    });
+    return out;
 }
 
 function amsAssetMakeModel(oa) {
@@ -2637,15 +2798,27 @@ function amsCollectPrintMobilesForEmp(amsId) {
 }
 
 function amsCollectPrintSimsForEmp(amsId) {
+    const split = amsSplitDirectVsSubordinateAssets(getEmployeeSimCards(amsId));
     const subordinate = [];
     getSubordinates(amsId).forEach(sub => {
-        getEmployeeSimCards(sub.amsId).forEach(s => subordinate.push({
-            ...s,
-            holder: getEmployeeFullName(sub),
-            holderId: amsGetEmployeeDisplayId(sub),
-        }));
+        getEmployeeSimCards(sub.amsId).forEach(s => {
+            if (amsAssetIsDeptOrSub(s)) return;
+            subordinate.push({
+                ...s,
+                holder: getEmployeeFullName(sub),
+                holderId: amsGetEmployeeDisplayId(sub),
+            });
+        });
     });
-    return { direct: getEmployeeSimCards(amsId), subordinate };
+    split.subordinate.forEach(s => {
+        const holderEmp = s.assignedToSubordinate ? amsGetEmployeeByAmsId(s.assignedToSubordinate) : null;
+        subordinate.push({
+            ...s,
+            holder: holderEmp ? holderEmp.name : (s.assignedSubText || amsAssetHolderLabel(s)),
+            holderId: holderEmp ? amsGetEmployeeDisplayId(holderEmp) : "",
+        });
+    });
+    return { direct: split.direct, subordinate };
 }
 
 function amsBuildPrintMobilesSectionHtml(directList, subList, opts) {
@@ -2667,7 +2840,7 @@ function amsBuildPrintMobilesSectionHtml(directList, subList, opts) {
                 <tr>
                     <th style="width:30px;">#</th><th>Mobile ID</th><th>Type / Make / Model</th>
                     <th>IMEI No 1</th><th>IMEI No 2</th><th>Battery No</th><th>Charger No</th>
-                    <th>Mobile No</th><th>Site</th>${withCondition ? "<th>Physical Condition at Issue</th>" : ""}
+                    <th>Mobile No</th><th>Site</th><th>Date of Issue</th>${withCondition ? "<th>Physical Condition at Issue</th>" : ""}
                 </tr>
             </thead>
             <tbody>
@@ -2682,6 +2855,7 @@ function amsBuildPrintMobilesSectionHtml(directList, subList, opts) {
                         <td class="mono">${amsEsc(m.chargerNo || "-")}</td>
                         <td class="mono">${amsEsc(mobileNo(m))}</td>
                         <td>${amsEsc(m.currentSite || m.site || "-")}</td>
+                        <td>${typeof amsPrintItemIssueDate === "function" ? amsEsc(amsPrintItemIssueDate(m)) : "-"}</td>
                         ${withCondition ? `<td>${conditionRow()}</td>` : ""}
                     </tr>`).join("")}
             </tbody>
@@ -2694,7 +2868,7 @@ function amsBuildPrintMobilesSectionHtml(directList, subList, opts) {
             <thead>
                 <tr>
                     <th style="width:30px;">#</th><th>Mobile ID</th><th>Type / Make / Model</th>
-                    <th>IMEI No 1</th><th>Mobile No</th><th>Held By</th><th>Employee ID</th><th>Site</th>
+                    <th>IMEI No 1</th><th>Mobile No</th><th>Held By</th><th>Employee ID</th><th>Site</th><th>Date of Issue</th>
                 </tr>
             </thead>
             <tbody>
@@ -2708,6 +2882,7 @@ function amsBuildPrintMobilesSectionHtml(directList, subList, opts) {
                         <td>${amsEsc(m.holder || m.subName || "-")}</td>
                         <td class="mono">${m.holderId || m.subEmpId ? amsEsc(m.holderId || m.subEmpId) : "-"}</td>
                         <td>${amsEsc(m.site || m.currentSite || "-")}</td>
+                        <td>${typeof amsPrintItemIssueDate === "function" ? amsEsc(amsPrintItemIssueDate(m)) : "-"}</td>
                     </tr>`).join("")}
             </tbody>
         </table>`;
@@ -2725,7 +2900,7 @@ function amsBuildPrintSimCardsSectionHtml(directList, subList, opts) {
             <thead>
                 <tr>
                     <th style="width:30px;">#</th><th>SIM ID</th><th>Mobile Number</th>
-                    <th>Operator</th><th>Plan</th><th>Site</th><th>Used In</th><th>Status</th>
+                    <th>Operator</th><th>Plan</th><th>Site</th><th>Used In</th><th>Status</th><th>Date of Issue</th>
                 </tr>
             </thead>
             <tbody>
@@ -2739,6 +2914,7 @@ function amsBuildPrintSimCardsSectionHtml(directList, subList, opts) {
                         <td>${amsEsc(s.site || "-")}</td>
                         <td>${amsEsc(amsSimPrintUsedIn(s))}</td>
                         <td>${amsEsc(s.status || "-")}</td>
+                        <td>${typeof amsPrintItemIssueDate === "function" ? amsEsc(amsPrintItemIssueDate(s)) : "-"}</td>
                     </tr>`).join("")}
             </tbody>
         </table>`;
@@ -2750,7 +2926,7 @@ function amsBuildPrintSimCardsSectionHtml(directList, subList, opts) {
             <thead>
                 <tr>
                     <th style="width:30px;">#</th><th>SIM ID</th><th>Mobile Number</th>
-                    <th>Operator</th><th>Plan</th><th>Site</th><th>Held By</th><th>Employee ID</th>
+                    <th>Operator</th><th>Plan</th><th>Site</th><th>Held By</th><th>Employee ID</th><th>Date of Issue</th>
                 </tr>
             </thead>
             <tbody>
@@ -2764,6 +2940,7 @@ function amsBuildPrintSimCardsSectionHtml(directList, subList, opts) {
                         <td>${amsEsc(s.site || "-")}</td>
                         <td>${amsEsc(s.holder || s.subName || "-")}</td>
                         <td class="mono">${s.holderId || s.subEmpId ? amsEsc(s.holderId || s.subEmpId) : "-"}</td>
+                        <td>${typeof amsPrintItemIssueDate === "function" ? amsEsc(amsPrintItemIssueDate(s)) : "-"}</td>
                     </tr>`).join("")}
             </tbody>
         </table>`;
@@ -3065,34 +3242,46 @@ function amsEnsureSessionUserProfile() {
     });
 }
 
-async function amsMergeLoginUsersIntoProfiles() {
-    amsEnsureSessionUserProfile();
+async function amsFetchLoginUsers() {
     try {
         const list = await amsApiGet("/api/auth/users");
-        if (!Array.isArray(list)) return;
-        list.forEach(u => {
-            if (!u || !u.username) return;
-            const existing = AMS_DUMMY_USERS.find(x => x.username === u.username);
-            if (existing) {
-                if (u.role) existing.role = u.role;
-                if (u.displayName && !existing.displayName) existing.displayName = u.displayName;
-                if (u.email && !existing.email) existing.email = u.email;
-                if (u.linkedEmployee && !existing.linkedEmployee) existing.linkedEmployee = u.linkedEmployee;
-                if (existing.active === undefined) existing.active = u.active !== false;
-            } else {
-                AMS_DUMMY_USERS.push({
-                    username: u.username,
-                    role: u.role || "Standard User",
-                    displayName: u.displayName || u.username,
-                    linkedEmployee: u.linkedEmployee || "",
-                    email: u.email || "",
-                    remarks: u.remarks || "",
-                    active: u.active !== false,
-                    allowedPages: null,
-                });
-            }
-        });
-    } catch (e) { /* Standard User cannot list accounts - session stub is enough */ }
+        return Array.isArray(list) ? list : [];
+    } catch (e) {
+        /* Standard User cannot list accounts - session stub is enough */
+        return null;
+    }
+}
+
+function amsMergeLoginUsers(list) {
+    if (!Array.isArray(list)) return;
+    list.forEach(u => {
+        if (!u || !u.username) return;
+        const existing = AMS_DUMMY_USERS.find(x => x.username === u.username);
+        if (existing) {
+            if (u.role) existing.role = u.role;
+            if (u.displayName && !existing.displayName) existing.displayName = u.displayName;
+            if (u.email && !existing.email) existing.email = u.email;
+            if (u.linkedEmployee && !existing.linkedEmployee) existing.linkedEmployee = u.linkedEmployee;
+            if (existing.active === undefined) existing.active = u.active !== false;
+        } else {
+            AMS_DUMMY_USERS.push({
+                username: u.username,
+                role: u.role || "Standard User",
+                displayName: u.displayName || u.username,
+                linkedEmployee: u.linkedEmployee || "",
+                email: u.email || "",
+                remarks: u.remarks || "",
+                active: u.active !== false,
+                allowedPages: null,
+            });
+        }
+    });
+}
+
+async function amsMergeLoginUsersIntoProfiles() {
+    amsEnsureSessionUserProfile();
+    const list = await amsFetchLoginUsers();
+    if (list) amsMergeLoginUsers(list);
 }
 
 function amsResolveAllowedPages(user) {
@@ -3396,6 +3585,18 @@ function getEmployeeSummary() {
         + AMS_DUMMY_SIM_CARDS.filter(s => s.assignedTo).length;
     return { total: DUMMY_EMPLOYEES.length, active, inactive, assignedAssets };
 }
+
+/* Start loading SQL collections as soon as this script runs (deferred scripts
+   execute in order), so the fetch overlaps the rest of the page boot instead
+   of starting only after initLayout(). Pages/session-less screens simply skip
+   it - initLayout()/page init still await the same promise. */
+(function amsKickOffDbLoad() {
+    try {
+        if (typeof amsGetSession === "function" && amsGetSession()) {
+            amsDbLoadAll().catch(() => {});
+        }
+    } catch (e) { /* ignore - normal page init will retry */ }
+})();
 
 /*------------------------------------------------------------------------------
 #-------------- End of the code : DUMMY DATA ---------------------------------

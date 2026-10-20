@@ -3,6 +3,7 @@ using AMS.API.Data;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Http.Features;
+using Microsoft.AspNetCore.ResponseCompression;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.IdentityModel.Tokens;
@@ -10,6 +11,10 @@ using Microsoft.IdentityModel.Tokens;
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllers();
+
+// Compress JSON/static responses - the startup bulk payload can be large, so
+// gzip/brotli cuts the transfer time noticeably on slower links.
+builder.Services.AddResponseCompression(options => options.EnableForHttps = true);
 
 builder.Services.AddSingleton<AmsDb>();
 
@@ -40,6 +45,8 @@ builder.Services.Configure<Microsoft.AspNetCore.Server.Kestrel.Core.KestrelServe
     o.Limits.MaxRequestBodySize = 32_000_000);
 
 var app = builder.Build();
+
+app.UseResponseCompression();
 
 // A down/unreachable SQL Server surfaces as a bare HTTP 500 today, which the
 // frontend shows as "API error 500" with no explanation. Turn SqlExceptions
@@ -88,6 +95,7 @@ using (var scope = app.Services.CreateScope())
 var webRoot = Path.GetFullPath(Path.Combine(app.Environment.ContentRootPath, "..", ".."));
 if (Directory.Exists(webRoot))
 {
+    AmsDb.EnsureBackupFolder(webRoot);
     var fileProvider = new PhysicalFileProvider(webRoot);
     app.UseDefaultFiles(new DefaultFilesOptions { FileProvider = fileProvider });
     app.UseStaticFiles(new StaticFileOptions { FileProvider = fileProvider });

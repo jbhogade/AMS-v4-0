@@ -499,7 +499,8 @@ function amsWireAccessoryQuickAdd(containerId, getAssetType) {
         const added = amsQuickAddAccessory(input.value, assetType);
         if (!added) { alert("Enter a name - or it may already be in the list for this Asset Type."); return; }
         popover.classList.remove("open");
-        amsRenderAccessoriesChecklist(containerId, assetType);
+        const stillChecked = amsGetCheckedAccessories(containerId);
+        amsRenderAccessoriesChecklist(containerId, assetType, stillChecked);
         const newBox = [...document.querySelectorAll(`#${containerId} .acc-check`)].find(c => c.value === added);
         if (newBox) newBox.checked = true; /* auto-check it - that's presumably why it was just added */
     });
@@ -509,6 +510,14 @@ function amsWireAccessoryAndDeptQuickAdds() {
     amsWireAccessoryQuickAdd("assignAccessories", () => {
         const a = AST_STATE.assets.find(x => x.id === AST_STATE.editingId);
         return a ? a.type : "";
+    });
+    /* Replace modal - accessories are recorded against the replacement mobile. */
+    amsWireAccessoryQuickAdd("replAccessories", () => {
+        const sel = document.getElementById("replSourceAsset");
+        const newAsset = sel && sel.value ? AST_STATE.assets.find(x => x.id === sel.value) : null;
+        if (newAsset && newAsset.type) return newAsset.type;
+        const old = AST_STATE.assets.find(x => x.id === AST_STATE.editingId);
+        return old ? old.type : "";
     });
 }
 
@@ -573,17 +582,36 @@ function amsSaveQuickAddEmployee() {
 /* =============================================================================
    12) ADD / EDIT ASSET MODAL
    ===========================================================================*/
+function amsEditingMobile() {
+    return AST_STATE.editingId ? AST_STATE.assets.find(x => x.id === AST_STATE.editingId) : null;
+}
+
+function amsSimChoiceTaken(simNumber, exceptMobile) {
+    const num = String(simNumber || "0").trim();
+    if (!num || num === "0") return false;
+    const s = typeof amsFindSimByMobileNumber === "function" ? amsFindSimByMobileNumber(num) : null;
+    if (s && typeof amsSimTakenByOtherMobile === "function") return amsSimTakenByOtherMobile(s, exceptMobile);
+    const exceptKey = exceptMobile && typeof amsMobileStableId === "function" ? amsMobileStableId(exceptMobile) : "";
+    return (AST_STATE.assets || []).some(m => {
+        if (!m || m === exceptMobile) return false;
+        if (exceptKey && (m.amsAssetId === exceptKey || m.id === exceptKey || m.displayId === exceptKey)) return false;
+        return String(m.simMobileNo || "0").trim() === num;
+    });
+}
+
 function amsPopulateSimMobileSelect(selected) {
     const sel = document.getElementById("fSimMobileNo");
     if (!sel) return;
     const current = (selected === undefined || selected === null || selected === "") ? "0" : String(selected);
     const sims = (typeof AMS_DUMMY_SIM_CARDS !== "undefined") ? AMS_DUMMY_SIM_CARDS : [];
+    const exceptMobile = amsEditingMobile();
     const opts = [`<option value="0">0 (None)</option>`];
     const seen = new Set(["0"]);
     sims.forEach(s => {
         if (s.status === "Retired") return;
         const num = String(s.mobileNumber || "").trim();
         if (!num || seen.has(num)) return;
+        if (typeof amsSimTakenByOtherMobile === "function" && amsSimTakenByOtherMobile(s, exceptMobile)) return;
         seen.add(num);
         const bits = [num];
         if (s.simId) bits.push(s.simId);
@@ -675,6 +703,10 @@ function amsSubmitAssetForm(e) {
         ...amsReadMobileExtraFields(),
     };
     const statusVal = document.getElementById("fStatus").value;
+    if (amsSimChoiceTaken(values.simMobileNo, amsEditingMobile())) {
+        alert("That SIM Card is already linked to another mobile. Choose a different number or None.");
+        return;
+    }
 
     if (AST_STATE.editingId) {
         const a = AST_STATE.assets.find(x => x.id === AST_STATE.editingId);
@@ -867,7 +899,9 @@ function amsPopulateAssignSimSelect(mobile) {
         const linkedHere = typeof amsSimMatchesMobile === "function"
             ? amsSimMatchesMobile(s, mobile)
             : (s.linkedMobileId && (s.linkedMobileId === mobileKey || s.linkedMobileId === (mobile && mobile.id)));
-        const takenByOther = !linkedHere && s.linkedMobileId && !s.personalMobile;
+        const takenByOther = typeof amsSimTakenByOtherMobile === "function"
+            ? amsSimTakenByOtherMobile(s, mobile)
+            : (!linkedHere && s.linkedMobileId && !s.personalMobile);
         if (takenByOther) return;
         if (!linkedHere && s.assignedTo && mobile && mobile.assignedTo && s.assignedTo !== mobile.assignedTo) return;
         seen.add(num);
@@ -947,6 +981,10 @@ function amsConfirmAssign() {
 
     const simSel = document.getElementById("assignSimMobileNo");
     const simChoice = simSel ? (simSel.value || "0") : (a.simMobileNo || "0");
+    if (amsSimChoiceTaken(simChoice, a)) {
+        alert("That SIM Card is already linked to another mobile. Choose a different number or None.");
+        return;
+    }
 
     const isEdit = AST_STATE.assignMode === "edit";
     a.history.push({
@@ -1097,6 +1135,7 @@ function amsOpenReplaceModal(key) {
     document.getElementById("replIssueDate").value = new Date().toISOString().slice(0, 10);
     document.getElementById("replReason").value = "";
     document.getElementById("replNote").value = "";
+    amsRenderReplaceAccessories();
 
     amsOpenModal("modalReplace");
 }
@@ -1135,6 +1174,7 @@ function amsUpdateReplaceSelected() {
     const a = id ? AST_STATE.assets.find(x => x.id === id) : null;
     if (!a) {
         info.innerHTML = `<div class="selected-asset-box"><span class="form-hint">No replacement asset selected yet.</span></div>`;
+        amsRenderReplaceAccessories();
         return;
     }
     const acc = (a.accessories && a.accessories.length) ? a.accessories.join(", ") : "-";
@@ -1143,6 +1183,23 @@ function amsUpdateReplaceSelected() {
         <div class="form-hint">Serial: ${amsEsc(a.serialNumber) || "-"} &middot; Site: ${amsEsc(a.currentSite || a.site)} &middot;
         Purchase: ${amsFormatDate(a.purchaseDate) || "-"} &middot; Accessories: ${amsEsc(acc)}</div>
     </div>`;
+    amsRenderReplaceAccessories();
+}
+
+/* Renders the optional Common / Supportive Accessories checklist in the
+   Replace modal. Pre-fills from the selected replacement mobile, falling back
+   to the old mobile's accessories when the replacement has none recorded. */
+function amsRenderReplaceAccessories() {
+    const container = document.getElementById("replAccessories");
+    if (!container) return;
+    const sel = document.getElementById("replSourceAsset");
+    const newAsset = sel && sel.value ? AST_STATE.assets.find(x => x.id === sel.value) : null;
+    const old = AST_STATE.assets.find(x => x.id === AST_STATE.editingId);
+    const type = (newAsset && newAsset.type) || (old ? old.type : "") || document.getElementById("replType").value;
+    const prefill = (newAsset && newAsset.accessories && newAsset.accessories.length)
+        ? newAsset.accessories
+        : ((old && old.accessories) ? old.accessories : []);
+    amsRenderAccessoriesChecklist("replAccessories", type, prefill);
 }
 
 /* Opens the standard Add Asset modal from inside the Replace modal. When the new
@@ -1190,6 +1247,10 @@ function amsSubmitReplaceForm(e) {
     const replacesNote = document.getElementById("replNote").value.trim();
     const replDetail = `Reason: ${replacesReason}${replacesNote ? ` - ${replacesNote}` : ""}`;
     const oldEmp = old.assignedTo ? amsGetEmployeeByAmsId(old.assignedTo) : null;
+    /* Optional Common / Supportive Accessories handed over with the replacement
+       (pre-filled from the replacement, or the old mobile when it had none). */
+    const replAccessories = amsGetCheckedAccessories("replAccessories");
+    if (document.getElementById("replAccessories")) newAsset.accessories = replAccessories.slice();
 
     /* ---- The selected In-Store asset takes over the old asset's assignment ---- */
     newAsset.assignedTo = old.assignedTo || null;
@@ -1318,7 +1379,7 @@ function amsGenerateAssetFormNo() {
 function amsBuildRemarksLinesHtml(assetsList) {
     const lines = [];
     assetsList.forEach(oa => {
-        if (oa.remarks) lines.push(`<div><strong>${amsEsc(amsPrintAssetId(oa))} - Remarks (on record):</strong> ${amsEsc(oa.remarks)}</div>`);
+        if (oa.remarks) lines.push(`<div><strong>${amsEsc(typeof amsPrintRemarkId === "function" ? amsPrintRemarkId(oa) : amsPrintAssetId(oa))} - Remarks (on record):</strong> ${amsEsc(oa.remarks)}</div>`);
     });
     if (!lines.length) lines.push(`<div class="pf-notes-empty">No remarks recorded against the asset(s) in the system.</div>`);
     return lines.join("");
@@ -1349,10 +1410,45 @@ function amsPrintAssetIssueForm(key) {
     }
     const emp = amsGetEmployeeByAmsId(a.assignedTo);
     if (!emp) return;
-    amsGenerateAssetIssueFormPrint(key, "");
+    AST_STATE.printIssueKey = key;
+    document.getElementById("printScopeEmpLabel").textContent = emp.name || getEmployeeFullName(emp);
+    const directRadio = document.querySelector('#modalPrintScope input[name="printScopeChoice"][value="direct"]');
+    if (directRadio) directRadio.checked = true;
+    amsOpenModal("modalPrintScope");
 }
 
-function amsGenerateAssetIssueFormPrint(key, extraRemarks) {
+function amsConfirmPrintScope() {
+    const chosen = document.querySelector('#modalPrintScope input[name="printScopeChoice"]:checked');
+    const scope = chosen ? chosen.value : "direct";
+    const key = AST_STATE.printIssueKey;
+    const a = AST_STATE.assets.find(x => x.id === key);
+    const emp = a && a.assignedTo ? amsGetEmployeeByAmsId(a.assignedTo) : null;
+    if (!emp) {
+        amsCloseModal("modalPrintScope");
+        return;
+    }
+    const includeDirect = scope !== "team";
+    const includeTeam = scope !== "direct";
+    const owned = amsOwnedAssetsForEmp(emp.empId);
+    const splitOwned = amsSplitDirectVsSubordinateAssets(owned);
+    const directCount = includeDirect ? splitOwned.direct.length : 0;
+    const teamCount = includeTeam
+        ? (splitOwned.subordinate.length + amsSubordinateAssetsForEmpDetailed(emp.empId).length)
+        : 0;
+    const simPrint = typeof amsCollectPrintSimsForEmp === "function"
+        ? amsCollectPrintSimsForEmp(emp.amsId || emp.empId)
+        : { direct: [], subordinate: [] };
+    const simCount = (includeDirect ? simPrint.direct.length : 0)
+        + (includeTeam ? simPrint.subordinate.length : 0);
+    if (directCount + teamCount + simCount === 0) {
+        alert("No holdings match the selected print scope for " + (emp.name || getEmployeeFullName(emp)) + ".");
+        return;
+    }
+    amsCloseModal("modalPrintScope");
+    amsGenerateAssetIssueFormPrint(key, "", scope);
+}
+
+function amsGenerateAssetIssueFormPrint(key, extraRemarks, printScope) {
     const a = AST_STATE.assets.find(x => x.id === key);
     if (!a || a.status !== "Assigned" || !a.assignedTo) {
         alert("Asset Issue Form is only available for assets currently marked Assigned.");
@@ -1360,8 +1456,11 @@ function amsGenerateAssetIssueFormPrint(key, extraRemarks) {
     }
     const emp = amsGetEmployeeByAmsId(a.assignedTo);
     if (!emp) return;
+    const scope = printScope || "both";
+    const includeDirect = scope !== "team";
+    const includeTeam = scope !== "direct";
     const owned = amsOwnedAssetsForEmp(emp.empId);
-    const subAssets = amsSubordinateAssetsForEmpDetailed(emp.empId);
+    const subAssetsAll = amsSubordinateAssetsForEmpDetailed(emp.empId);
 
     /* Assets issued directly to the employee (assigned to them with no
        subordinate/team actual user) stay in "Assets Issued". Assets whose actual
@@ -1369,14 +1468,17 @@ function amsGenerateAssetIssueFormPrint(key, extraRemarks) {
        in the "For Reference" section instead, since they are not personally held
        by the employee. */
     const splitOwned = amsSplitDirectVsSubordinateAssets(owned);
-    const directOwned = splitOwned.direct;
-    const subOwned = splitOwned.subordinate;
+    const directOwned = includeDirect ? splitOwned.direct : [];
+    const subOwned = includeTeam ? splitOwned.subordinate : [];
+    const subAssets = includeTeam ? subAssetsAll : [];
     const simPreview = typeof amsCollectPrintSimsForEmp === "function"
         ? amsCollectPrintSimsForEmp(emp.amsId || emp.empId)
         : { direct: [], subordinate: [] };
+    const simDirect = includeDirect ? simPreview.direct : [];
+    const simTeam = includeTeam ? simPreview.subordinate : [];
     const assignmentType = amsAssignmentTypeLabel(
-        directOwned.length + simPreview.direct.length,
-        subOwned.length + subAssets.length + simPreview.subordinate.length);
+        directOwned.length + simDirect.length,
+        subOwned.length + subAssets.length + simTeam.length);
 
     const title = "Asset Issue Form";
     const formNo = amsGenerateAssetFormNo();
@@ -1405,8 +1507,7 @@ function amsGenerateAssetIssueFormPrint(key, extraRemarks) {
             ${infoBox("Reporting Manager", amsEsc(managerName))}
             ${infoBox("Assignment Type", amsEsc(assignmentType))}
         </div>
-        <div class="pf-box-grid cols-3">
-            ${infoBox("Date of Issue", today)}
+        <div class="pf-box-grid cols-2">
             ${infoBox("Expected Return", "Not Specified")}
             ${infoBox("Issued By", "IT / Admin")}
         </div>`;
@@ -1417,7 +1518,7 @@ function amsGenerateAssetIssueFormPrint(key, extraRemarks) {
                 <tr>
                     <th style="width:30px;">#</th><th>Mobile ID</th><th>Type / Make / Model</th>
                     <th>IMEI No 1</th><th>IMEI No 2</th><th>Battery No</th><th>Charger No</th>
-                    <th>Mobile No</th><th>Site</th><th>Physical Condition at Issue</th>
+                    <th>Mobile No</th><th>Site</th><th>Date of Issue</th><th>Physical Condition at Issue</th>
                 </tr>
             </thead>
             <tbody>
@@ -1435,37 +1536,38 @@ function amsGenerateAssetIssueFormPrint(key, extraRemarks) {
                         <td class="mono">${amsEsc(oa.chargerNo || "-")}</td>
                         <td class="mono">${amsEsc(mobileNo)}</td>
                         <td>${amsEsc(oa.currentSite || oa.site || "-")}</td>
+                        <td>${typeof amsPrintItemIssueDate === "function" ? amsPrintItemIssueDate(oa) : "-"}</td>
                         <td>${conditionRow()}</td>
                     </tr>`;
                 }).join("")
-                    : `<tr><td colspan="10" style="text-align:center; color:#777;">No mobiles currently on record for this employee</td></tr>`}
+                    : `<tr><td colspan="11" style="text-align:center; color:#777;">No mobiles currently on record for this employee</td></tr>`}
             </tbody>
         </table>`;
 
-    const accessoryItems = (typeof amsPrintDirectHoldingsForAccessories === "function")
-        ? amsPrintDirectHoldingsForAccessories(emp.amsId || emp.empId, directOwned)
-        : directOwned;
+    const accessoryItems = includeDirect
+        ? ((typeof amsPrintDirectHoldingsForAccessories === "function")
+            ? amsPrintDirectHoldingsForAccessories(emp.amsId || emp.empId, directOwned)
+            : directOwned)
+        : [];
     const accessoriesHtml = (typeof amsBuildPrintAccessoriesHtml === "function")
         ? amsBuildPrintAccessoriesHtml(accessoryItems)
         : "";
 
-    const simPrint = typeof amsCollectPrintSimsForEmp === "function"
-        ? amsCollectPrintSimsForEmp(emp.amsId || emp.empId)
-        : { direct: [], subordinate: [] };
     const mobileSimPrint = {
         html: typeof amsBuildPrintSimCardsSectionHtml === "function"
-            ? amsBuildPrintSimCardsSectionHtml(simPrint.direct, simPrint.subordinate)
+            ? amsBuildPrintSimCardsSectionHtml(simDirect, simTeam)
             : "",
         mobileDirect: 0,
         mobileTeam: 0,
-        simDirect: simPrint.direct.length,
-        simTeam: simPrint.subordinate.length,
+        simDirect: simDirect.length,
+        simTeam: simTeam.length,
     };
 
     const subRows = subAssets.map(sa => ({
         id: amsPrintAssetId(sa), type: sa.type, makeModel: sa.makeModel || (typeof amsAssetMakeModel === "function" ? amsAssetMakeModel(sa) : ""),
         site: sa.currentSite || sa.site, holder: sa.subName, holderId: sa.subEmpId,
         imei1: sa.imei1, simMobileNo: sa.simMobileNo,
+        issueDate: typeof amsPrintItemIssueDate === "function" ? amsPrintItemIssueDate(sa) : "-",
     }));
     subOwned.forEach(oa => {
         const holderEmp = oa.assignedToSubordinate ? amsGetEmployeeByAmsId(oa.assignedToSubordinate) : null;
@@ -1475,17 +1577,18 @@ function amsGenerateAssetIssueFormPrint(key, extraRemarks) {
             holder: holderEmp ? holderEmp.name : (oa.assignedSubText || amsAssetHolderLabel(oa)),
             holderId: holderEmp ? amsGetEmployeeDisplayId(holderEmp) : "",
             imei1: oa.imei1, simMobileNo: oa.simMobileNo,
+            issueDate: typeof amsPrintItemIssueDate === "function" ? amsPrintItemIssueDate(oa) : "-",
         });
     });
     const subordinateHtml = subRows.length ? `
         <div class="pf-section-bar">Mobiles Currently Assigned to Subordinates (For Reference)</div>
         <table class="pf-asset-table">
-            <thead><tr><th style="width:30px;">#</th><th>Mobile ID</th><th>Type</th><th>IMEI No 1</th><th>Mobile No</th><th>Held By</th><th>Employee ID</th><th>Site</th></tr></thead>
+            <thead><tr><th style="width:30px;">#</th><th>Mobile ID</th><th>Type</th><th>IMEI No 1</th><th>Mobile No</th><th>Held By</th><th>Employee ID</th><th>Site</th><th>Date of Issue</th></tr></thead>
             <tbody>
                 ${subRows.map((sa, i) => {
                     const mm = sa.makeModel || (typeof amsAssetMakeModel === "function" ? amsAssetMakeModel(sa) : "");
                     const mobileNo = (sa.simMobileNo && sa.simMobileNo !== "0") ? sa.simMobileNo : "-";
-                    return `<tr><td>${i + 1}</td><td class="mono">${sa.id}</td><td>${amsEsc(sa.type || "-")}${mm ? ` (${amsEsc(mm)})` : ""}</td><td class="mono">${amsEsc(sa.imei1 || "-")}</td><td class="mono">${amsEsc(mobileNo)}</td><td>${amsEsc(sa.holder)}</td><td class="mono">${sa.holderId ? amsEsc(sa.holderId) : "-"}</td><td>${amsEsc(sa.site || "-")}</td></tr>`;
+                    return `<tr><td>${i + 1}</td><td class="mono">${sa.id}</td><td>${amsEsc(sa.type || "-")}${mm ? ` (${amsEsc(mm)})` : ""}</td><td class="mono">${amsEsc(sa.imei1 || "-")}</td><td class="mono">${amsEsc(mobileNo)}</td><td>${amsEsc(sa.holder)}</td><td class="mono">${sa.holderId ? amsEsc(sa.holderId) : "-"}</td><td>${amsEsc(sa.site || "-")}</td><td>${amsEsc(sa.issueDate || "-")}</td></tr>`;
                 }).join("")}
             </tbody>
         </table>` : "";
@@ -1502,8 +1605,8 @@ function amsGenerateAssetIssueFormPrint(key, extraRemarks) {
             <div class="pf-section-bar">Issued To</div>
             ${infoBoxesHtml}
 
-            <div class="pf-section-bar">Mobiles Issued</div>
-            ${assetTableHtml}
+            ${includeDirect ? `<div class="pf-section-bar">Mobiles Issued</div>
+            ${assetTableHtml}` : ""}
 
             ${accessoriesHtml}
             ${subordinateHtml}
@@ -1784,6 +1887,7 @@ async function initMobiles() {
 
     /* Transfer */
     document.getElementById("btnConfirmTransfer").addEventListener("click", amsConfirmTransfer);
+    document.getElementById("btnConfirmPrintScope").addEventListener("click", amsConfirmPrintScope);
 
     /* Replace */
     document.getElementById("replType").addEventListener("change", amsPopulateReplaceSource);

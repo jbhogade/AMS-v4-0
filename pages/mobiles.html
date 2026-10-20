@@ -13,7 +13,7 @@
 #    - js/dummy-data.js, js/theme.js, js/app.js, js/layout.js, js/mobiles.js
 #------------------------------------------------------------------------------
 -->
-<html lang="en" data-theme="platinum" data-ui-style="glass">
+<html lang="en" data-theme="platinum" data-ui-style="plain">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -473,6 +473,24 @@
                             <label>Replacement Note</label>
                             <input type="text" id="replNote" class="input" placeholder="Optional - e.g. old unit damaged beyond repair">
                         </div>
+                        <div class="field field-full">
+                            <div class="accessories-header">
+                                <label>Common / Supportive Accessories (optional)</label>
+                                <div class="quickadd-inline">
+                                    <button type="button" class="btn-quickadd" data-acc-quickadd="replAccessories" title="Add a missing accessory">+</button>
+                                    <div class="quickadd-popover" id="accQaPopover-replAccessories">
+                                        <label class="qa-label">New Accessory Name</label>
+                                        <input type="text" id="accQaInput-replAccessories" placeholder="e.g. Docking Station">
+                                        <div class="qa-actions">
+                                            <button type="button" class="btn btn-secondary" data-acc-qa-cancel="replAccessories">Cancel</button>
+                                            <button type="button" class="btn btn-primary" data-acc-qa-save="replAccessories">Add</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="accessories-checklist" id="replAccessories"></div>
+                            <div class="form-hint">Accessories handed over with the replacement. Pre-filled from the selected replacement asset, or from the old asset when the replacement has none recorded.</div>
+                        </div>
                     </div>
                 </div>
                 <div class="modal-footer">
@@ -480,6 +498,39 @@
                     <button type="submit" class="btn btn-primary">Confirm Replacement</button>
                 </div>
             </form>
+        </div>
+    </div>
+
+    <!-- ====================================================================
+         MODAL : MOBILE ISSUE FORM PRINT SCOPE
+         ==================================================================== -->
+    <div class="modal-overlay" id="modalPrintScope">
+        <div class="modal">
+            <div class="modal-header">
+                <h3>Mobile Issue Form</h3>
+                <button class="modal-close" data-close="modalPrintScope">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p class="form-hint" style="margin-bottom:12px;">Choose which holdings to include for <strong id="printScopeEmpLabel"></strong>.</p>
+                <div class="field">
+                    <label class="pf-check-block" style="display:block;margin-bottom:10px;">
+                        <input type="radio" name="printScopeChoice" value="direct" checked>
+                        Directly assigned mobiles only
+                    </label>
+                    <label class="pf-check-block" style="display:block;margin-bottom:10px;">
+                        <input type="radio" name="printScopeChoice" value="both">
+                        Directly assigned mobiles plus team mobiles
+                    </label>
+                    <label class="pf-check-block" style="display:block;">
+                        <input type="radio" name="printScopeChoice" value="team">
+                        Team mobiles only
+                    </label>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-close="modalPrintScope">Cancel</button>
+                <button type="button" class="btn btn-primary" id="btnConfirmPrintScope">Print</button>
+            </div>
         </div>
     </div>
 

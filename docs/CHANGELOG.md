@@ -1,5 +1,128 @@
 # AMS-v4-0 change log
 
+## 2026-10-20 — SIM Assign To (Subordinate / Actual User)
+
+SIM Assign / Reassign / Edit Issue now has **Assign To (Subordinate /
+Actual User)** matching Asset Assign: optional employee, Other (free
+text), and + quick-add. Table shows `Direct → Holder`. View, CSV, print
+(Issued vs For Reference), owned/team counts, and Exit follow the same
+rules as assets and mobiles.
+
+Hard-refresh (Ctrl+F5).
+
+## 2026-10-20 — Exit checklist includes mobiles and SIMs; print remarks use base IDs
+
+Employee Exit now lists mobiles and SIM cards to return (same as assets),
+and counts them on subordinate handover. Issue / Handover **Remarks /
+Notes** use the base ID (`LT25SLPD`, `SIM-000001`) instead of appending
+site/department (`LT25SLPDSLPRD`, `undefinedPRD`).
+
+Hard-refresh (Ctrl+F5).
+
+## 2026-10-20 — Mobile Issue Form print scope
+
+Mobile Master **Print Issue Form** now asks Direct / Team / Both before
+printing, matching Asset Master: directly assigned mobiles only, plus
+team mobiles, or team only. SIM sections follow the same choice.
+
+Hard-refresh (Ctrl+F5).
+
+## 2026-10-19 — Print mobile remarks with asset remarks
+
+When an employee also has mobiles assigned, the Issue Form **Remarks /
+Notes** section now lists each mobile's on-record remarks in the same
+style as assets (`Mobile ID - Remarks (on record)`). Applies to Asset
+Master and Employee Master prints. Handover already included returned
+mobiles.
+
+Hard-refresh (Ctrl+F5).
+
+## 2026-10-19 — One SIM Card per mobile
+
+Mobile Master no longer lists a SIM that is already linked to another
+phone. Add / Edit **Mobile No (SIM Card)** and Assign hide those numbers
+(the current phone's own SIM stays selectable). Saving a taken number is
+blocked.
+
+Hard-refresh (Ctrl+F5).
+
+## 2026-10-19 — Print Date of Issue on issued and subordinate holdings
+
+The Issue Form header no longer has a single **Date of Issue** box. Each
+issued and subordinate (For Reference) row now has its own **Date of Issue**
+column, taken from that item's last assignment date.
+
+- Asset / Mobile / SIM issued tables and subordinate tables.
+- **Date Generated** in the letterhead is unchanged. Handover Form is unchanged.
+
+Hard-refresh (Ctrl+F5).
+
+## 2026-10-19 — Print accessories are only those selected at assignment
+
+The Issue Form **Accessories / Items Included** section now lists only the
+accessories ticked in Assign / Replace **Common / Supportive Accessories
+(optional)**. If none were selected, the section is omitted.
+
+Hard-refresh (Ctrl+F5).
+
+## 2026-10-18 — Print Date of Issue uses the assignment date
+
+Asset Issue Form / SIM Card Issue Form previously put today's date in
+**Date of Issue**, so a print taken later than the assignment showed the
+wrong handover date.
+
+- **Date of Issue** now comes from the item's last assignment (`assignedDate`
+  / `issueDate`, else the newest "Assigned" / "Reassigned" / "Assignment
+  updated" history row).
+- **Date Generated** in the letterhead is still the day the form is printed.
+- Applies to Asset Master, Mobile Master, SIM Card Master, and Employee
+  Master issue prints. Handover Form is unchanged (Date of Exit + Form
+  Generated).
+
+Hard-refresh (Ctrl+F5).
+
+## 2026-10-18 — Plain solid surfaces (theme / UI style)
+
+The portal now uses opaque, plain surfaces instead of frosted glass, matching
+AMS-Test and cutting GPU/RAM use on older machines.
+
+- Every page, `index.html`, and `login.html` now set `data-ui-style="plain"`;
+  `applyTheme()` / `applyUiStyle()` pin it to plain, so a previously saved
+  "glass" value is overwritten.
+- `css/ui-styles.css` is the flattened plain stylesheet: no `backdrop-filter`,
+  no Halo streaks/lattice, no `color-mix` glass fills. Cards, sidebar, topbar,
+  modals, menus, inputs, and table headers use the theme's solid tokens.
+- Login pane uses the solid card/field/button tokens (gold-to-charcoal gradient
+  and blurred pane removed). Colour palettes in `css/themes.css` are unchanged,
+  and the Theme dropdown still works exactly as before.
+
+Hard-refresh (Ctrl+F5) so the browser drops the cached stylesheet.
+
+## 2026-10-18 — Faster startup data load and Replace accessories
+
+Startup no longer pays ~28 sequential queries for the business collections.
+
+- **Bulk endpoint:** `GET /api/collections` (ASP.NET Core and Django) returns
+  every collection in a single SQL round-trip
+  (`AmsDb.GetAllCollectionsAsync` / `db.get_all_collections`). The frontend
+  uses it once and falls back to per-collection loads if it fails.
+- **ETag / 304:** the bulk response carries an `ETag` built from row counts and
+  newest `updated_at`, and the frontend keeps the payload in `sessionStorage`,
+  so moving between pages revalidates with a 304 instead of re-downloading.
+- **Parallel account load:** `/api/auth/users` is fetched at the same time as
+  the collections instead of after them.
+- **Earlier kickoff:** the load starts as soon as `dummy-data.js` runs when a
+  session exists, overlapping the rest of the page boot.
+- **Response compression:** gzip/brotli enabled for API and static responses.
+- **Seed accounts:** startup skips the two expensive PBKDF2 re-hashes when the
+  seeded rows already verify, so the API reaches "ready" noticeably sooner.
+- **Replace Accessories:** the Replace modal on Assets and Mobiles now has an
+  optional Common / Supportive Accessories checklist with the usual quick-add.
+  It pre-fills from the selected replacement asset (falling back to the old
+  asset) and is saved onto the replacement record.
+
+Restart the API, then hard-refresh (Ctrl+F5).
+
 ## 2026-09-27 — Unused connections and page links
 
 Sidebar, Profile, and login redirects now resolve from both the dashboard

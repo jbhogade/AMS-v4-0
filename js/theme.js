@@ -2,12 +2,13 @@
 #-------------- Start Code for : THEME SWITCHER (theme.js) --------------------
 #
 #  PURPOSE   : One Theme dropdown. Color palettes live in themes.css.
-#              Surface look is always frosted glass (css/ui-styles.css).
+#              Surface look is always plain/solid (css/ui-styles.css) for
+#              lower GPU and RAM use.
 #
 #  HOW IT WORKS :
 #    - Theme name is saved per signed-in username (ams-theme-by-user).
 #    - Login page (no session) uses the shared ams-theme key.
-#    - Glass is always on. There is no separate Style control.
+#    - Plain solid surfaces are always on. There is no glass Style control.
 #
 #  TO ADD A NEW THEME :
 #    1. Add the [data-theme="name"] block in css/themes.css
@@ -65,7 +66,7 @@ function amsNormalizeThemeName(name) {
 function applyTheme(themeName) {
     const name = amsNormalizeThemeName(themeName);
     document.documentElement.setAttribute("data-theme", name);
-    document.documentElement.setAttribute("data-ui-style", "glass");
+    document.documentElement.setAttribute("data-ui-style", "plain");
     try { localStorage.setItem(THEME_STORAGE_KEY, name); } catch (e) { /* storage unavailable */ }
     const user = amsThemeUserKey();
     if (user) {
@@ -110,18 +111,18 @@ function buildThemeMenu(selectId) {
 
 /* ---- Style API kept as a no-op so older pages do not break ----------------- */
 const UI_STYLES = [
-    { name: "glass", label: "Glass", hint: "Frosted glass. Always on." }
+    { name: "plain", label: "Plain", hint: "Solid surfaces. Always on." }
 ];
 const UI_STYLE_STORAGE_KEY = "ams-ui-style";
-const DEFAULT_UI_STYLE = "glass";
+const DEFAULT_UI_STYLE = "plain";
 
 function applyUiStyle() {
-    document.documentElement.setAttribute("data-ui-style", "glass");
-    try { localStorage.setItem(UI_STYLE_STORAGE_KEY, "glass"); } catch (e) { /* storage unavailable */ }
+    document.documentElement.setAttribute("data-ui-style", "plain");
+    try { localStorage.setItem(UI_STYLE_STORAGE_KEY, "plain"); } catch (e) { /* storage unavailable */ }
 }
 
 function loadSavedUiStyle() {
-    return "glass";
+    return "plain";
 }
 
 function buildStyleMenu() {

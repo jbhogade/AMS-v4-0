@@ -5,6 +5,7 @@ and legacy migration all behave identically to the .NET version, so the Django
 backend and the .NET API can share the same SQL Server database.
 """
 
+import hashlib
 import json
 import logging
 import re
@@ -1332,6 +1333,72 @@ class AmsDb:
             conn.close()
 
     # ---- collections ---------------------------------------------------------
+    def get_collections_version(self):
+        """Row count + newest updated_at per table, hashed into an ETag so the
+        bulk endpoint can answer 304 Not Modified (twin of
+        AmsDb.GetCollectionsVersionAsync)."""
+        parts = []
+        for d in TABLE_DEFS:
+            parts.append(
+                f"SELECT N'{d.key}' AS k, COUNT_BIG(*) AS c, "
+                "DATEDIFF_BIG(MICROSECOND, '1970-01-01', "
+                f"COALESCE(MAX(updated_at), '1970-01-01')) AS t FROM dbo.{d.table}"
+            )
+        sql = "\nUNION ALL\n".join(parts) + "\nORDER BY k;"
+        conn = pyodbc.connect(self.conn_string)
+        try:
+            cur = conn.cursor()
+            cur.execute(sql)
+            rows = cur.fetchall()
+        finally:
+            conn.close()
+        version = "".join(f"{k}:{int(c)}:{int(t)}\n" for k, c, t in rows)
+        return hashlib.sha256(version.encode("utf-8")).hexdigest()[:32]
+
+    def get_all_collections(self):
+        """Return every collection in ONE database round-trip (twin of
+        AmsDb.GetAllCollectionsAsync) so startup does not pay ~28 separate
+        connection/query costs."""
+        parts = []
+        for d in TABLE_DEFS:
+            if d.is_document:
+                parts.append(
+                    f"SELECT N'{d.key}' AS collection_key, data_json, CAST(0 AS BIGINT) AS row_id "
+                    f"FROM dbo.{d.table} WHERE record_key = N'{d.fixed_key}'"
+                )
+            else:
+                parts.append(
+                    f"SELECT N'{d.key}' AS collection_key, data_json, row_id FROM dbo.{d.table}"
+                )
+        sql = "\nUNION ALL\n".join(parts) + "\nORDER BY collection_key, row_id;"
+
+        rows_by_key = {}
+        docs = {}
+        conn = pyodbc.connect(self.conn_string)
+        try:
+            cur = conn.cursor()
+            cur.execute(sql)
+            for key, data_json, _row_id in cur.fetchall():
+                if data_json is None:
+                    continue
+                d = KEY_INDEX.get(key)
+                if d is not None and d.is_document:
+                    docs[key] = data_json
+                else:
+                    rows_by_key.setdefault(key, []).append(data_json)
+        finally:
+            conn.close()
+
+        result = {}
+        for d in TABLE_DEFS:
+            if d.is_document:
+                if d.key in docs:
+                    result[d.key] = docs[d.key]
+            else:
+                rows = rows_by_key.get(d.key) or []
+                result[d.key] = "[]" if not rows else "[" + ",".join(rows) + "]"
+        return result
+
     def get_collection(self, key):
         d = KEY_INDEX.get(key)
         if d is None:

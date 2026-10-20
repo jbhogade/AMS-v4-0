@@ -9,9 +9,8 @@
 #  NOTE      : This is the ONLY entry point when no live session exists.
 #              js/layout.js's amsRequireSession() redirects every page here.
 #
-#  LOOK      : Vector-style frosted glass pane (theme tokens, no Halo SVG
-#              field). Backdrop is a smooth accent-to-charcoal gradient, not
-#              a lattice. Username / password only - no Sign Up, no social.
+#  LOOK      : Plain solid login pane (theme tokens). Username / password
+#              only - no Sign Up, no social.
 #              Theme dropdown here writes the shared ams-theme key. After
 #              sign-in, Theme and sidebar Show/Hide are stored per username.
 #
@@ -27,7 +26,7 @@
 #    password : Sr#Ops@2026   (Supreme Root)
 #------------------------------------------------------------------------------
 -->
-<html lang="en" class="login-page" data-theme="platinum" data-ui-style="glass">
+<html lang="en" class="login-page" data-theme="platinum" data-ui-style="plain">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -45,13 +44,7 @@
             position: relative;
             overflow: hidden;
             background-color: var(--bg-body);
-            background-image:
-                radial-gradient(ellipse 92% 72% at 14% 6%, color-mix(in srgb, var(--accent) 40%, transparent), transparent 58%),
-                radial-gradient(ellipse 78% 58% at 88% 100%, color-mix(in srgb, var(--bg-body) 55%, #050506), transparent 62%),
-                linear-gradient(165deg,
-                    color-mix(in srgb, var(--accent) 24%, var(--bg-body)) 0%,
-                    var(--bg-body) 46%,
-                    color-mix(in srgb, var(--bg-body) 72%, #050506) 100%);
+            background-image: none;
             color: var(--text-primary);
         }
         html.login-page .login-theme-bar {
@@ -76,14 +69,9 @@
             display: flex;
             flex-direction: column;
             gap: 22px;
-            background: color-mix(in srgb, var(--bg-card) 26%, transparent);
-            border: 1px solid color-mix(in srgb, var(--text-primary) 28%, var(--border));
-            box-shadow:
-                0 1px 0 color-mix(in srgb, var(--text-primary) 55%, transparent) inset,
-                0 0 0 1px color-mix(in srgb, var(--text-primary) 22%, transparent) inset,
-                0 26px 60px color-mix(in srgb, var(--bg-body) 42%, transparent);
-            backdrop-filter: blur(16px) saturate(1.6);
-            -webkit-backdrop-filter: blur(16px) saturate(1.6);
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            box-shadow: var(--shadow);
         }
         html.login-page .login-brand {
             display: flex;
@@ -95,15 +83,14 @@
             width: 44px;
             height: 44px;
             border-radius: 12px;
-            background: linear-gradient(145deg, color-mix(in srgb, var(--accent) 35%, transparent), color-mix(in srgb, var(--accent) 16%, transparent));
-            border: 1px solid color-mix(in srgb, var(--accent) 55%, var(--border));
+            background: var(--accent);
+            border: 1px solid var(--accent);
             display: flex;
             align-items: center;
             justify-content: center;
             font-weight: 700;
-            color: var(--text-primary);
+            color: var(--accent-contrast);
             font-size: 16px;
-            box-shadow: inset 0 1px 0 color-mix(in srgb, var(--text-primary) 25%, transparent);
         }
         html.login-page .login-brand-name {
             font-size: 18px;
@@ -152,14 +139,12 @@
             width: 100%;
             padding: 12px 15px;
             border-radius: 10px;
-            border: 1px solid color-mix(in srgb, var(--text-primary) 14%, var(--border));
-            background: color-mix(in srgb, var(--bg-input) 55%, transparent);
+            border: 1px solid var(--border);
+            background: var(--bg-input);
             color: var(--text-primary);
             font-size: 14.5px;
             box-sizing: border-box;
             outline: none;
-            backdrop-filter: blur(10px);
-            -webkit-backdrop-filter: blur(10px);
         }
         html.login-page .login-form input::placeholder {
             color: var(--text-muted);
@@ -168,7 +153,7 @@
             outline: none;
             border-color: var(--accent);
             box-shadow: 0 0 0 3px var(--accent-soft);
-            background: color-mix(in srgb, var(--bg-input) 78%, transparent);
+            background: var(--bg-input);
         }
         html.login-page .login-toggle {
             position: absolute;
@@ -201,23 +186,17 @@
             margin-top: 4px;
             padding: 13px 18px;
             border-radius: 10px;
-            border: 1px solid color-mix(in srgb, var(--accent) 72%, var(--border));
-            background: linear-gradient(180deg, color-mix(in srgb, var(--accent) 48%, transparent), color-mix(in srgb, var(--accent) 18%, transparent));
-            color: var(--text-primary);
+            border: 1px solid var(--accent);
+            background: var(--accent);
+            color: var(--accent-contrast);
             font-size: 15px;
             font-weight: 700;
             letter-spacing: 0.02em;
             cursor: pointer;
-            backdrop-filter: blur(8px);
-            -webkit-backdrop-filter: blur(8px);
-            box-shadow:
-                0 8px 20px color-mix(in srgb, var(--accent) 22%, transparent),
-                inset 0 1px 0 color-mix(in srgb, var(--text-primary) 28%, transparent);
         }
         html.login-page .btn-login:hover {
-            background: linear-gradient(180deg, color-mix(in srgb, var(--accent) 58%, transparent), color-mix(in srgb, var(--accent) 24%, transparent));
+            background: var(--accent-hover);
             border-color: var(--accent-hover);
-            transform: translateY(-1px);
         }
         html.login-page .btn-login:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
         html.login-page .login-hint {
