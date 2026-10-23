@@ -13,7 +13,8 @@
 #  FIELDS    : SIM ID (auto-generated, e.g. SIM-000001), SIM Serial / ICCID,
 #              Mobile Number, Operator, Plan, Status (In Store / Issued /
 #              Blocked / Retired), optional Site, Activation Date, Vendor, Cost,
-#              Remarks, Assigned To (employee) + lifecycle history.
+#              Remarks, Assigned To (Direct Employee + optional Subordinate /
+              Actual User) + lifecycle history.
 #
 #  FILES USED :
 #    - css/themes.css, css/main.css, css/assets.css
@@ -21,7 +22,7 @@
 #      js/layout.js (sidebar/header), js/sim-cards.js (this page)
 #------------------------------------------------------------------------------
 -->
-<html lang="en" data-theme="platinum" data-ui-style="glass">
+<html lang="en" data-theme="platinum" data-ui-style="plain">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -214,9 +215,21 @@
             <div class="modal-body">
                 <div class="form-grid">
                     <div class="field field-full">
-                        <label>Assign To Employee <span class="req">*</span></label>
-                        <select id="simAssignEmp" class="select" required></select>
-                        <div class="form-hint">Employee this SIM card is issued to</div>
+                        <label>Assign To (Direct Employee) <span class="req">*</span></label>
+                        <div class="select-with-add">
+                            <select id="simAssignEmp" class="select" required></select>
+                            <button type="button" class="btn-quickadd" data-open-add-employee="simAssignEmp" title="Add new Employee">+</button>
+                        </div>
+                        <div class="form-hint">Employee officially responsible for this SIM card</div>
+                    </div>
+                    <div class="field field-full">
+                        <label>Assign To (Subordinate / Actual User)</label>
+                        <div class="select-with-add">
+                            <select id="simAssignSubEmp" class="select"></select>
+                            <button type="button" class="btn-quickadd" data-open-add-employee="simAssignSubEmp" title="Add new Employee">+</button>
+                        </div>
+                        <input type="text" id="simAssignSubText" class="input" style="display:none; margin-top:6px;" placeholder="Actual user's name (not in User Master)">
+                        <div class="form-hint">Optional - the person who actually uses the SIM. Pick from the list, or choose "Other / Not in User Master..." and type a name for anyone not in the User Master.</div>
                     </div>
                     <div class="field field-full">
                         <label>Used In Mobile</label>
@@ -236,6 +249,42 @@
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-close="modalSimAssign">Cancel</button>
                 <button type="button" class="btn btn-primary" id="btnSimConfirmAssign">Confirm</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ====================================================================
+         MODAL : QUICK-ADD EMPLOYEE (inline, from the Assign modal - same
+         pattern as Asset Master; writes through addEmployee())
+         ==================================================================== -->
+    <div class="modal-overlay" id="modalQuickAddEmp">
+        <div class="modal">
+            <div class="modal-header">
+                <h3>Add Employee (Quick)</h3>
+                <button class="modal-close" data-close="modalQuickAddEmp">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-error" id="quickadd-emp-error"></div>
+                <div class="form-grid">
+                    <div class="field" style="grid-column:1 / -1;">
+                        <label>Full Name <span class="req">*</span></label>
+                        <input type="text" id="qaEmpName" class="input" placeholder="e.g. Ravikumar Rajendra Tiparadi">
+                    </div>
+                    <div class="field">
+                        <label>Department <span class="req">*</span></label>
+                        <select id="qaEmpDept" class="select"></select>
+                    </div>
+                    <div class="field">
+                        <label>Designation <span class="req">*</span></label>
+                        <input type="text" id="qaEmpDesig" class="input" list="qaEmpDesigList">
+                        <datalist id="qaEmpDesigList"></datalist>
+                    </div>
+                </div>
+                <div class="form-hint">The AMS Employee ID is auto-generated (EMP-&lt;DeptShort&gt;-000001). Other details (contact, email, manager) can be filled later in the Employee Master.</div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-close="modalQuickAddEmp">Cancel</button>
+                <button type="button" class="btn btn-primary" id="qaEmpSave">Add Employee</button>
             </div>
         </div>
     </div>

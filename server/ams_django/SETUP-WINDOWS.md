@@ -19,7 +19,8 @@ frontend is unchanged and served by Django itself, so you only open one URL.
 | 5 | **SSMS** (optional but recommended) | Create/inspect the database | https://learn.microsoft.com/sql/ssms/download-sql-server-management-studio-ssms |
 
 Python packages are installed automatically by `run-django.bat`
-(`Django`, `mssql-django`, `pyodbc`, `PyJWT`, `python-dotenv`).
+(`Django`, `mssql-django`, `pyodbc`, `PyJWT`, `python-dotenv`, `uvicorn`,
+`cryptography`).
 
 ---
 
@@ -62,11 +63,20 @@ Open `.env` with Notepad and set:
 
 ## 5. Start the server
 
+HTTP:
+
 ```bat
 run-django.bat
 ```
 
-(Or manually: `python -m pip install -r requirements.txt` then
+HTTPS (creates `cert.pem` / `key.pem` on first run):
+
+```bat
+run-django-https.bat
+```
+
+(Or manually: `python -m pip install --upgrade pip` then
+`python -m pip install -r requirements.txt` then
 `python manage.py migrate` then `python manage.py runserver`.)
 
 `python manage.py migrate` needs `TrustServerCertificate=yes` on ODBC Driver 18.
@@ -74,13 +84,15 @@ That `extra_params` flag is already in `ams_django/settings.py` `DATABASES`.
 App tables are still created on first request (`initdb` / lazy bootstrap), not
 by Django model migrations.
 
-First launch installs the Python packages, then starts the server at
-**http://127.0.0.1:8000/**. The first request initializes the database
-(lazy, idempotent). Press **CTRL-BREAK** to stop.
+First launch installs the Python packages, then starts the server.
+HTTP: **http://127.0.0.1:8000/**. HTTPS: **https://127.0.0.1:8000/**
+(accept the self-signed cert warning). The first request initializes the
+database (lazy, idempotent). Press **CTRL-BREAK** to stop.
 
 ## 6. Log in
 
-Open http://127.0.0.1:8000/ and sign in with a seeded account:
+Open http://127.0.0.1:8000/ (HTTP) or https://127.0.0.1:8000/ (HTTPS) and
+sign in with a seeded account:
 
 | Username | Password | Role |
 |---|---|---|
@@ -100,13 +112,18 @@ On the host machine, start with the LAN interface:
 run-django.bat 0.0.0.0:8000
 ```
 
-Open firewall port 8000, then share **http://<host-ip>:8000/** with the team
-(e.g. `http://192.168.1.50:8000`). If SQL Server is on another machine, set
-`AMS_DB_SERVER` to that machine's IP, enable TCP/IP in SQL Server Configuration
-Manager (port 1433) and use SQL auth (`AMS_DB_USER`/`AMS_DB_PASSWORD`).
+`0.0.0.0` is only the bind address. Open firewall port 8000, then share
+**http://<host-ip>:8000/** with the team (e.g. `http://192.168.1.50:8000`
+from `ipconfig` -> IPv4 Address). Do not open `http://0.0.0.0:8000`.
+If SQL Server is on another machine, set `AMS_DB_SERVER` to that machine's
+IP, enable TCP/IP in SQL Server Configuration Manager (port 1433) and use
+SQL auth (`AMS_DB_USER`/`AMS_DB_PASSWORD`).
 
-> `runserver` is for development/testing only. For a longer-lived deployment use
-> a production WSGI server (e.g. `waitress`) and set `AMS_DEBUG=0`.
+> HTTP: `run-django.bat 0.0.0.0:8000`. HTTPS: `run-django-https.bat 0.0.0.0:8000`
+> then open **https://127.0.0.1:8000** on this PC or **https://<host-ip>:8000**
+> on the LAN (not `0.0.0.0`). Recreate the cert after an IP change:
+> `python make_https_cert.py --force`. For a longer-lived deployment use a
+> production WSGI server (e.g. `waitress`) and set `AMS_DEBUG=0`.
 
 ---
 
@@ -133,6 +150,15 @@ CRLF (e.g. Notepad++ Edit → EOL Conversion → Windows).
 
 **Port 8000 already in use** — pass another port:
 `run-django.bat 127.0.0.1:8080`.
+
+**Unknown command: 'runserver_plus'** — that command is not installed. Use
+`python manage.py runserver` for HTTP, or uvicorn with `cert.pem` / `key.pem`
+for HTTPS (see README).
+
+**WinError 32 / "used by another process"** during `pip install` — a Python
+process still has the venv open (running `runserver` / uvicorn, another
+terminal, or the IDE). Stop the server, close those windows, then retry.
+If the project sits under OneDrive, pause sync until install finishes.
 
 **"Database unavailable" (503) in the UI** — the app is up but SQL Server is
 not reachable. Read the `AMS-v4-0 database init failed. ...` line in the server

@@ -15,14 +15,23 @@ if not exist ".env" (
     copy ".env.example" ".env" >nul
 )
 
-echo  [1/2] Installing / checking Python packages...
+echo  [1/3] Checking pip (upgrade if a newer release is available)...
+python -m pip install --upgrade pip
+if errorlevel 1 (
+    echo  [!] pip upgrade failed. Continuing with the current pip.
+)
+
+echo  [2/3] Installing / checking Python packages...
 python -m pip install -r requirements.txt
 if errorlevel 1 (
     echo  [!] pip install failed. Check that Python is installed and on PATH.
+    echo      If you see WinError 32 / "used by another process", stop the
+    echo      running server and close other Python windows using this venv,
+    echo      then retry. OneDrive can also lock files under this folder.
     pause
     exit /b 1
 )
 
-echo  [2/2] Starting the server. Press CTRL-BREAK to stop.
+echo  [3/3] Starting the server. Press CTRL-BREAK to stop.
 python manage.py runserver %*
 endlocal

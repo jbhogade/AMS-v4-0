@@ -286,6 +286,41 @@ def user_detail(request, username):
     return HttpResponse(status=405)
 
 
+# ---- /api/collections (bulk load) --------------------------------------------
+
+
+@require_auth
+def collections_all(request):
+    if request.method != "GET":
+        return HttpResponse(status=405)
+    try:
+        db = get_db()
+        etag = '"' + db.get_collections_version() + '"'
+        incoming = request.headers.get("If-None-Match") or ""
+        if incoming in (etag, "W/" + etag):
+            response = HttpResponse(status=304)
+            response["ETag"] = etag
+            response["Cache-Control"] = "private, no-cache"
+            return response
+        all_raw = db.get_all_collections()
+        payload = {}
+        for key in ALLOWED_KEYS:
+            stored = all_raw.get(key)
+            if not stored or not str(stored).strip():
+                payload[key] = []
+                continue
+            try:
+                payload[key] = json.loads(stored)
+            except (TypeError, ValueError, json.JSONDecodeError):
+                payload[key] = []
+        response = JsonResponse(payload)
+        response["ETag"] = etag
+        response["Cache-Control"] = "private, no-cache"
+        return response
+    except pyodbc.Error:
+        return _db_error()
+
+
 # ---- /api/collection ---------------------------------------------------------
 
 

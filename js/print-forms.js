@@ -33,7 +33,7 @@ function amsGenerateFormNo(prefix) {
 function amsBuildReportRemarks(assetsList) {
     const lines = [];
     assetsList.forEach(oa => {
-        const assetLabel = amsPrintAssetId(oa);
+        const assetLabel = typeof amsPrintRemarkId === "function" ? amsPrintRemarkId(oa) : amsPrintAssetId(oa);
         if (oa.remarks) lines.push(`<div><strong>${amsEsc(assetLabel)} - Remarks (on record):</strong> ${amsEsc(oa.remarks)}</div>`);
     });
     if (!lines.length) lines.push(`<div class="pf-notes-empty">No remarks recorded against the asset(s) in the system.</div>`);
@@ -148,8 +148,7 @@ function amsGenerateReport(amsId, type, extraRemarks, printScope) {
             ${infoBox("Reporting Manager", amsEsc(managerName))}
             ${infoBox("Assignment Type", amsEsc(assignmentType))}
         </div>
-        <div class="pf-box-grid cols-3">
-            ${infoBox("Date of Issue", today)}
+        <div class="pf-box-grid cols-2">
             ${infoBox("Expected Return", "Not Specified")}
             ${infoBox("Issued By", "IT / Admin")}
         </div>` : `
@@ -183,15 +182,16 @@ function amsGenerateReport(amsId, type, extraRemarks, printScope) {
     const assetTableHtml = `
         <table class="pf-asset-table">
             <thead>
-                <tr><th style="width:30px;">#</th><th>Asset ID</th><th>Asset Name / Type</th><th>Site</th><th>${isIssue ? "Physical Condition at Issue" : "Condition at Return"}</th></tr>
+                <tr><th style="width:30px;">#</th><th>Asset ID</th><th>Asset Name / Type</th><th>Site</th>${isIssue ? "<th>Date of Issue</th>" : ""}<th>${isIssue ? "Physical Condition at Issue" : "Condition at Return"}</th></tr>
             </thead>
             <tbody>
                 ${directOwned.length ? directOwned.map((oa, i) => `
                     <tr>
                         <td>${i + 1}</td><td class="mono">${amsEsc(amsPrintAssetId(oa))}</td><td>${amsEsc(oa.type)}${oa.makeModel ? ` (${amsEsc(oa.makeModel)})` : ""}</td><td>${amsEsc(oa.currentSite || oa.site || "-")}</td>
+                        ${isIssue ? `<td>${typeof amsPrintItemIssueDate === "function" ? amsEsc(amsPrintItemIssueDate(oa)) : "-"}</td>` : ""}
                         <td>${conditionRow()}</td>
                     </tr>`).join("")
-                    : `<tr><td colspan="5" style="text-align:center; color:#777;">No assets currently on record for this employee</td></tr>`}
+                    : `<tr><td colspan="${isIssue ? 6 : 5}" style="text-align:center; color:#777;">No assets currently on record for this employee</td></tr>`}
             </tbody>
         </table>`;
 
@@ -213,6 +213,7 @@ function amsGenerateReport(amsId, type, extraRemarks, printScope) {
     const subRows = subAssets.map(sa => ({
         id: amsPrintAssetId(sa), type: sa.type, makeModel: sa.makeModel,
         site: sa.currentSite || sa.site, holder: sa.subName, holderId: sa.subEmpId,
+        issueDate: typeof amsPrintItemIssueDate === "function" ? amsPrintItemIssueDate(sa) : "-",
     }));
     subOwned.forEach(oa => {
         const holderEmp = oa.assignedToSubordinate ? amsGetEmployeeByAmsId(oa.assignedToSubordinate) : null;
@@ -221,15 +222,16 @@ function amsGenerateReport(amsId, type, extraRemarks, printScope) {
             site: oa.currentSite || oa.site,
             holder: holderEmp ? holderEmp.name : (oa.assignedSubText || amsAssetHolderLabel(oa)),
             holderId: holderEmp ? amsGetEmployeeDisplayId(holderEmp) : "",
+            issueDate: typeof amsPrintItemIssueDate === "function" ? amsPrintItemIssueDate(oa) : "-",
         });
     });
     const subordinateHtml = subRows.length ? `
         <div class="pf-section-bar">Assets Currently Assigned to Subordinates (For Reference)</div>
         <table class="pf-asset-table">
-            <thead><tr><th style="width:30px;">#</th><th>Asset ID</th><th>Type</th><th>Held By</th><th>Employee ID</th><th>Site</th></tr></thead>
+            <thead><tr><th style="width:30px;">#</th><th>Asset ID</th><th>Type</th><th>Held By</th><th>Employee ID</th><th>Site</th><th>Date of Issue</th></tr></thead>
             <tbody>
                 ${subRows.map((sa, i) => `
-                    <tr><td>${i + 1}</td><td class="mono">${amsEsc(sa.id)}</td><td>${amsEsc(sa.type)}${sa.makeModel ? ` (${amsEsc(sa.makeModel)})` : ""}</td><td>${amsEsc(sa.holder)}</td><td class="mono">${sa.holderId ? amsEsc(sa.holderId) : "-"}</td><td>${amsEsc(sa.site)}</td></tr>`).join("")}
+                    <tr><td>${i + 1}</td><td class="mono">${amsEsc(sa.id)}</td><td>${amsEsc(sa.type)}${sa.makeModel ? ` (${amsEsc(sa.makeModel)})` : ""}</td><td>${amsEsc(sa.holder)}</td><td class="mono">${sa.holderId ? amsEsc(sa.holderId) : "-"}</td><td>${amsEsc(sa.site)}</td><td>${amsEsc(sa.issueDate || "-")}</td></tr>`).join("")}
             </tbody>
         </table>` : "";
 
@@ -276,7 +278,11 @@ function amsGenerateReport(amsId, type, extraRemarks, printScope) {
 
             <div class="pf-section-bar">Remarks / Notes</div>
             <div class="pf-notes-box">
-                ${amsBuildReportRemarks(isIssue ? directOwned : accessoryItems)}
+                ${amsBuildReportRemarks(isIssue
+                    ? (includeDirect && typeof amsPrintDirectHoldingsForRemarks === "function"
+                        ? amsPrintDirectHoldingsForRemarks(amsId, directOwned)
+                        : directOwned)
+                    : accessoryItems)}
             </div>
 
             <div class="pf-section-bar pf-bar-accent">Additional Remarks/Notes (IT/HR/Admin)</div>

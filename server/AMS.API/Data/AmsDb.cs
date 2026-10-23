@@ -407,6 +407,7 @@ public class AmsDb
                 purchase_site  NVARCHAR(200) NULL,
                 assigned_to    NVARCHAR(200) NULL,
                 model          NVARCHAR(200) NULL,
+                model_number   NVARCHAR(200) NULL,
                 serial_number  NVARCHAR(200) NULL,
                 imei1          NVARCHAR(50)  NULL,
                 imei2          NVARCHAR(50)  NULL,
@@ -750,6 +751,9 @@ public class AmsDb
                 AND COL_LENGTH(N'dbo.ams_mobiles', N'model') IS NULL
                 ALTER TABLE dbo.ams_mobiles ADD model NVARCHAR(200) NULL;
             IF OBJECT_ID(N'dbo.ams_mobiles', N'U') IS NOT NULL
+                AND COL_LENGTH(N'dbo.ams_mobiles', N'model_number') IS NULL
+                ALTER TABLE dbo.ams_mobiles ADD model_number NVARCHAR(200) NULL;
+            IF OBJECT_ID(N'dbo.ams_mobiles', N'U') IS NOT NULL
                 AND COL_LENGTH(N'dbo.ams_mobiles', N'serial_number') IS NULL
                 ALTER TABLE dbo.ams_mobiles ADD serial_number NVARCHAR(200) NULL;
             IF OBJECT_ID(N'dbo.ams_mobiles', N'U') IS NOT NULL
@@ -1052,14 +1056,53 @@ public class AmsDb
 
         foreach (var (username, password, role, email, remarks, displayName) in seeds)
         {
-            var exists = (int?)await ExecuteScalarAsync(conn,
-                "SELECT COUNT(1) FROM dbo.ams_users WHERE username = @u",
-                ("@u", username)) ?? 0;
+            var rowExists = false;
+            string? existingHash = null;
+            string? existingSalt = null;
+            string? existingRole = null;
+            var existingActive = false;
+
+            await using (var q = new SqlCommand(
+                "SELECT password_hash, password_salt, role, active FROM dbo.ams_users WHERE username = @u;", conn))
+            {
+                q.Parameters.AddWithValue("@u", username);
+                await using var r = await q.ExecuteReaderAsync();
+                if (await r.ReadAsync())
+                {
+                    rowExists = true;
+                    existingHash = r.IsDBNull(0) ? null : r.GetString(0);
+                    existingSalt = r.IsDBNull(1) ? null : r.GetString(1);
+                    existingRole = r.IsDBNull(2) ? null : r.GetString(2);
+                    existingActive = !r.IsDBNull(3) && r.GetBoolean(3);
+                }
+            }
+
+            if (rowExists && existingHash is not null && existingSalt is not null)
+            {
+                /* Avoid two expensive PBKDF2 (100k iteration) hashes on every
+                   API start when the seeded row is already correct. A row
+                   inserted by AMS-v4-0.sql has a placeholder hash/salt, so the
+                   verification fails (or throws) and we fall through to
+                   re-hash it. */
+                var matches = false;
+                try
+                {
+                    var probe = new AmsUser { PasswordHash = existingHash, PasswordSalt = existingSalt };
+                    matches = string.Equals(existingRole, role, StringComparison.Ordinal)
+                        && existingActive
+                        && VerifyPassword(probe, password);
+                }
+                catch (FormatException)
+                {
+                    matches = false; // placeholder / malformed salt - re-hash below
+                }
+                if (matches) continue;
+            }
 
             var salt = HashUtils.NewSalt();
             var hash = HashUtils.HashPassword(password, salt);
 
-            if (exists > 0)
+            if (rowExists)
             {
                 // Keep the seeded account in sync (re-hash + re-activate). A row
                 // inserted by AMS-v4-0.sql carries a placeholder hash until the
@@ -1150,7 +1193,8 @@ public class AmsDb
                 C("site", "site"), C("current_site", "currentSite"),
                 C("purchase_site", "purchaseSite"),
                 C("assigned_to", "assignedTo"),
-                C("model", "model"), C("serial_number", "serialNumber"),
+                C("model", "model"), C("model_number", "modelNumber"),
+                C("serial_number", "serialNumber"),
                 C("imei1", "imei1"), C("imei2", "imei2"),
                 C("battery_no", "batteryNo"), C("charger_no", "chargerNo"),
                 C("sim_mobile_no", "simMobileNo"), C("vendor", "vendor"),
@@ -1470,6 +1514,108 @@ public class AmsDb
 
     /* ---- Collections (per-entity table storage) ---------------------------- */
 
+    /// <summary>Lightweight change token for every collection: row count plus
+    /// the newest updated_at per table, fetched in ONE round-trip and hashed.
+    /// Used as an ETag so a page navigation can be answered with 304 Not
+    /// Modified instead of shipping the whole payload again.</summary>
+    public async Task<string> GetCollectionsVersionAsync()
+    {
+        var sql = new StringBuilder();
+        foreach (var def in TableDefs)
+        {
+            if (sql.Length > 0) sql.Append("\nUNION ALL\n");
+            sql.Append("SELECT N'").Append(def.Key).Append("' AS k, COUNT_BIG(*) AS c,")
+               .Append(" DATEDIFF_BIG(MICROSECOND, '1970-01-01', COALESCE(MAX(updated_at), '1970-01-01')) AS t")
+               .Append(" FROM dbo.").Append(def.Table);
+        }
+        sql.Append("\nORDER BY k;");
+
+        await using var conn = new SqlConnection(GetDbConnectionString());
+        await conn.OpenAsync();
+        var cmd = new SqlCommand(sql.ToString(), conn) { CommandTimeout = 60 };
+        var version = new StringBuilder();
+        await using (var reader = await cmd.ExecuteReaderAsync())
+        {
+            while (await reader.ReadAsync())
+            {
+                version.Append(reader.GetString(0))
+                       .Append(':').Append(reader.GetInt64(1))
+                       .Append(':').Append(reader.GetInt64(2))
+                       .Append('\n');
+            }
+        }
+
+        var bytes = SHA256.HashData(Encoding.UTF8.GetBytes(version.ToString()));
+        return Convert.ToHexString(bytes, 0, 16).ToLowerInvariant();
+    }
+
+    /// <summary>Returns every collection in ONE database round-trip. Used by
+    /// the startup bulk endpoint so the portal does not pay ~28 separate
+    /// connection/login/query costs on every page load.</summary>
+    public async Task<Dictionary<string, string>> GetAllCollectionsAsync()
+    {
+        var result = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        var jsonByKey = new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase);
+        var docs = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+
+        var sql = new StringBuilder();
+        foreach (var def in TableDefs)
+        {
+            if (sql.Length > 0) sql.Append("\nUNION ALL\n");
+            if (def.IsDocument)
+            {
+                sql.Append("SELECT N'").Append(def.Key).Append("' AS collection_key, data_json, CAST(0 AS BIGINT) AS row_id")
+                   .Append(" FROM dbo.").Append(def.Table)
+                   .Append(" WHERE record_key = N'").Append(def.FixedKey).Append("'");
+            }
+            else
+            {
+                sql.Append("SELECT N'").Append(def.Key).Append("' AS collection_key, data_json, row_id")
+                   .Append(" FROM dbo.").Append(def.Table);
+            }
+        }
+        sql.Append("\nORDER BY collection_key, row_id;");
+
+        await using var conn = new SqlConnection(GetDbConnectionString());
+        await conn.OpenAsync();
+        var cmd = new SqlCommand(sql.ToString(), conn) { CommandTimeout = 120 };
+        await using var reader = await cmd.ExecuteReaderAsync();
+        while (await reader.ReadAsync())
+        {
+            if (await reader.IsDBNullAsync(1)) continue;
+            var key = reader.GetString(0);
+            var json = reader.GetString(1);
+            var def = GetTableDef(key);
+            if (def is not null && def.IsDocument) docs[key] = json;
+            else
+            {
+                if (!jsonByKey.TryGetValue(key, out var list))
+                {
+                    list = new List<string>();
+                    jsonByKey[key] = list;
+                }
+                list.Add(json);
+            }
+        }
+
+        foreach (var def in TableDefs)
+        {
+            if (def.IsDocument)
+            {
+                if (docs.TryGetValue(def.Key, out var doc)) result[def.Key] = doc;
+            }
+            else if (jsonByKey.TryGetValue(def.Key, out var rows))
+            {
+                result[def.Key] = rows.Count == 0 ? "[]" : "[" + string.Join(",", rows) + "]";
+            }
+            else
+            {
+                result[def.Key] = "[]";
+            }
+        }
+        return result;
+    }
+
     /// <summary>Returns the stored collection as JSON. Array collections are
     /// reconstructed from the data_json column in row_id order.</summary>
     public async Task<string?> GetCollectionAsync(string key)
@@ -1769,6 +1915,102 @@ public class AmsDb
         var cmd = new SqlCommand("DELETE FROM dbo.ams_users WHERE username = @u;", conn);
         cmd.Parameters.AddWithValue("@u", username);
         await cmd.ExecuteNonQueryAsync();
+    }
+
+    public static string EnsureBackupFolder(string projectRoot)
+    {
+        var destFolder = Path.GetFullPath(Path.Combine(projectRoot, "SQL-DB-Backup"));
+        Directory.CreateDirectory(destFolder);
+        return destFolder;
+    }
+
+    public async Task<object> BackupDatabaseAsync(string projectRoot)
+    {
+        var destFolder = EnsureBackupFolder(projectRoot);
+        var stamp = DateTime.Now.ToString("yyyyMMdd-HHmmss");
+        var fileName = "AMS-v4-0-" + stamp + ".bak";
+        var destPath = Path.Combine(destFolder, fileName);
+
+        await using var conn = new SqlConnection(GetMasterConnectionString());
+        await conn.OpenAsync();
+
+        var sqlDir = await GetSqlBackupDirectoryAsync(conn);
+        var sqlFile = Path.Combine(sqlDir, fileName);
+        var sqlEsc = sqlFile.Replace("'", "''");
+        var compressed = true;
+        var backupSql = "BACKUP DATABASE [" + _dbName + "] TO DISK = N'" + sqlEsc
+            + "' WITH COPY_ONLY, COMPRESSION, INIT;";
+
+        try
+        {
+            await using var cmd = new SqlCommand(backupSql, conn);
+            cmd.CommandTimeout = 600;
+            await cmd.ExecuteNonQueryAsync();
+        }
+        catch (SqlException)
+        {
+            compressed = false;
+            backupSql = "BACKUP DATABASE [" + _dbName + "] TO DISK = N'" + sqlEsc
+                + "' WITH COPY_ONLY, INIT;";
+            await using var cmd = new SqlCommand(backupSql, conn);
+            cmd.CommandTimeout = 600;
+            await cmd.ExecuteNonQueryAsync();
+        }
+
+        EnsureBackupFolder(projectRoot);
+        var note = compressed ? "" : "SQL Server does not support compressed backups on this edition; the file is uncompressed.";
+        var path = destPath;
+        try
+        {
+            System.IO.File.Copy(sqlFile, destPath, true);
+        }
+        catch (Exception copyEx)
+        {
+            path = sqlFile;
+            var copyNote = "Backup completed on SQL Server, but it could not be copied into SQL-DB-Backup. "
+                + copyEx.Message + " File is at: " + sqlFile;
+            note = string.IsNullOrEmpty(note) ? copyNote : note + " " + copyNote;
+        }
+
+        long bytes = 0;
+        if (System.IO.File.Exists(path)) bytes = new FileInfo(path).Length;
+        return new
+        {
+            ok = true,
+            fileName,
+            folder = "SQL-DB-Backup",
+            path,
+            sqlPath = sqlFile,
+            bytes,
+            compressed,
+            note,
+        };
+    }
+
+    private static async Task<string> GetSqlBackupDirectoryAsync(SqlConnection conn)
+    {
+        await using (var cmd = new SqlCommand(
+            "SELECT CAST(SERVERPROPERTY('InstanceDefaultBackupPath') AS NVARCHAR(4000));", conn))
+        {
+            var val = await cmd.ExecuteScalarAsync() as string;
+            if (!string.IsNullOrWhiteSpace(val)) return val.TrimEnd('\\', '/');
+        }
+
+        await using (var cmd = new SqlCommand(@"
+DECLARE @dir NVARCHAR(4000);
+EXEC master.dbo.xp_instance_regread
+    N'HKEY_LOCAL_MACHINE',
+    N'Software\Microsoft\MSSQLServer\MSSQLServer',
+    N'BackupDirectory',
+    @dir OUTPUT;
+SELECT @dir;", conn))
+        {
+            var val = await cmd.ExecuteScalarAsync() as string;
+            if (!string.IsNullOrWhiteSpace(val)) return val.TrimEnd('\\', '/');
+        }
+
+        throw new InvalidOperationException(
+            "Could not resolve the SQL Server backup directory. Check that the SQL Server service can write its default Backup folder.");
     }
 
     /* ---- Helpers ---------------------------------------------------------- */

@@ -126,34 +126,44 @@ SQL Server to load from):
    npx serve .
    ```
 
-**Django Server** - Steps to run in Django:
-
-Open a terminal / Command Prompt **inside** the project folder
-(`D:\Asset_Management_System_v4-0\server\ams_django\`) and run:
+**Django Server** - HTTP or HTTPS. Open a terminal **inside**
+`server\ams_django\` (activate `venv` first if you use one).
 
 ```bash
-# 1. (Recommended) Create a virtual environment so packages stay isolated
-python -m venv venv
-
-# 2. Activate it
-venv\Scripts\activate          # Windows
-# source venv/bin/activate     # Mac/Linux
-
-# 3. Install required packages
+python -m pip install --upgrade pip
 pip install -r requirements.txt
-
-# 4. Connect to SQL Server (ODBC Driver 18 needs TrustServerCertificate;
-#    that extra_params flag is already in ams_django/settings.py DATABASES)
 python manage.py migrate
-
-# 5. Run the local development server (schema/users are created on first request)
-python manage.py runserver
-
-# 6. Stop virtual environment
-deactivate
 ```
 
-Then open your browser to: **http://127.0.0.1:8000/**
+HTTP (`runserver` is HTTP only; `runserver_plus` is not installed). From
+VS Code or any terminal this still works:
+
+```bash
+run-django.bat
+python manage.py runserver
+python manage.py runserver 0.0.0.0:8010
+```
+
+`0.0.0.0` is only the bind address (listen on all NICs). Do not put
+`0.0.0.0` in the browser. Open **http://127.0.0.1:8010/** on this PC, or
+**http://YOUR_LAN_IP:8010/** from other devices (`ipconfig` -> IPv4 Address).
+Allow the port in Windows Firewall.
+
+HTTPS cannot use `manage.py runserver`. Use `run-django-https.bat` or
+uvicorn. From VS Code (creates `cert.pem` / `key.pem` if missing; recreate
+with `python make_https_cert.py --force` after a LAN IP change):
+
+```bash
+run-django-https.bat
+run-django-https.bat 0.0.0.0:8010
+python make_https_cert.py
+python -m uvicorn ams_django.asgi:application --host 0.0.0.0 --port 8010 --ssl-certfile cert.pem --ssl-keyfile key.pem
+```
+
+Open **https://127.0.0.1:8010/** on this PC, or **https://YOUR_LAN_IP:8010/**
+from other devices (not `https://0.0.0.0:8010`). The browser will warn on
+the self-signed cert; click Advanced, then Continue. Do not run HTTP and
+HTTPS on the same port at the same time.
 
 Sign in, then use the Theme dropdown (top-right, also on the login page). Default
 is **Platinum**. Frosted glass is always on. Theme and desktop sidebar Show/Hide

@@ -506,7 +506,8 @@ function amsWireAccessoryQuickAdd(containerId, getAssetType) {
         const added = amsQuickAddAccessory(input.value, assetType);
         if (!added) { alert("Enter a name - or it may already be in the list for this Asset Type."); return; }
         popover.classList.remove("open");
-        amsRenderAccessoriesChecklist(containerId, assetType);
+        const stillChecked = amsGetCheckedAccessories(containerId);
+        amsRenderAccessoriesChecklist(containerId, assetType, stillChecked);
         const newBox = [...document.querySelectorAll(`#${containerId} .acc-check`)].find(c => c.value === added);
         if (newBox) newBox.checked = true; /* auto-check it - that's presumably why it was just added */
     });
@@ -516,6 +517,14 @@ function amsWireAccessoryAndDeptQuickAdds() {
     amsWireAccessoryQuickAdd("assignAccessories", () => {
         const a = AST_STATE.assets.find(x => x.id === AST_STATE.editingId);
         return a ? a.type : "";
+    });
+    /* Replace modal - accessories are recorded against the replacement asset. */
+    amsWireAccessoryQuickAdd("replAccessories", () => {
+        const sel = document.getElementById("replSourceAsset");
+        const newAsset = sel && sel.value ? AST_STATE.assets.find(x => x.id === sel.value) : null;
+        if (newAsset && newAsset.type) return newAsset.type;
+        const old = AST_STATE.assets.find(x => x.id === AST_STATE.editingId);
+        return old ? old.type : "";
     });
 }
 
@@ -1028,6 +1037,7 @@ function amsOpenReplaceModal(key) {
     document.getElementById("replIssueDate").value = new Date().toISOString().slice(0, 10);
     document.getElementById("replReason").value = "";
     document.getElementById("replNote").value = "";
+    amsRenderReplaceAccessories();
 
     amsOpenModal("modalReplace");
 }
@@ -1066,6 +1076,7 @@ function amsUpdateReplaceSelected() {
     const a = id ? AST_STATE.assets.find(x => x.id === id) : null;
     if (!a) {
         info.innerHTML = `<div class="selected-asset-box"><span class="form-hint">No replacement asset selected yet.</span></div>`;
+        amsRenderReplaceAccessories();
         return;
     }
     const acc = (a.accessories && a.accessories.length) ? a.accessories.join(", ") : "-";
@@ -1074,6 +1085,23 @@ function amsUpdateReplaceSelected() {
         <div class="form-hint">Serial: ${amsEsc(a.serialNumber) || "-"} &middot; Site: ${amsEsc(a.currentSite || a.site)} &middot;
         Purchase: ${amsFormatDate(a.purchaseDate) || "-"} &middot; Accessories: ${amsEsc(acc)}</div>
     </div>`;
+    amsRenderReplaceAccessories();
+}
+
+/* Renders the optional Common / Supportive Accessories checklist in the
+   Replace modal. Pre-fills from the selected replacement asset, falling back
+   to the old asset's accessories when the replacement has none recorded. */
+function amsRenderReplaceAccessories() {
+    const container = document.getElementById("replAccessories");
+    if (!container) return;
+    const sel = document.getElementById("replSourceAsset");
+    const newAsset = sel && sel.value ? AST_STATE.assets.find(x => x.id === sel.value) : null;
+    const old = AST_STATE.assets.find(x => x.id === AST_STATE.editingId);
+    const type = (newAsset && newAsset.type) || (old ? old.type : "") || document.getElementById("replType").value;
+    const prefill = (newAsset && newAsset.accessories && newAsset.accessories.length)
+        ? newAsset.accessories
+        : ((old && old.accessories) ? old.accessories : []);
+    amsRenderAccessoriesChecklist("replAccessories", type, prefill);
 }
 
 /* Opens the standard Add Asset modal from inside the Replace modal. When the new
@@ -1122,6 +1150,10 @@ function amsSubmitReplaceForm(e) {
     const replacesNote = document.getElementById("replNote").value.trim();
     const replDetail = `Reason: ${replacesReason}${replacesNote ? ` - ${replacesNote}` : ""}`;
     const oldEmp = old.assignedTo ? amsGetEmployeeByAmsId(old.assignedTo) : null;
+    /* Optional Common / Supportive Accessories handed over with the replacement
+       (pre-filled from the replacement, or the old asset when it had none). */
+    const replAccessories = amsGetCheckedAccessories("replAccessories");
+    if (document.getElementById("replAccessories")) newAsset.accessories = replAccessories.slice();
 
     /* ---- The selected In-Store asset takes over the old asset's assignment ---- */
     newAsset.assignedTo = old.assignedTo || null;
@@ -1246,7 +1278,7 @@ function amsGenerateAssetFormNo() {
 function amsBuildRemarksLinesHtml(assetsList) {
     const lines = [];
     assetsList.forEach(oa => {
-        if (oa.remarks) lines.push(`<div><strong>${amsEsc(amsPrintAssetId(oa))} - Remarks (on record):</strong> ${amsEsc(oa.remarks)}</div>`);
+        if (oa.remarks) lines.push(`<div><strong>${amsEsc(typeof amsPrintRemarkId === "function" ? amsPrintRemarkId(oa) : amsPrintAssetId(oa))} - Remarks (on record):</strong> ${amsEsc(oa.remarks)}</div>`);
     });
     if (!lines.length) lines.push(`<div class="pf-notes-empty">No remarks recorded against the asset(s) in the system.</div>`);
     return lines.join("");
@@ -1376,8 +1408,7 @@ function amsGenerateAssetIssueFormPrint(key, extraRemarks, printScope) {
             ${infoBox("Reporting Manager", amsEsc(managerName))}
             ${infoBox("Assignment Type", amsEsc(assignmentType))}
         </div>
-        <div class="pf-box-grid cols-3">
-            ${infoBox("Date of Issue", today)}
+        <div class="pf-box-grid cols-2">
             ${infoBox("Expected Return", "Not Specified")}
             ${infoBox("Issued By", "IT / Admin")}
         </div>`;
@@ -1385,15 +1416,16 @@ function amsGenerateAssetIssueFormPrint(key, extraRemarks, printScope) {
     const assetTableHtml = `
         <table class="pf-asset-table">
             <thead>
-                <tr><th style="width:30px;">#</th><th>Asset ID</th><th>Asset Name / Type</th><th>Site</th><th>Physical Condition at Issue</th></tr>
+                <tr><th style="width:30px;">#</th><th>Asset ID</th><th>Asset Name / Type</th><th>Site</th><th>Date of Issue</th><th>Physical Condition at Issue</th></tr>
             </thead>
             <tbody>
                 ${directOwned.length ? directOwned.map((oa, i) => `
                     <tr>
                         <td>${i + 1}</td><td class="mono">${amsPrintAssetId(oa)}</td><td>${oa.type}${oa.makeModel ? ` (${amsEsc(oa.makeModel)})` : ""}</td><td>${oa.currentSite || oa.site}</td>
+                        <td>${typeof amsPrintItemIssueDate === "function" ? amsEsc(amsPrintItemIssueDate(oa)) : "-"}</td>
                         <td>${conditionRow()}</td>
                     </tr>`).join("")
-                    : `<tr><td colspan="5" style="text-align:center; color:#777;">No assets currently on record for this employee</td></tr>`}
+                    : `<tr><td colspan="6" style="text-align:center; color:#777;">No assets currently on record for this employee</td></tr>`}
             </tbody>
         </table>`;
 
@@ -1411,6 +1443,7 @@ function amsGenerateAssetIssueFormPrint(key, extraRemarks, printScope) {
     const subRows = subAssets.map(sa => ({
         id: amsPrintAssetId(sa), type: sa.type, makeModel: sa.makeModel,
         site: sa.currentSite || sa.site, holder: sa.subName, holderId: sa.subEmpId,
+        issueDate: typeof amsPrintItemIssueDate === "function" ? amsPrintItemIssueDate(sa) : "-",
     }));
     subOwned.forEach(oa => {
         const holderEmp = oa.assignedToSubordinate ? amsGetEmployeeByAmsId(oa.assignedToSubordinate) : null;
@@ -1419,15 +1452,16 @@ function amsGenerateAssetIssueFormPrint(key, extraRemarks, printScope) {
             site: oa.currentSite || oa.site,
             holder: holderEmp ? holderEmp.name : (oa.assignedSubText || amsAssetHolderLabel(oa)),
             holderId: holderEmp ? amsGetEmployeeDisplayId(holderEmp) : "",
+            issueDate: typeof amsPrintItemIssueDate === "function" ? amsPrintItemIssueDate(oa) : "-",
         });
     });
     const subordinateHtml = subRows.length ? `
         <div class="pf-section-bar">Assets Currently Assigned to Subordinates (For Reference)</div>
         <table class="pf-asset-table">
-            <thead><tr><th style="width:30px;">#</th><th>Asset ID</th><th>Type</th><th>Held By</th><th>Employee ID</th><th>Site</th></tr></thead>
+            <thead><tr><th style="width:30px;">#</th><th>Asset ID</th><th>Type</th><th>Held By</th><th>Employee ID</th><th>Site</th><th>Date of Issue</th></tr></thead>
             <tbody>
                 ${subRows.map((sa, i) => `
-                    <tr><td>${i + 1}</td><td class="mono">${sa.id}</td><td>${sa.type}${sa.makeModel ? ` (${amsEsc(sa.makeModel)})` : ""}</td><td>${sa.holder}</td><td class="mono">${sa.holderId ? amsEsc(sa.holderId) : "-"}</td><td>${sa.site}</td></tr>`).join("")}
+                    <tr><td>${i + 1}</td><td class="mono">${sa.id}</td><td>${sa.type}${sa.makeModel ? ` (${amsEsc(sa.makeModel)})` : ""}</td><td>${sa.holder}</td><td class="mono">${sa.holderId ? amsEsc(sa.holderId) : "-"}</td><td>${sa.site}</td><td>${amsEsc(sa.issueDate || "-")}</td></tr>`).join("")}
             </tbody>
         </table>` : "";
 
@@ -1452,7 +1486,9 @@ function amsGenerateAssetIssueFormPrint(key, extraRemarks, printScope) {
 
             <div class="pf-section-bar">Remarks / Notes</div>
             <div class="pf-notes-box">
-                ${amsBuildRemarksLinesHtml(directOwned)}
+                ${amsBuildRemarksLinesHtml(includeDirect && typeof amsPrintDirectHoldingsForRemarks === "function"
+                    ? amsPrintDirectHoldingsForRemarks(emp.amsId || emp.empId, directOwned)
+                    : directOwned)}
             </div>
 
             <div class="pf-section-bar pf-bar-accent">Additional Remarks/Notes (IT/HR/Admin)</div>

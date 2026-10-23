@@ -7,6 +7,7 @@ urlpatterns = [
     path("api/auth/me", views.me, name="me"),
     path("api/auth/users", views.users, name="users"),
     path("api/auth/users/<str:username>", views.user_detail, name="user_detail"),
+    path("api/collections", views.collections_all, name="collections_all"),
     path("api/collection/<str:key>", views.collection, name="collection"),
     path("api/health", views.health, name="health"),
 ]

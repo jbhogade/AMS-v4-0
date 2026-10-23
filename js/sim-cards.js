@@ -68,7 +68,8 @@ function amsSimTableGetters() {
         status: s => s.status,
         assigned: s => {
             const e = s.assignedTo ? amsGetEmployeeByAmsId(s.assignedTo) : null;
-            return e ? e.name : "";
+            const holder = (typeof amsAssetHolderLabel === "function") ? amsAssetHolderLabel(s) : "";
+            return e ? (holder ? `${e.name} ${holder}` : e.name) : (holder || "");
         },
         site: s => s.site || "",
         usedIn: s => amsSimUsedInLabel(s),
@@ -96,6 +97,12 @@ function renderSimTable() {
 
     const rows = sortedFiltered.map(s => {
         const emp = s.assignedTo ? amsGetEmployeeByAmsId(s.assignedTo) : null;
+        const subEmp = s.assignedToSubordinate ? amsGetEmployeeByAmsId(s.assignedToSubordinate) : null;
+        const holderName = s.assignedToSubordinate ? (subEmp ? subEmp.name : s.assignedToSubordinate)
+            : (s.assignedSubText ? s.assignedSubText : "");
+        const assignedDisplay = emp
+            ? `${amsEsc(emp.name)}${holderName ? ` &rarr; ${amsEsc(holderName)}` : ""}`
+            : "-";
         const usedIn = amsSimUsedInLabel(s);
         return `<tr>
             <td class="mono-cell"><a href="#" class="clickable-id" data-sim-view-key="${amsEsc(s.simId)}">${amsEsc(s.simId)}</a></td>
@@ -103,7 +110,7 @@ function renderSimTable() {
             <td>${amsEsc(s.operator) || "-"}</td>
             <td>${amsEsc(s.plan) || "-"}</td>
             <td><span class="badge ${SIM_STATUS_BADGE[s.status] || "badge-grey"}">${amsEsc(s.status)}</span></td>
-            <td>${emp ? amsEsc(emp.name) : "-"}</td>
+            <td>${assignedDisplay}</td>
             <td>${amsEsc(s.site) || "-"}</td>
             <td>${usedIn && usedIn !== "None" ? amsEsc(usedIn) : "-"}</td>
             <td class="actions-cell">
@@ -341,6 +348,7 @@ function amsSimSubmitForm(e) {
         s.status = statusVal;
         if (statusVal === "Retired") {
             s.assignedTo = null; s.assignedDate = "";
+            s.assignedToSubordinate = null; s.assignedSubText = null;
             if (amsSimUnlinkFromMobile(s)) amsDbSaveAsync("mobiles");
         } else if (s.linkedMobileId && !s.personalMobile && prevNumber !== s.mobileNumber) {
             const m = amsSimFindMobileById(s.linkedMobileId);
@@ -357,6 +365,7 @@ function amsSimSubmitForm(e) {
             ...values,
             status: statusVal,
             assignedTo: null, assignedDate: "",
+            assignedToSubordinate: null, assignedSubText: null,
             linkedMobileId: null, personalMobile: false,
             history: [{ date: new Date().toISOString().slice(0, 10), action: "Added to Inventory", empId: "", empName: "", empDept: "", remarks: "", statusLabel: statusVal }],
         };
@@ -425,6 +434,7 @@ function amsSimOpenViewModal(key) {
     if (!s) return;
     SIM_STATE.viewKey = key;
     const emp = s.assignedTo ? amsGetEmployeeByAmsId(s.assignedTo) : null;
+    const subEmp = s.assignedToSubordinate ? amsGetEmployeeByAmsId(s.assignedToSubordinate) : null;
 
     const historyRows = (s.history && s.history.length)
         ? s.history.map(h => {
@@ -450,7 +460,8 @@ function amsSimOpenViewModal(key) {
         <div class="detail-row"><span class="detail-label">Status</span><span class="detail-value">${amsEsc(s.status)}</span></div>
         <div class="detail-row"><span class="detail-label">Site</span><span class="detail-value">${amsEsc(s.site) || "-"}</span></div>
         <div class="detail-row"><span class="detail-label">Activation Date</span><span class="detail-value">${amsFormatDate(s.activationDate) || "-"}</span></div>
-        <div class="detail-row"><span class="detail-label">Assigned To</span><span class="detail-value">${emp ? amsEsc(emp.name) + " (" + amsEsc(amsGetEmployeeDisplayId(emp)) + ")" : "-"}</span></div>
+        <div class="detail-row"><span class="detail-label">Assigned To (Direct)</span><span class="detail-value">${emp ? amsEsc(emp.name) + " (" + amsEsc(amsGetEmployeeDisplayId(emp)) + ")" : "-"}</span></div>
+        <div class="detail-row"><span class="detail-label">Assigned To (Subordinate)</span><span class="detail-value">${subEmp ? amsEsc(subEmp.name) + " (" + amsEsc(amsGetEmployeeDisplayId(subEmp)) + ")" : (s.assignedSubText ? amsEsc(s.assignedSubText) : "-")}</span></div>
         <div class="detail-row"><span class="detail-label">Used In Mobile</span><span class="detail-value">${amsEsc(amsSimUsedInLabel(s))}</span></div>
         <div class="detail-row"><span class="detail-label">Assignment Date</span><span class="detail-value">${amsFormatDate(s.assignedDate) || "-"}</span></div>
         <div class="detail-row"><span class="detail-label">Vendor</span><span class="detail-value">${amsEsc(s.vendor) || "-"}</span></div>
@@ -473,6 +484,7 @@ function amsSimDownloadView() {
     const s = SIM_STATE.sims.find(x => x.simId === SIM_STATE.viewKey);
     if (!s) return;
     const emp = s.assignedTo ? amsGetEmployeeByAmsId(s.assignedTo) : null;
+    const subEmp = s.assignedToSubordinate ? amsGetEmployeeByAmsId(s.assignedToSubordinate) : null;
 
     const rows = [["Field", "Value"]];
     const p = (label, value) => rows.push([label, value == null || value === "" ? "-" : value]);
@@ -484,7 +496,8 @@ function amsSimDownloadView() {
     p("Status", s.status);
     p("Site", s.site || "-");
     p("Activation Date", amsFormatDate(s.activationDate));
-    p("Assigned To", emp ? `${emp.name} (${amsGetEmployeeDisplayId(emp)})` : "-");
+    p("Assigned To (Direct)", emp ? `${emp.name} (${amsGetEmployeeDisplayId(emp)})` : "-");
+    p("Assigned To (Subordinate)", subEmp ? `${subEmp.name} (${amsGetEmployeeDisplayId(subEmp)})` : (s.assignedSubText || "-"));
     p("Used In Mobile", amsSimUsedInLabel(s));
     p("Assignment Date", amsFormatDate(s.assignedDate));
     p("Vendor", s.vendor);
@@ -566,9 +579,13 @@ function amsSimApplyMobileLink(s, choice, empId, assignDate) {
 
 function amsSimPopulateEmpDropdown() {
     const activeEmps = simEmployeesRef().filter(e => e.status === "Active");
-    document.getElementById("simAssignEmp").innerHTML =
-        `<option value="">(Select employee)</option>` +
-        activeEmps.map(e => `<option value="${amsEsc(e.empId)}">${amsEsc(e.name)} (${amsEsc(e.dept)})</option>`).join("");
+    const empOpts = activeEmps.map(e => `<option value="${amsEsc(e.empId)}">${amsEsc(e.name)} (${amsEsc(e.dept)})</option>`).join("");
+    const subOpts = `<option value="">None</option>` + empOpts
+        + `<option value="__other__">Other / Not in User Master...</option>`;
+    const empEl = document.getElementById("simAssignEmp");
+    const subEl = document.getElementById("simAssignSubEmp");
+    if (empEl) empEl.innerHTML = `<option value="">(Select employee)</option>` + empOpts;
+    if (subEl) subEl.innerHTML = subOpts;
 }
 
 function amsSimPopulateMobileDropdown(sim) {
@@ -624,6 +641,12 @@ function amsSimOpenAssignModal(key, mode) {
     amsSimPopulateEmpDropdown();
     amsSimPopulateMobileDropdown(s);
     amsSetSelectValue("simAssignEmp", s.assignedTo || "");
+    amsSetSelectValue("simAssignSubEmp", s.assignedToSubordinate || (s.assignedSubText ? "__other__" : ""));
+    const subTextEl = document.getElementById("simAssignSubText");
+    if (subTextEl) {
+        subTextEl.value = s.assignedSubText || "";
+        subTextEl.style.display = s.assignedSubText ? "block" : "none";
+    }
     const dateEl = document.getElementById("simAssignDate");
     if (mode === "edit") amsSetDateInput(dateEl, amsSimLastAssignDate(s) || new Date().toISOString().slice(0, 10));
     else amsSetDateInput(dateEl, new Date().toISOString().slice(0, 10));
@@ -631,17 +654,79 @@ function amsSimOpenAssignModal(key, mode) {
     amsSimOpenModal("modalSimAssign");
 }
 
+function amsSimWireAssignOtherToggles() {
+    const subSelect = document.getElementById("simAssignSubEmp");
+    const subText = document.getElementById("simAssignSubText");
+    if (subSelect && subText) {
+        subSelect.addEventListener("change", () => {
+            subText.style.display = subSelect.value === "__other__" ? "block" : "none";
+            if (subSelect.value !== "__other__") subText.value = "";
+        });
+    }
+}
+
+let SIM_QUICKADD_EMP_TARGET = null;
+
+function amsSimOpenAddEmployeeModal(targetSelectId) {
+    SIM_QUICKADD_EMP_TARGET = targetSelectId;
+    const deptUnion = (typeof DEPARTMENTS !== "undefined" ? DEPARTMENTS : []).map(d => ({ name: d.name, short: d.short }));
+    (typeof AMS_DUMMY_DEPARTMENTS !== "undefined" ? AMS_DUMMY_DEPARTMENTS : []).forEach(d => {
+        if (!deptUnion.some(x => x.name.toLowerCase() === d.name.toLowerCase())) deptUnion.push({ name: d.name, short: d.shortform });
+    });
+    const desigUnion = (typeof DESIGNATIONS !== "undefined" ? DESIGNATIONS.slice() : []);
+    (typeof AMS_DESIGNATION_OPTIONS !== "undefined" ? AMS_DESIGNATION_OPTIONS : []).forEach(d => {
+        if (!desigUnion.some(x => String(x).toLowerCase() === d.name.toLowerCase())) desigUnion.push(d.name);
+    });
+    document.getElementById("qaEmpDept").innerHTML = deptUnion.map(d => `<option value="${amsEsc(d.name)}">${amsEsc(d.name)}</option>`).join("");
+    document.getElementById("qaEmpDesigList").innerHTML = desigUnion.map(d => `<option value="${amsEsc(d)}"></option>`).join("");
+    document.getElementById("qaEmpName").value = "";
+    document.getElementById("qaEmpDesig").value = "";
+    hideFormError("quickadd-emp-error");
+    amsSimOpenModal("modalQuickAddEmp");
+}
+
+function amsSimSaveQuickAddEmployee() {
+    const data = {
+        empId: "EMP-000001",
+        name: document.getElementById("qaEmpName").value.trim().replace(/\s+/g, " "),
+        department: document.getElementById("qaEmpDept").value,
+        designation: document.getElementById("qaEmpDesig").value.trim(),
+    };
+    if (!data.name || !data.designation) {
+        showFormError("quickadd-emp-error", "Please fill in Full Name and Designation (Department is pre-selected).");
+        return;
+    }
+    const emp = addEmployee(data);
+    const directVal = document.getElementById("simAssignEmp").value;
+    const subVal = document.getElementById("simAssignSubEmp").value;
+    amsSimPopulateEmpDropdown();
+    document.getElementById("simAssignEmp").value = SIM_QUICKADD_EMP_TARGET === "simAssignEmp" ? emp.amsId : directVal;
+    document.getElementById("simAssignSubEmp").value = SIM_QUICKADD_EMP_TARGET === "simAssignSubEmp" ? emp.amsId : subVal;
+    if (SIM_QUICKADD_EMP_TARGET === "simAssignSubEmp") {
+        const subTextEl = document.getElementById("simAssignSubText");
+        if (subTextEl) { subTextEl.value = ""; subTextEl.style.display = "none"; }
+    }
+    amsSimCloseModal("modalQuickAddEmp");
+    amsNotify(`Employee added: ${getEmployeeFullName(emp)} (${emp.amsId})`, "success");
+}
+
 function amsSimConfirmAssign() {
     const s = SIM_STATE.sims.find(x => x.simId === SIM_STATE.editingId);
     if (!s) return;
     const empId = document.getElementById("simAssignEmp").value;
+    const subId = (document.getElementById("simAssignSubEmp") || {}).value || "";
+    const subTextEl = document.getElementById("simAssignSubText");
+    const subText = (subId === "__other__" && subTextEl) ? subTextEl.value.trim() : "";
+    const assignedSub = subId && subId !== "__other__" ? subId : (subText ? "__other__" : null);
     const assignDate = document.getElementById("simAssignDate").value || new Date().toISOString().slice(0, 10);
     const remarks = document.getElementById("simAssignRemarks").value.trim();
     const mobileChoice = (document.getElementById("simAssignMobile") || {}).value || "";
-    if (!empId) { alert("Select an employee to assign this SIM card to."); return; }
+    if (!empId) { alert("Select a Direct Employee to assign this SIM card to."); return; }
 
     const emp = amsGetEmployeeByAmsId(empId);
     s.assignedTo = empId;
+    s.assignedToSubordinate = subId && subId !== "__other__" ? subId : null;
+    s.assignedSubText = subText || null;
     s.assignedDate = assignDate;
     s.status = "Issued";
     const mobilesChanged = amsSimApplyMobileLink(s, mobileChoice, empId, assignDate);
@@ -656,8 +741,11 @@ function amsSimConfirmAssign() {
         empId: emp ? emp.empId : "", empName: emp ? emp.name : "", empDept: emp ? emp.dept : "",
         remarks: histRemarks, statusLabel: "Issued",
     });
+    const holderBits = [];
+    if (assignedSub) holderBits.push(assignedSub === "__other__" ? subText : (amsGetEmployeeByAmsId(assignedSub) || {}).name || assignedSub);
+    const holderNote = holderBits.length ? ` (${holderBits.join(" / ")})` : "";
     const verb = mode === "reassign" ? "reassigned" : (mode === "edit" ? "issue updated for" : "assigned");
-    amsNotify(`SIM card ${s.simId} ${verb} ${emp ? emp.name : empId}`, "success");
+    amsNotify(`SIM card ${s.simId} ${verb} ${emp ? emp.name : empId}${holderNote}`, "success");
 
     amsSimCloseModal("modalSimAssign");
     amsDbSaveAsync("simCards");
@@ -755,8 +843,7 @@ function amsPrintSimIssueForm(key) {
                 ${infoBox("Reporting Manager", amsEsc(managerName))}
                 ${infoBox("Assignment Type", amsEsc(assignmentType))}
             </div>
-            <div class="pf-box-grid cols-3">
-                ${infoBox("Date of Issue", today)}
+            <div class="pf-box-grid cols-2">
                 ${infoBox("Expected Return", "Not Specified")}
                 ${infoBox("Issued By", "IT / Admin")}
             </div>
@@ -813,7 +900,7 @@ function amsSimReturn(key) {
         empId: prevEmp ? prevEmp.empId : "", empName: prevEmp ? prevEmp.name : "", empDept: prevEmp ? prevEmp.dept : "",
         remarks: "", statusLabel: "In Store",
     });
-    s.assignedTo = null; s.assignedDate = ""; s.status = "In Store";
+    s.assignedTo = null; s.assignedDate = ""; s.assignedToSubordinate = null; s.assignedSubText = null; s.status = "In Store";
     const mobilesChanged = amsSimUnlinkFromMobile(s);
     amsNotify(`SIM card returned: ${s.simId}${prevEmp ? ` (from ${prevEmp.name})` : ""}`, "info");
     amsDbSaveAsync("simCards");
@@ -849,7 +936,7 @@ function amsSimRetire(key) {
         empId: "", empName: "", empDept: "",
         remarks: "", statusLabel: "Retired",
     });
-    s.assignedTo = null; s.assignedDate = ""; s.status = "Retired";
+    s.assignedTo = null; s.assignedDate = ""; s.assignedToSubordinate = null; s.assignedSubText = null; s.status = "Retired";
     const mobilesChanged = amsSimUnlinkFromMobile(s);
     amsNotify(`SIM card retired: ${s.simId}`, "info");
     amsDbSaveAsync("simCards");
@@ -950,6 +1037,7 @@ function amsImportSimsFile(file) {
                 });
                 if (status === "Retired") {
                     existing.assignedTo = null; existing.assignedDate = "";
+                    existing.assignedToSubordinate = null; existing.assignedSubText = null;
                     if (amsSimUnlinkFromMobile(existing)) mobilesChanged = true;
                 }
                 existing.status = status;
@@ -969,6 +1057,7 @@ function amsImportSimsFile(file) {
                     cost: obj.cost || "",
                     remarks: obj.remarks || "",
                     assignedTo: null, assignedDate: "",
+                    assignedToSubordinate: null, assignedSubText: null,
                     linkedMobileId: null, personalMobile: false,
                     history: [{ date: new Date().toISOString().slice(0, 10), action: "Added to Inventory (Import)", empId: "", empName: "", empDept: "", remarks: "", statusLabel: status }],
                 };
@@ -1030,6 +1119,12 @@ async function initSimCards() {
 
     /* Assign/Reassign */
     document.getElementById("btnSimConfirmAssign").addEventListener("click", amsSimConfirmAssign);
+    amsSimWireAssignOtherToggles();
+    document.querySelectorAll("[data-open-add-employee]").forEach(btn => {
+        btn.addEventListener("click", () => amsSimOpenAddEmployeeModal(btn.getAttribute("data-open-add-employee")));
+    });
+    const qaSave = document.getElementById("qaEmpSave");
+    if (qaSave) qaSave.addEventListener("click", amsSimSaveQuickAddEmployee);
 
     /* Detail report download (View modal) */
     document.getElementById("btnSimViewCsv").addEventListener("click", amsSimDownloadView);
@@ -1041,6 +1136,18 @@ async function initSimCards() {
             if (e.target === overlay) amsSimCloseModal(overlay.id);
         });
     });
+}
+
+function showFormError(id, message) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.textContent = message;
+    el.classList.add("show");
+}
+
+function hideFormError(id) {
+    const el = document.getElementById(id);
+    if (el) el.classList.remove("show");
 }
 
 /*------------------------------------------------------------------------------

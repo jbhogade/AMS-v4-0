@@ -5,11 +5,13 @@ Behavioral twin of `server/AMS.API` (.NET), sharing the same SQL Server
 unchanged AMS-v4-0 frontend same-origin.
 
 > **On Windows?** Follow [`SETUP-WINDOWS.md`](SETUP-WINDOWS.md) for the full
-> software list and step-by-step process. You can just run `run-django.bat`.
+> software list and step-by-step process. HTTP: `run-django.bat`. HTTPS:
+> `run-django-https.bat`.
 
 ## Setup
 
 ```bash
+python -m pip install --upgrade pip
 pip install -r requirements.txt
 cp .env.example .env      # Windows: copy .env.example .env  (edit it)
 # System dependency (Debian/Ubuntu):
@@ -20,9 +22,45 @@ cp .env.example .env      # Windows: copy .env.example .env  (edit it)
 
 ```bash
 python manage.py migrate              # ODBC Driver 18: TrustServerCertificate via extra_params
-python manage.py runserver            # http://127.0.0.1:8000
 python manage.py initdb               # optional: create/seed the database
 ```
+
+### HTTP
+
+`runserver` is HTTP only (`runserver_plus` is not installed). From VS Code
+or any terminal:
+
+```bash
+run-django.bat
+python manage.py runserver
+python manage.py runserver 0.0.0.0:8010
+```
+
+`0.0.0.0` is only the bind address. Do not put it in the browser. Open
+**http://127.0.0.1:8010/** on this PC, or **http://YOUR_LAN_IP:8010/** from
+other devices (`ipconfig` -> IPv4 Address). Allow the port in Windows Firewall.
+
+### HTTPS
+
+HTTPS cannot use `manage.py runserver`. From VS Code, use uvicorn (or
+`run-django-https.bat`). Stop HTTP first if that port is already in use.
+`make_https_cert.py` creates `cert.pem` / `key.pem` if they are missing
+(includes this PC's LAN IPs). Recreate after an IP change:
+
+```bash
+python make_https_cert.py --force
+```
+
+```bash
+run-django-https.bat
+run-django-https.bat 0.0.0.0:8010
+python make_https_cert.py
+python -m uvicorn ams_django.asgi:application --host 0.0.0.0 --port 8010 --ssl-certfile cert.pem --ssl-keyfile key.pem
+```
+
+Open **https://127.0.0.1:8010/** on this PC, or **https://YOUR_LAN_IP:8010/**
+from other devices (not `https://0.0.0.0:8010`). The browser will warn on
+the self-signed cert; click Advanced, then Continue.
 
 Startup is lazy: the first request runs the idempotent bootstrap (create
 database, schema, seed users, migrate legacy collections, seed lookups), so the

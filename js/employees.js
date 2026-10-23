@@ -526,17 +526,35 @@ function openExitModal(amsId) {
     document.getElementById("exit-meta").textContent = emp.designation + " - " + emp.department;
     document.getElementById("exit-date").value = new Date().toISOString().slice(0, 10);
 
-    /* Assets owned must be returned - one checkbox each */
+    /* Assets / mobiles / SIM cards owned must be returned - one checkbox each */
     const assets = getEmployeeAssets(amsId);
+    const mobiles = typeof getEmployeeMobiles === "function" ? getEmployeeMobiles(amsId) : [];
+    const sims = typeof getEmployeeSimCards === "function" ? getEmployeeSimCards(amsId) : [];
+    const holdingRows = [];
+    assets.forEach(a => {
+        const id = (typeof amsPrintRemarkId === "function" ? amsPrintRemarkId(a) : a.id) || a.id;
+        const mm = (typeof amsAssetMakeModel === "function" ? amsAssetMakeModel(a) : a.makeModel) || a.type || "";
+        holdingRows.push({ id, label: mm ? `${id} - ${mm}` : id });
+    });
+    mobiles.forEach(a => {
+        const id = (typeof amsPrintRemarkId === "function" ? amsPrintRemarkId(a) : a.id) || a.id;
+        const mm = (typeof amsAssetMakeModel === "function" ? amsAssetMakeModel(a) : a.makeModel) || a.type || "Mobile";
+        holdingRows.push({ id, label: `Mobile ${id}${mm ? " - " + mm : ""}` });
+    });
+    sims.forEach(s => {
+        const id = s.simId || "";
+        const bits = [s.mobileNumber, s.operator, s.plan].filter(Boolean);
+        holdingRows.push({ id, label: `SIM ${id}${bits.length ? " - " + bits.join(" · ") : ""}` });
+    });
     const assetList = document.getElementById("exit-asset-list");
-    assetList.innerHTML = assets.length
-        ? assets.map(a => `
+    assetList.innerHTML = holdingRows.length
+        ? holdingRows.map(row => `
             <li>
                 <input type="checkbox" checked>
-                <span class="fac-label">${escapeHtml(a.id)} - ${escapeHtml(a.makeModel)}</span>
+                <span class="fac-label">${escapeHtml(row.label)}</span>
                 <span class="fac-state on">To Return</span>
             </li>`).join("")
-        : `<li><span class="fac-label">No assets held by this employee.</span></li>`;
+        : `<li><span class="fac-label">No assets, mobiles, or SIM cards held by this employee.</span></li>`;
 
     /* Facilities start unchecked so the user marks revoke or N/A themselves. */
     const facList = document.getElementById("exit-facility-list");
@@ -569,10 +587,14 @@ function openExitModal(amsId) {
         }
     };
 
-    /* Subordinate / team assets - list who reports to this person and force a
-       choice of the new Incharge / HOD so the team's asset records continue */
+    /* Subordinate / team holdings - list who reports to this person and force a
+       choice of the new Incharge / HOD so the team's records continue */
+    const empHoldingCount = (subAmsId) =>
+        getEmployeeAssets(subAmsId).length
+        + (typeof getEmployeeMobiles === "function" ? getEmployeeMobiles(subAmsId).length : 0)
+        + (typeof getEmployeeSimCards === "function" ? getEmployeeSimCards(subAmsId).length : 0);
     const subordinates = getSubordinates(amsId);
-    const subWithAssets = subordinates.filter(s => getEmployeeAssets(s.amsId).length > 0);
+    const subWithAssets = subordinates.filter(s => empHoldingCount(s.amsId) > 0);
     const teamWrap = document.getElementById("exit-team-wrap");
     if (!subWithAssets.length) {
         teamWrap.style.display = "none";
@@ -580,11 +602,11 @@ function openExitModal(amsId) {
     } else {
         teamWrap.style.display = "";
         document.getElementById("exit-team-list").innerHTML = subWithAssets.map(s => {
-            const cnt = getEmployeeAssets(s.amsId).length;
+            const cnt = empHoldingCount(s.amsId);
             return `<li>
                 <input type="checkbox" checked>
                 <span class="fac-label">${escapeHtml(getEmployeeFullName(s))} (${escapeHtml(s.empId)})</span>
-                <span class="fac-state on">${cnt} asset${cnt > 1 ? "s" : ""}</span>
+                <span class="fac-state on">${cnt} holding${cnt > 1 ? "s" : ""}</span>
             </li>`;
         }).join("");
 
@@ -613,13 +635,17 @@ function confirmExit() {
     if (!emp) return;
 
     const exitReason = document.getElementById("exit-reason").value;
-    /* If this person has direct subordinates holding assets, the new Incharge /
-       HOD must be chosen so the team's asset records continue under them */
+    /* If this person has direct subordinates holding assets/mobiles/SIMs, the
+       new Incharge / HOD must be chosen so the team's records continue */
+    const empHoldingCount = (subAmsId) =>
+        getEmployeeAssets(subAmsId).length
+        + (typeof getEmployeeMobiles === "function" ? getEmployeeMobiles(subAmsId).length : 0)
+        + (typeof getEmployeeSimCards === "function" ? getEmployeeSimCards(subAmsId).length : 0);
     const subWithAssets = getSubordinates(currentEmployeeAmsId)
-        .filter(s => getEmployeeAssets(s.amsId).length > 0);
+        .filter(s => empHoldingCount(s.amsId) > 0);
     const teamIncharge = subWithAssets.length ? document.getElementById("exit-incharge").value : "";
     if (subWithAssets.length && !teamIncharge) {
-        alert("This employee has " + subWithAssets.length + " direct subordinate(s) holding assets. Please select the New Incharge / HOD to take over the team's assets.");
+        alert("This employee has " + subWithAssets.length + " direct subordinate(s) holding assets, mobiles, or SIM cards. Please select the New Incharge / HOD to take over the team's holdings.");
         return;
     }
 
