@@ -2764,7 +2764,9 @@ function amsPrintDirectHoldingsForRemarks(amsId, extraAssets) {
 function amsAssetMakeModel(oa) {
     if (!oa) return "";
     if (oa.makeModel) return oa.makeModel;
-    return [oa.make, oa.model].filter(Boolean).join(" ").trim();
+    const base = [oa.make, oa.model].filter(Boolean).join(" ").trim();
+    if (oa.modelNumber) return base ? `${base} [${oa.modelNumber}]` : String(oa.modelNumber);
+    return base;
 }
 
 function amsCollectPrintMobilesForEmp(amsId) {

@@ -1,5 +1,35 @@
 # AMS-v4-0 change log
 
+## 2026-10-23 — Django HTTPS packages
+
+`server/ams_django/requirements.txt` now includes `uvicorn==0.34.2` and
+`cryptography==50.0.2` so HTTPS can be installed with
+`pip install -r requirements.txt`. `runserver` stays HTTP-only;
+`runserver_plus` is not available. Also added `cryptography` (and
+`PyJWT` where it was missing) to `requirements-2*.txt`.
+`run-django.bat` upgrades pip first when a newer release is available.
+HTTPS: run `run-django-https.bat` (creates `cert.pem` / `key.pem`) and open
+`https://127.0.0.1:8000/`.
+
+## 2026-10-21 — Mobile Master labels, Model Number, Swap Mobile
+
+Mobile Master user-facing text now says Mobile (not Asset): IDs, types,
+stock, transfer/replace/history, issue form, notifications. Internal field
+IDs are unchanged.
+
+Optional **Model Number** sits beside Mobile Model on Add/Edit. It shows in
+View, CSV, table Make/Model, print Type/Make/Model, import/export. SQL column
+`ams_mobiles.model_number` (Django / .NET maps included).
+
+New **Swap** action (Replace is unchanged): Assigned↔Assigned or Assigned↔In
+Store. Holders are exchanged. If either phone has a SIM, you must choose
+**Move SIM with holder** or **Keep SIM in this phone**. History is written
+on both phones and on SIMs when a SIM is involved. Swap includes optional
+**Common / Supportive Accessories**, saved on the mobile the original holder
+receives.
+
+Hard-refresh (Ctrl+F5).
+
 ## 2026-10-20 — SIM Assign To (Subordinate / Actual User)
 
 SIM Assign / Reassign / Edit Issue now has **Assign To (Subordinate /

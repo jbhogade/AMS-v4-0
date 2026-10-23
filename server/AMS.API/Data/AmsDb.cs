@@ -407,6 +407,7 @@ public class AmsDb
                 purchase_site  NVARCHAR(200) NULL,
                 assigned_to    NVARCHAR(200) NULL,
                 model          NVARCHAR(200) NULL,
+                model_number   NVARCHAR(200) NULL,
                 serial_number  NVARCHAR(200) NULL,
                 imei1          NVARCHAR(50)  NULL,
                 imei2          NVARCHAR(50)  NULL,
@@ -749,6 +750,9 @@ public class AmsDb
             IF OBJECT_ID(N'dbo.ams_mobiles', N'U') IS NOT NULL
                 AND COL_LENGTH(N'dbo.ams_mobiles', N'model') IS NULL
                 ALTER TABLE dbo.ams_mobiles ADD model NVARCHAR(200) NULL;
+            IF OBJECT_ID(N'dbo.ams_mobiles', N'U') IS NOT NULL
+                AND COL_LENGTH(N'dbo.ams_mobiles', N'model_number') IS NULL
+                ALTER TABLE dbo.ams_mobiles ADD model_number NVARCHAR(200) NULL;
             IF OBJECT_ID(N'dbo.ams_mobiles', N'U') IS NOT NULL
                 AND COL_LENGTH(N'dbo.ams_mobiles', N'serial_number') IS NULL
                 ALTER TABLE dbo.ams_mobiles ADD serial_number NVARCHAR(200) NULL;
@@ -1189,7 +1193,8 @@ public class AmsDb
                 C("site", "site"), C("current_site", "currentSite"),
                 C("purchase_site", "purchaseSite"),
                 C("assigned_to", "assignedTo"),
-                C("model", "model"), C("serial_number", "serialNumber"),
+                C("model", "model"), C("model_number", "modelNumber"),
+                C("serial_number", "serialNumber"),
                 C("imei1", "imei1"), C("imei2", "imei2"),
                 C("battery_no", "batteryNo"), C("charger_no", "chargerNo"),
                 C("sim_mobile_no", "simMobileNo"), C("vendor", "vendor"),

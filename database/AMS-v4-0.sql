@@ -424,6 +424,7 @@ BEGIN
         purchase_site  NVARCHAR(200) NULL,
         assigned_to    NVARCHAR(200) NULL,
         model          NVARCHAR(200) NULL,
+        model_number   NVARCHAR(200) NULL,
         serial_number  NVARCHAR(200) NULL,
         imei1          NVARCHAR(50)  NULL,
         imei2          NVARCHAR(50)  NULL,
@@ -683,6 +684,10 @@ GO
 IF OBJECT_ID(N'dbo.ams_mobiles', N'U') IS NOT NULL
    AND COL_LENGTH(N'dbo.ams_mobiles', N'model') IS NULL
    ALTER TABLE dbo.ams_mobiles ADD model NVARCHAR(200) NULL;
+GO
+IF OBJECT_ID(N'dbo.ams_mobiles', N'U') IS NOT NULL
+   AND COL_LENGTH(N'dbo.ams_mobiles', N'model_number') IS NULL
+   ALTER TABLE dbo.ams_mobiles ADD model_number NVARCHAR(200) NULL;
 GO
 IF OBJECT_ID(N'dbo.ams_mobiles', N'U') IS NOT NULL
    AND COL_LENGTH(N'dbo.ams_mobiles', N'serial_number') IS NULL

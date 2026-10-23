@@ -388,6 +388,7 @@ BEGIN
         purchase_site  NVARCHAR(200) NULL,
         assigned_to    NVARCHAR(200) NULL,
         model          NVARCHAR(200) NULL,
+        model_number   NVARCHAR(200) NULL,
         serial_number  NVARCHAR(200) NULL,
         imei1          NVARCHAR(50)  NULL,
         imei2          NVARCHAR(50)  NULL,
@@ -649,6 +650,9 @@ IF OBJECT_ID(N'dbo.ams_assets', N'U') IS NOT NULL
 IF OBJECT_ID(N'dbo.ams_mobiles', N'U') IS NOT NULL
     AND COL_LENGTH(N'dbo.ams_mobiles', N'model') IS NULL
     ALTER TABLE dbo.ams_mobiles ADD model NVARCHAR(200) NULL;
+IF OBJECT_ID(N'dbo.ams_mobiles', N'U') IS NOT NULL
+    AND COL_LENGTH(N'dbo.ams_mobiles', N'model_number') IS NULL
+    ALTER TABLE dbo.ams_mobiles ADD model_number NVARCHAR(200) NULL;
 IF OBJECT_ID(N'dbo.ams_mobiles', N'U') IS NOT NULL
     AND COL_LENGTH(N'dbo.ams_mobiles', N'serial_number') IS NULL
     ALTER TABLE dbo.ams_mobiles ADD serial_number NVARCHAR(200) NULL;
@@ -1057,7 +1061,8 @@ def _build_table_defs():
             c("site", "site"), c("current_site", "currentSite"),
             c("purchase_site", "purchaseSite"),
             c("assigned_to", "assignedTo"),
-            c("model", "model"), c("serial_number", "serialNumber"),
+            c("model", "model"), c("model_number", "modelNumber"),
+            c("serial_number", "serialNumber"),
             c("imei1", "imei1"), c("imei2", "imei2"),
             c("battery_no", "batteryNo"), c("charger_no", "chargerNo"),
             c("sim_mobile_no", "simMobileNo"), c("vendor", "vendor"),

@@ -4,9 +4,11 @@
 #
 #  PURPOSE   : Mobile Master - same lifecycle as Asset Master (Add/Edit,
 #              Assign/Return/Edit Mobile Issue, Transfer, Not Working, Retire /
-#              Scrap, Replace, Asset ID Record, Import / Export / Template) for
-#              mobile phones and handheld devices, stored separately. SIM Card
-#              assignment is available on Assign and Edit Mobile Issue.
+#              Scrap, Replace, Swap, Mobile ID Record, Import / Export / Template)
+#              for mobile phones and handheld devices, stored separately. SIM Card
+#              assignment is available on Assign and Edit Mobile Issue. Optional
+#              Model Number. Swap exchanges two phones (Assigned/In Store) with a
+#              required Move/Keep SIM choice when either phone has a SIM.
 #
 #  FILES USED :
 #    - css/themes.css, css/main.css, css/assets.css
@@ -45,7 +47,7 @@
                 </section>
 
                 <details class="stock-by-type">
-                    <summary>Stock by Asset Type</summary>
+                    <summary>Stock by Mobile Type</summary>
                     <div class="card card-compact">
                         <div class="table-wrap">
                             <table class="table" id="assetStockByTypeTable"></table>
@@ -56,7 +58,7 @@
                 <!-- ==================== TOOLBAR ==================== -->
                 <div class="asset-toolbar">
                     <div class="asset-toolbar-left">
-                        <input type="search" id="searchBox" class="search-input" placeholder="Search Asset ID, type, make, serial...">
+                        <input type="search" id="searchBox" class="search-input" placeholder="Search Mobile ID, type, make, serial...">
                         <select id="siteFilter" class="select" style="width:auto;">
                             <option value="">All Sites</option>
                         </select>
@@ -96,7 +98,7 @@
     </div>
 
     <!-- ====================================================================
-         MODAL : ADD / EDIT ASSET
+          MODAL : ADD / EDIT MOBILE
          ==================================================================== -->
     <div class="modal-overlay" id="modalForm">
         <div class="modal modal-lg">
@@ -108,11 +110,11 @@
                 <div class="modal-body">
                     <div class="form-grid">
                         <div class="field field-full">
-                            <label>AMS Asset ID (auto-generated, Super Root only)</label>
+                            <label>AMS Mobile ID (auto-generated, Super Root only)</label>
                             <div class="ams-id-preview" id="amsAssetIdPreview">AMS-???-000000-000000</div>
                         </div>
                         <div class="field">
-                            <label>Asset ID (Display)</label>
+                            <label>Mobile ID (Display)</label>
                             <input type="text" id="fAssetId" class="input" placeholder="Auto-generated - or enter legacy/custom ID">
                             <div class="form-hint">Leave blank to auto-generate. Legacy-format IDs are accepted as-is.</div>
                         </div>
@@ -136,14 +138,14 @@
                             </div>
                         </div>
                         <div class="field">
-                            <label>Asset Type <span class="req">*</span></label>
+                            <label>Mobile Type <span class="req">*</span></label>
                             <div class="select-with-add">
                                 <select id="fType" class="select" required></select>
-                                <button type="button" class="btn-quickadd" data-quickadd="type" title="Add new Asset Type">+</button>
+                                <button type="button" class="btn-quickadd" data-quickadd="type" title="Add new Mobile Type">+</button>
                                 <div class="quickadd-popover" id="qaPopoverType">
-                                    <label class="qa-label">New Asset Type Name</label>
+                                    <label class="qa-label">New Mobile Type Name</label>
                                     <input type="text" id="qaTypeName" placeholder="e.g. Tablet">
-                                    <label class="qa-label">Shortform (for Asset ID)</label>
+                                    <label class="qa-label">Shortform (for Mobile ID)</label>
                                     <input type="text" id="qaTypeShort" placeholder="e.g. TB" maxlength="4" style="text-transform:uppercase;">
                                     <div class="qa-actions">
                                         <button type="button" class="btn btn-secondary" data-qa-cancel="type">Cancel</button>
@@ -153,10 +155,10 @@
                             </div>
                         </div>
                         <div class="field">
-                            <label>Asset Make <span class="req">*</span></label>
+                            <label>Mobile Make <span class="req">*</span></label>
                             <div class="select-with-add">
                                 <select id="fMake" class="select" required></select>
-                                <button type="button" class="btn-quickadd" data-quickadd="make" title="Add new Asset Make">+</button>
+                                <button type="button" class="btn-quickadd" data-quickadd="make" title="Add new Mobile Make">+</button>
                                 <div class="quickadd-popover" id="qaPopoverMake">
                                     <label class="qa-label">New Make / Brand Name</label>
                                     <input type="text" id="qaMakeName" placeholder="e.g. Asus">
@@ -168,12 +170,16 @@
                             </div>
                         </div>
                         <div class="field">
-                            <label>Asset Name</label>
+                            <label>Mobile Name</label>
                             <input type="text" id="fName" class="input" placeholder="Optional">
                         </div>
                         <div class="field">
-                            <label>Asset Model</label>
+                            <label>Mobile Model</label>
                             <input type="text" id="fModel" class="input" placeholder="Optional">
+                        </div>
+                        <div class="field">
+                            <label>Model Number</label>
+                            <input type="text" id="fModelNumber" class="input" placeholder="Optional">
                         </div>
                         <div class="field">
                             <label>Purchase Site <span class="req">*</span></label>
@@ -183,7 +189,7 @@
                                 <div class="quickadd-popover" id="qaPopoverPurchaseSite">
                                     <label class="qa-label">New Site Name</label>
                                     <input type="text" id="qaPurchaseSiteName" placeholder="e.g. Nagpur">
-                                    <label class="qa-label">Shortform (for Asset ID)</label>
+                                    <label class="qa-label">Shortform (for Mobile ID)</label>
                                     <input type="text" id="qaPurchaseSiteShort" placeholder="e.g. NG" maxlength="4" style="text-transform:uppercase;">
                                     <div class="qa-actions">
                                         <button type="button" class="btn btn-secondary" data-qa-cancel="purchaseSite">Cancel</button>
@@ -200,7 +206,7 @@
                                 <div class="quickadd-popover" id="qaPopoverCurrentSite">
                                     <label class="qa-label">New Site Name</label>
                                     <input type="text" id="qaCurrentSiteName" placeholder="e.g. Nagpur">
-                                    <label class="qa-label">Shortform (for Asset ID)</label>
+                                    <label class="qa-label">Shortform (for Mobile ID)</label>
                                     <input type="text" id="qaCurrentSiteShort" placeholder="e.g. NG" maxlength="4" style="text-transform:uppercase;">
                                     <div class="qa-actions">
                                         <button type="button" class="btn btn-secondary" data-qa-cancel="currentSite">Cancel</button>
@@ -268,7 +274,7 @@
     </div>
 
     <!-- ====================================================================
-         MODAL : VIEW ASSET
+          MODAL : VIEW MOBILE
          ==================================================================== -->
     <div class="modal-overlay" id="modalView">
         <div class="modal">
@@ -278,7 +284,7 @@
             </div>
             <div class="modal-body" id="viewModalBody"></div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" id="btnViewCsv" title="Download this asset's details as a CSV report">Download Report</button>
+                <button type="button" class="btn btn-secondary" id="btnViewCsv" title="Download this mobile's details as a CSV report">Download Report</button>
                 <button type="button" class="btn btn-secondary" data-close="modalView">Close</button>
             </div>
         </div>
@@ -385,12 +391,12 @@
     </div>
 
     <!-- ====================================================================
-         MODAL : TRANSFER ASSET (change Current Site)
-         ==================================================================== -->
+          MODAL : TRANSFER MOBILE (change Current Site)
+          ==================================================================== -->
     <div class="modal-overlay" id="modalTransfer">
         <div class="modal">
             <div class="modal-header">
-                <h3>Transfer Asset</h3>
+                <h3>Transfer Mobile</h3>
                 <button class="modal-close" data-close="modalTransfer">&times;</button>
             </div>
             <div class="modal-body">
@@ -418,36 +424,36 @@
     </div>
 
     <!-- ====================================================================
-         MODAL : REPLACE ASSET (creates a new asset, marks the old one Replaced,
-         links both records)
-         ==================================================================== -->
+          MODAL : REPLACE MOBILE (creates a new mobile, marks the old one Replaced,
+          links both records)
+          ==================================================================== -->
     <div class="modal-overlay" id="modalReplace">
         <div class="modal modal-lg">
             <div class="modal-header">
-                <h3>Replace Asset</h3>
+                <h3>Replace Mobile</h3>
                 <button class="modal-close" data-close="modalReplace">&times;</button>
             </div>
             <form id="replaceForm">
                 <div class="modal-body">
                     <p class="form-hint" style="margin-bottom:12px;">
                         Replacing <strong id="replaceOldAssetLabel"></strong>. Pick an <strong>In-Store (unassigned)</strong>
-                        asset to take over this asset's current assignment. The old asset is marked "Replaced" and both
-                        records stay cross-linked in their Asset ID Record. If no suitable In-Store asset exists, use
-                        <strong>+</strong> to add a new asset first, then select it here.
+                        mobile to take over this mobile's current assignment. The old mobile is marked "Replaced" and both
+                        records stay cross-linked in their Mobile ID Record. If no suitable In-Store mobile exists, use
+                        <strong>+</strong> to add a new mobile first, then select it here.
                     </p>
                     <div class="form-grid">
                         <div class="field">
-                            <label>Asset Type</label>
+                            <label>Mobile Type</label>
                             <select id="replType" class="select"></select>
                             <div class="form-hint" id="replTypeHint"></div>
                         </div>
                         <div class="field">
-                            <label>Replacement Asset <span class="req">*</span></label>
+                            <label>Replacement Mobile <span class="req">*</span></label>
                             <div class="select-with-add">
                                 <select id="replSourceAsset" class="select" required></select>
-                                <button type="button" class="btn-quickadd" id="btnReplaceAddAsset" title="Add a new asset first, then select it here">+</button>
+                                <button type="button" class="btn-quickadd" id="btnReplaceAddAsset" title="Add a new mobile first, then select it here">+</button>
                             </div>
-                            <div class="form-hint">Only In-Store (unassigned) assets of the selected type are listed. The + button opens the Add Asset form.</div>
+                            <div class="form-hint">Only In-Store (unassigned) mobiles of the selected type are listed. The + button opens the Add Mobile form.</div>
                         </div>
                         <div class="field field-full">
                             <div id="replSelectedInfo"></div>
@@ -489,13 +495,92 @@
                                 </div>
                             </div>
                             <div class="accessories-checklist" id="replAccessories"></div>
-                            <div class="form-hint">Accessories handed over with the replacement. Pre-filled from the selected replacement asset, or from the old asset when the replacement has none recorded.</div>
+                            <div class="form-hint">Accessories handed over with the replacement. Pre-filled from the selected replacement mobile, or from the old mobile when the replacement has none recorded.</div>
                         </div>
                     </div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-close="modalReplace">Cancel</button>
                     <button type="submit" class="btn btn-primary">Confirm Replacement</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ====================================================================
+         MODAL : SWAP MOBILE (exchange two phones; SIM Move/Keep required)
+         ==================================================================== -->
+    <div class="modal-overlay" id="modalSwap">
+        <div class="modal modal-lg">
+            <div class="modal-header">
+                <h3>Swap Mobile</h3>
+                <button class="modal-close" data-close="modalSwap">&times;</button>
+            </div>
+            <form id="swapForm">
+                <div class="modal-body">
+                    <p class="form-hint" style="margin-bottom:12px;">
+                        Swapping <strong id="swapSourceLabel"></strong>. Pick another <strong>Assigned</strong>
+                        or <strong>In Store</strong> mobile. Holders and assignment details are exchanged.
+                        If either phone has a SIM, you must choose whether to <strong>Move SIM with holder</strong>
+                        or <strong>Keep SIM in this phone</strong>.
+                    </p>
+                    <div class="form-grid">
+                        <div class="field">
+                            <label>Mobile Type</label>
+                            <select id="swapType" class="select"></select>
+                            <div class="form-hint" id="swapTypeHint"></div>
+                        </div>
+                        <div class="field">
+                            <label>Swap With <span class="req">*</span></label>
+                            <select id="swapTargetMobile" class="select" required></select>
+                            <div class="form-hint">Assigned or In Store mobiles of the selected type (not this phone).</div>
+                        </div>
+                        <div class="field field-full">
+                            <div id="swapSelectedInfo"></div>
+                        </div>
+                        <div class="field">
+                            <label>Swap Date <span class="req">*</span></label>
+                            <input type="date" id="swapDate" class="input" required>
+                        </div>
+                        <div class="field">
+                            <label>Note</label>
+                            <input type="text" id="swapNote" class="input" placeholder="Optional">
+                        </div>
+                        <div class="field field-full" id="swapSimChoiceWrap" style="display:none;">
+                            <label>SIM cards <span class="req">*</span></label>
+                            <div class="form-hint" id="swapSimChoiceHint" style="margin-bottom:8px;"></div>
+                            <label class="pf-check-block" style="display:block;margin-bottom:10px;">
+                                <input type="radio" name="swapSimChoice" value="move">
+                                Move SIM with holder
+                            </label>
+                            <label class="pf-check-block" style="display:block;">
+                                <input type="radio" name="swapSimChoice" value="keep">
+                                Keep SIM in this phone
+                            </label>
+                        </div>
+                        <div class="field field-full">
+                            <div class="accessories-header">
+                                <label>Common / Supportive Accessories (optional)</label>
+                                <div class="quickadd-inline">
+                                    <button type="button" class="btn-quickadd" data-acc-quickadd="swapAccessories" title="Add a missing accessory">+</button>
+                                    <div class="quickadd-popover" id="accQaPopover-swapAccessories">
+                                        <label class="qa-label">New Accessory Name</label>
+                                        <input type="text" id="accQaInput-swapAccessories" placeholder="e.g. Docking Station">
+                                        <div class="qa-actions">
+                                            <button type="button" class="btn btn-secondary" data-acc-qa-cancel="swapAccessories">Cancel</button>
+                                            <button type="button" class="btn btn-primary" data-acc-qa-save="swapAccessories">Add</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="accessories-checklist" id="swapAccessories"></div>
+                            <div class="form-hint">Accessories handed over with this swap. Pre-filled from the selected mobile, or from this phone when the other has none recorded. Saved on the mobile the original holder receives.</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-close="modalSwap">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Confirm Swap</button>
                 </div>
             </form>
         </div>
@@ -535,17 +620,17 @@
     </div>
 
     <!-- ====================================================================
-         MODAL : ASSET ID RECORD (lifecycle history)
-         ==================================================================== -->
+          MODAL : MOBILE ID RECORD (lifecycle history)
+          ==================================================================== -->
     <div class="modal-overlay" id="modalHistory">
         <div class="modal modal-lg">
             <div class="modal-header">
-                <h3>Asset ID Record</h3>
+                <h3>Mobile ID Record</h3>
                 <button class="modal-close" data-close="modalHistory">&times;</button>
             </div>
             <div class="modal-body" id="historyModalBody"></div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" id="btnHistoryCsv" title="Download the asset ID record (lifecycle history) as a CSV report">Download Report</button>
+                <button type="button" class="btn btn-secondary" id="btnHistoryCsv" title="Download the mobile ID record (lifecycle history) as a CSV report">Download Report</button>
                 <button type="button" class="btn btn-secondary" data-close="modalHistory">Close</button>
             </div>
         </div>
