@@ -28,6 +28,7 @@
 
     if (typeof initTheme === "function") initTheme();
     if (typeof buildThemeMenu === "function") buildThemeMenu("theme-select");
+    if (typeof buildStyleMenu === "function") buildStyleMenu("style-select");
     if (typeof amsApplyPortalPrefs === "function") amsApplyPortalPrefs();
 
     /* If a live session already exists, skip the login page entirely. */
@@ -94,13 +95,21 @@
             /* A fresh login should start from the account's real role, not a
                stale role-simulator override left over from earlier testing. */
             try { localStorage.removeItem("ams_viewing_as_role"); } catch (e) { /* storage unavailable */ }
+            var userKey = String(result.username || "").trim().toLowerCase();
             if (typeof applyTheme === "function") {
-                var userKey = String(result.username || "").trim().toLowerCase();
                 var map = (typeof amsReadThemeMap === "function") ? amsReadThemeMap() : {};
                 if (userKey && map[userKey]) {
                     applyTheme(map[userKey]);
                 } else {
                     applyTheme(document.documentElement.getAttribute("data-theme"));
+                }
+            }
+            if (typeof applyUiStyle === "function") {
+                var styleMap = (typeof amsReadStyleMap === "function") ? amsReadStyleMap() : {};
+                if (userKey && styleMap[userKey]) {
+                    applyUiStyle(styleMap[userKey]);
+                } else {
+                    applyUiStyle(document.documentElement.getAttribute("data-ui-style") || "apple");
                 }
             }
             window.location.replace("index.html");

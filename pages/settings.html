@@ -3,7 +3,7 @@
 #-------------- Start Code for : SETTINGS (settings.html) ----------------------
 #
 #  PURPOSE   : Portal preferences hub:
-#                1. Appearance   - theme gallery, font size
+#                1. Appearance   - theme gallery, Style gallery, font size
 #                2. General      - portal name, default list page size, currency
 #                3. Notifications- toast toggle, clear bell / activity log
 #                4. Data         - "Viewing As" role shortcut, reset demo data
@@ -17,15 +17,15 @@
 #    - js/dummy-data.js, js/theme.js, js/app.js, js/layout.js, js/settings.js
 #------------------------------------------------------------------------------
 -->
-<html lang="en" data-theme="platinum" data-ui-style="plain">
+<html lang="en" data-theme="dark-grey" data-ui-style="apple">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Settings | Asset Management System</title>
 
-    <link rel="stylesheet" href="../css/themes.css">
+    <link rel="stylesheet" href="../css/themes.css?v=v40u">
     <link rel="stylesheet" href="../css/main.css">
-    <link rel="stylesheet" href="../css/ui-styles.css">
+    <link rel="stylesheet" href="../css/ui-styles.css?v=v40u">
     <link rel="stylesheet" href="../css/settings.css">
 </head>
 <body>
@@ -60,11 +60,23 @@
                         </div>
                         <div class="card-body">
                              <p class="form-hint" style="margin-bottom:14px;">
-                                 Pick a color theme. Glass is always on. The choice is remembered by your browser and applied on every page.
+                                 Pick a color theme. The choice is remembered per signed-in user and applied on every page.
                              </p>
                              <div class="theme-grid" id="themeGallery"></div>
                          </div>
                      </div>
+
+                    <div class="card">
+                        <div class="card-header">
+                            <h3>Style</h3>
+                        </div>
+                        <div class="card-body">
+                            <p class="form-hint" style="margin-bottom:14px;">
+                                Surface look. Apple is the default. Plain, macOS, iOS, and iPadOS are optional.
+                            </p>
+                            <div class="theme-grid" id="styleGallery"></div>
+                        </div>
+                    </div>
 
                     <div class="card">
                         <div class="card-header">
@@ -170,7 +182,7 @@
     </div>
 
     <script defer src="../js/dummy-data.js"></script>
-    <script defer src="../js/theme.js"></script>
+    <script defer src="../js/theme.js?v=v40u"></script>
     <script defer src="../js/app.js"></script>
     <script defer src="../js/layout.js"></script>
     <script defer src="../js/settings.js"></script>

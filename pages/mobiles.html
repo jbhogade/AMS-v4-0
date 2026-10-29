@@ -15,15 +15,15 @@
 #    - js/dummy-data.js, js/theme.js, js/app.js, js/layout.js, js/mobiles.js
 #------------------------------------------------------------------------------
 -->
-<html lang="en" data-theme="platinum" data-ui-style="plain">
+<html lang="en" data-theme="dark-grey" data-ui-style="apple">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Mobiles | Asset Management System</title>
 
-    <link rel="stylesheet" href="../css/themes.css">
+    <link rel="stylesheet" href="../css/themes.css?v=v40u">
     <link rel="stylesheet" href="../css/main.css">
-    <link rel="stylesheet" href="../css/ui-styles.css">
+    <link rel="stylesheet" href="../css/ui-styles.css?v=v40u">
     <link rel="stylesheet" href="../css/assets.css">
 </head>
 <body>
@@ -238,7 +238,7 @@
                         <div class="field">
                             <label>Mobile No (SIM Card)</label>
                             <select id="fSimMobileNo" class="select"></select>
-                            <div class="form-hint">Attach a number from SIM Card Master. Default is 0 (none).</div>
+                             <div class="form-hint">Personal SIM Card is first. 0 (None) means no SIM. Other rows are company SIMs from SIM Card Master.</div>
                         </div>
                         <div class="field">
                             <label>Purchase Date <span class="req">*</span></label>
@@ -321,7 +321,7 @@
                     <div class="field field-full">
                         <label>SIM Card</label>
                         <select id="assignSimMobileNo" class="select"></select>
-                        <div class="form-hint">Optional - company SIM to issue with this mobile (None by default). Links SIM Card Master and issues the SIM to the same employee.</div>
+                         <div class="form-hint">Optional. Personal SIM Card is first (employee uses their own SIM). None means no SIM. Other rows are company SIMs from SIM Card Master.</div>
                     </div>
                     <div class="field field-full">
                         <label>Assignment Date <span class="req">*</span></label>
@@ -637,7 +637,7 @@
     </div>
 
     <script defer src="../js/dummy-data.js"></script>
-    <script defer src="../js/theme.js"></script>
+    <script defer src="../js/theme.js?v=v40u"></script>
     <script defer src="../js/app.js"></script>
     <script defer src="../js/layout.js"></script>
     <script defer src="../js/sortable.js"></script>

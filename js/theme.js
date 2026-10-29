@@ -1,14 +1,16 @@
 /*==============================================================================
 #-------------- Start Code for : THEME SWITCHER (theme.js) --------------------
 #
-#  PURPOSE   : One Theme dropdown. Color palettes live in themes.css.
-#              Surface look is always plain/solid (css/ui-styles.css) for
-#              lower GPU and RAM use.
+#  PURPOSE   : Theme dropdown (color) plus Style dropdown (Plain / Apple).
+#              Color palettes live in themes.css. Surface look lives in
+#              css/ui-styles.css.
 #
 #  HOW IT WORKS :
 #    - Theme name is saved per signed-in username (ams-theme-by-user).
-#    - Login page (no session) uses the shared ams-theme key.
-#    - Plain solid surfaces are always on. There is no glass Style control.
+#    - Style name is saved per signed-in username (ams-ui-style-by-user).
+#    - Login page (no session) uses shared ams-theme and ams-ui-style keys.
+#    - Nine themes. Removed names map to a kept theme (see THEME_ALIASES).
+#    - Default Style is Apple. Also: Plain, macOS, iOS, iPadOS.
 #
 #  TO ADD A NEW THEME :
 #    1. Add the [data-theme="name"] block in css/themes.css
@@ -18,30 +20,34 @@
 
 /* ---- Available themes (must match the blocks in themes.css) ---------------- */
 const THEMES = [
-    { name: "platinum",   label: "Platinum"  },
-    { name: "dark-gold",  label: "Dark Gold" },
-    { name: "midnight",   label: "Midnight"  },
-    { name: "obsidian",   label: "Obsidian"  },
     { name: "dark-grey",  label: "Dark Grey" },
+    { name: "midnight",   label: "Midnight"  },
     { name: "slate-blue", label: "Slate Blue" },
-    { name: "ice",        label: "Ice"       },
-    { name: "teal",       label: "Teal"      },
-    { name: "forest",     label: "Forest"    },
-    { name: "emerald",    label: "Emerald"   },
-    { name: "purple",     label: "Purple"    },
-    { name: "violet",     label: "Violet"    },
-    { name: "wine",       label: "Wine"      },
-    { name: "crimson",    label: "Crimson"   },
-    { name: "rose-gold",  label: "Rose Gold" },
-    { name: "amber",      label: "Amber"     },
-    { name: "copper",     label: "Copper"    },
     { name: "lite",       label: "Lite"      },
+    { name: "forest",     label: "Forest"    },
+    { name: "purple",     label: "Purple"    },
+    { name: "ice",        label: "Ice"       },
+    { name: "dark-gold",  label: "Dark Gold" },
     { name: "contrast",   label: "Contrast"  }
 ];
 
+const THEME_ALIASES = {
+    blue: "dark-grey",
+    platinum: "dark-grey",
+    obsidian: "midnight",
+    teal: "ice",
+    emerald: "forest",
+    violet: "purple",
+    wine: "dark-gold",
+    crimson: "contrast",
+    "rose-gold": "dark-gold",
+    amber: "dark-gold",
+    copper: "dark-gold"
+};
+
 const THEME_STORAGE_KEY = "ams-theme";
 const THEME_BY_USER_KEY = "ams-theme-by-user";
-const DEFAULT_THEME = "platinum";
+const DEFAULT_THEME = "dark-grey";
 
 function amsThemeUserKey() {
     const sess = (typeof amsGetSession === "function") ? amsGetSession() : null;
@@ -58,7 +64,7 @@ function amsWriteThemeMap(map) {
 }
 
 function amsNormalizeThemeName(name) {
-    if (name === "blue") return DEFAULT_THEME;
+    if (THEME_ALIASES[name]) return THEME_ALIASES[name];
     return THEMES.some(t => t.name === name) ? name : DEFAULT_THEME;
 }
 
@@ -66,7 +72,6 @@ function amsNormalizeThemeName(name) {
 function applyTheme(themeName) {
     const name = amsNormalizeThemeName(themeName);
     document.documentElement.setAttribute("data-theme", name);
-    document.documentElement.setAttribute("data-ui-style", "plain");
     try { localStorage.setItem(THEME_STORAGE_KEY, name); } catch (e) { /* storage unavailable */ }
     const user = amsThemeUserKey();
     if (user) {
@@ -109,30 +114,89 @@ function buildThemeMenu(selectId) {
     });
 }
 
-/* ---- Style API kept as a no-op so older pages do not break ----------------- */
+/* ---- Appearance Style (Apple default) -------------------------------------- */
 const UI_STYLES = [
-    { name: "plain", label: "Plain", hint: "Solid surfaces. Always on." }
+    { name: "plain",  label: "Plain",  hint: "Solid surfaces." },
+    { name: "apple",  label: "Apple",  hint: "Default. macOS on desktop, iOS spacing on narrow screens." },
+    { name: "macos",  label: "macOS",  hint: "Quiet desktop chrome. Compact controls." },
+    { name: "ios",    label: "iOS",    hint: "Pill buttons, 44px taps, sheet-like modals." },
+    { name: "ipados", label: "iPadOS", hint: "Spacious rounded chrome. 44px taps." }
 ];
 const UI_STYLE_STORAGE_KEY = "ams-ui-style";
-const DEFAULT_UI_STYLE = "plain";
+const UI_STYLE_BY_USER_KEY = "ams-ui-style-by-user";
+const DEFAULT_UI_STYLE = "apple";
+const UI_STYLE_ALIASES = {
+    default: "plain",
+    glass: "plain",
+    "liquid-glass": "plain",
+    glassmorphism: "plain",
+    claymorphism: "plain",
+    neomorphism: "plain",
+    skeuomorphism: "plain",
+    minimalism: "plain"
+};
 
-function applyUiStyle() {
-    document.documentElement.setAttribute("data-ui-style", "plain");
-    try { localStorage.setItem(UI_STYLE_STORAGE_KEY, "plain"); } catch (e) { /* storage unavailable */ }
+function amsReadStyleMap() {
+    try { return JSON.parse(localStorage.getItem(UI_STYLE_BY_USER_KEY) || "{}") || {}; }
+    catch (e) { return {}; }
+}
+
+function amsWriteStyleMap(map) {
+    try { localStorage.setItem(UI_STYLE_BY_USER_KEY, JSON.stringify(map)); } catch (e) { /* storage unavailable */ }
+}
+
+function amsNormalizeUiStyle(name) {
+    if (UI_STYLE_ALIASES[name]) return UI_STYLE_ALIASES[name];
+    return UI_STYLES.some(s => s.name === name) ? name : DEFAULT_UI_STYLE;
+}
+
+function applyUiStyle(styleName) {
+    const name = amsNormalizeUiStyle(styleName);
+    document.documentElement.setAttribute("data-ui-style", name);
+    try { localStorage.setItem(UI_STYLE_STORAGE_KEY, name); } catch (e) { /* storage unavailable */ }
+    const user = amsThemeUserKey();
+    if (user) {
+        const map = amsReadStyleMap();
+        map[user] = name;
+        amsWriteStyleMap(map);
+    }
+    document.querySelectorAll("#style-select").forEach(sel => { sel.value = name; });
 }
 
 function loadSavedUiStyle() {
-    return "plain";
+    const user = amsThemeUserKey();
+    if (user) {
+        const map = amsReadStyleMap();
+        if (map[user]) return amsNormalizeUiStyle(map[user]);
+        return DEFAULT_UI_STYLE;
+    }
+    let saved = null;
+    try { saved = localStorage.getItem(UI_STYLE_STORAGE_KEY); } catch (e) { saved = null; }
+    return amsNormalizeUiStyle(saved);
 }
 
-function buildStyleMenu() {
-    /* Style dropdown removed: Theme is the only appearance control. */
+function buildStyleMenu(selectId) {
+    const select = document.getElementById(selectId);
+    if (!select) return;
+
+    UI_STYLES.forEach(style => {
+        const option = document.createElement("option");
+        option.value = style.name;
+        option.textContent = style.label;
+        select.appendChild(option);
+    });
+
+    select.value = loadSavedUiStyle();
+
+    select.addEventListener("change", function () {
+        applyUiStyle(this.value);
+    });
 }
 
 /* ---- Initialise theme when the page loads ---------------------------------- */
 function initTheme() {
     applyTheme(loadSavedTheme());
-    applyUiStyle();
+    applyUiStyle(loadSavedUiStyle());
 }
 
 /*------------------------------------------------------------------------------

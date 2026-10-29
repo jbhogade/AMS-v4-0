@@ -600,7 +600,7 @@ function amsEditingMobile() {
 
 function amsSimChoiceTaken(simNumber, exceptMobile) {
     const num = String(simNumber || "0").trim();
-    if (!num || num === "0") return false;
+    if (!num || num === "0" || num === "__personal__") return false;
     const s = typeof amsFindSimByMobileNumber === "function" ? amsFindSimByMobileNumber(num) : null;
     if (s && typeof amsSimTakenByOtherMobile === "function") return amsSimTakenByOtherMobile(s, exceptMobile);
     const exceptKey = exceptMobile && typeof amsMobileStableId === "function" ? amsMobileStableId(exceptMobile) : "";
@@ -617,8 +617,11 @@ function amsPopulateSimMobileSelect(selected) {
     const current = (selected === undefined || selected === null || selected === "") ? "0" : String(selected);
     const sims = (typeof AMS_DUMMY_SIM_CARDS !== "undefined") ? AMS_DUMMY_SIM_CARDS : [];
     const exceptMobile = amsEditingMobile();
-    const opts = [`<option value="0">0 (None)</option>`];
-    const seen = new Set(["0"]);
+    const opts = [
+        `<option value="__personal__">Personal SIM Card</option>`,
+        `<option value="0">0 (None)</option>`
+    ];
+    const seen = new Set(["0", "__personal__"]);
     sims.forEach(s => {
         if (s.status === "Retired") return;
         const num = String(s.mobileNumber || "").trim();
@@ -630,12 +633,12 @@ function amsPopulateSimMobileSelect(selected) {
         if (s.operator) bits.push(s.operator);
         opts.push(`<option value="${amsEsc(num)}">${amsEsc(bits.join(" · "))}</option>`);
     });
-    if (current !== "0" && !seen.has(current)) {
+    if (current !== "0" && current !== "__personal__" && !seen.has(current)) {
         opts.push(`<option value="${amsEsc(current)}">${amsEsc(current)}</option>`);
     }
     sel.innerHTML = opts.join("");
     sel.value = current;
-    if (sel.value !== current) sel.value = "0";
+    if (sel.value !== current) sel.value = (current === "__personal__") ? "__personal__" : "0";
 }
 
 function amsReadMobileExtraFields() {
@@ -784,7 +787,7 @@ function amsOpenViewModal(key) {
         <div class="detail-row"><span class="detail-label">IMEI No 2</span><span class="detail-value mono-cell">${amsEsc(a.imei2) || "-"}</span></div>
         <div class="detail-row"><span class="detail-label">Battery No</span><span class="detail-value mono-cell">${amsEsc(a.batteryNo) || "-"}</span></div>
         <div class="detail-row"><span class="detail-label">Charger No</span><span class="detail-value mono-cell">${amsEsc(a.chargerNo) || "-"}</span></div>
-        <div class="detail-row"><span class="detail-label">Mobile No (SIM Card)</span><span class="detail-value mono-cell">${amsEsc(a.simMobileNo || "0")}</span></div>
+        <div class="detail-row"><span class="detail-label">Mobile No (SIM Card)</span><span class="detail-value mono-cell">${amsEsc(typeof amsFormatMobileSimNo === "function" ? amsFormatMobileSimNo(a.simMobileNo) : (a.simMobileNo || "0"))}</span></div>
         <div class="detail-row"><span class="detail-label">Purchase Site</span><span class="detail-value">${amsEsc(a.purchaseSite)}</span></div>
         <div class="detail-row"><span class="detail-label">Current Site</span><span class="detail-value">${amsEsc(a.currentSite || a.site)}</span></div>
         <div class="detail-row"><span class="detail-label">Purchase Date</span><span class="detail-value">${amsFormatDate(a.purchaseDate) || "-"}</span></div>
@@ -840,7 +843,7 @@ function amsDownloadAssetView() {
         ["IMEI No 2", a.imei2 || "-"],
         ["Battery No", a.batteryNo || "-"],
         ["Charger No", a.chargerNo || "-"],
-        ["Mobile No (SIM Card)", a.simMobileNo || "0"],
+        ["Mobile No (SIM Card)", typeof amsFormatMobileSimNo === "function" ? amsFormatMobileSimNo(a.simMobileNo) : (a.simMobileNo || "0")],
         ["Purchase Site", a.purchaseSite || "-"],
         ["Current Site", a.currentSite || a.site || "-"],
         ["Purchase Date", amsFormatDate(a.purchaseDate) || "-"],
@@ -906,8 +909,11 @@ function amsPopulateAssignSimSelect(mobile) {
     if (!sel) return;
     const current = String((mobile && mobile.simMobileNo) || "0");
     const sims = (typeof AMS_DUMMY_SIM_CARDS !== "undefined") ? AMS_DUMMY_SIM_CARDS : [];
-    const opts = [`<option value="0">None</option>`];
-    const seen = new Set(["0"]);
+    const opts = [
+        `<option value="__personal__">Personal SIM Card</option>`,
+        `<option value="0">None</option>`
+    ];
+    const seen = new Set(["0", "__personal__"]);
     const mobileKey = typeof amsMobileStableId === "function" ? amsMobileStableId(mobile) : (mobile && (mobile.amsAssetId || mobile.id));
     sims.forEach(s => {
         if (s.status === "Retired" || s.status === "Blocked") return;
@@ -931,12 +937,12 @@ function amsPopulateAssignSimSelect(mobile) {
         }
         opts.push(`<option value="${amsEsc(num)}">${amsEsc(bits.join(" · "))}</option>`);
     });
-    if (current !== "0" && !seen.has(current)) {
+    if (current !== "0" && current !== "__personal__" && !seen.has(current)) {
         opts.push(`<option value="${amsEsc(current)}">${amsEsc(current)}</option>`);
     }
     sel.innerHTML = opts.join("");
     sel.value = current;
-    if (sel.value !== current) sel.value = "0";
+    if (sel.value !== current) sel.value = (current === "__personal__") ? "__personal__" : "0";
 }
 
 function amsOpenAssignModal(key, mode) {
@@ -1318,7 +1324,7 @@ function amsSubmitReplaceForm(e) {
    =========================================================================== */
 function amsMobileHasSim(m) {
     const n = String((m && m.simMobileNo) || "0").trim();
-    return !!n && n !== "0";
+    return !!n && n !== "0" && n !== "__personal__";
 }
 
 function amsMobileHolderSummary(m) {
@@ -1366,8 +1372,8 @@ function amsApplyMobileAssignmentSnapshot(m, snap) {
 function amsRelinkSimAfterSwap(mobile, simNumber, date, note) {
     const num = String(simNumber == null ? (mobile.simMobileNo || "0") : simNumber).trim() || "0";
     mobile.simMobileNo = num;
-    if (num === "0") {
-        if (typeof amsUnlinkMobileSim === "function") return amsUnlinkMobileSim(mobile, false);
+    if (num === "0" || num === "__personal__") {
+        if (num === "0" && typeof amsUnlinkMobileSim === "function") return amsUnlinkMobileSim(mobile, false);
         return false;
     }
     const s = typeof amsFindSimByMobileNumber === "function" ? amsFindSimByMobileNumber(num) : null;
@@ -1843,15 +1849,17 @@ function amsGenerateAssetIssueFormPrint(key, extraRemarks, printScope) {
             <tbody>
                 ${directOwned.length ? directOwned.map((oa, i) => {
                     const mm = typeof amsAssetMakeModel === "function" ? amsAssetMakeModel(oa) : (oa.makeModel || "");
-                    const mobileNo = (oa.simMobileNo && oa.simMobileNo !== "0") ? oa.simMobileNo : "-";
+                    const mobileNo = (oa.simMobileNo && oa.simMobileNo !== "0")
+                        ? (typeof amsFormatMobileSimNo === "function" ? amsFormatMobileSimNo(oa.simMobileNo) : oa.simMobileNo)
+                        : "-";
                     return `
                     <tr>
                         <td>${i + 1}</td>
                         <td class="mono">${amsPrintAssetId(oa)}</td>
                         <td>${amsEsc(oa.type || "-")}${mm ? ` (${amsEsc(mm)})` : ""}</td>
-                        <td class="mono">${amsEsc(oa.imei1 || "-")}</td>
-                        <td class="mono">${amsEsc(oa.imei2 || "-")}</td>
-                        <td class="mono">${amsEsc(oa.batteryNo || "-")}</td>
+                        <td class="mono pf-wrap">${amsEsc(oa.imei1 || "-")}</td>
+                        <td class="mono pf-wrap">${amsEsc(oa.imei2 || "-")}</td>
+                        <td class="mono pf-wrap">${amsEsc(oa.batteryNo || "-")}</td>
                         <td class="mono">${amsEsc(oa.chargerNo || "-")}</td>
                         <td class="mono">${amsEsc(mobileNo)}</td>
                         <td>${amsEsc(oa.currentSite || oa.site || "-")}</td>
@@ -1906,8 +1914,10 @@ function amsGenerateAssetIssueFormPrint(key, extraRemarks, printScope) {
             <tbody>
                 ${subRows.map((sa, i) => {
                     const mm = sa.makeModel || (typeof amsAssetMakeModel === "function" ? amsAssetMakeModel(sa) : "");
-                    const mobileNo = (sa.simMobileNo && sa.simMobileNo !== "0") ? sa.simMobileNo : "-";
-                    return `<tr><td>${i + 1}</td><td class="mono">${sa.id}</td><td>${amsEsc(sa.type || "-")}${mm ? ` (${amsEsc(mm)})` : ""}</td><td class="mono">${amsEsc(sa.imei1 || "-")}</td><td class="mono">${amsEsc(mobileNo)}</td><td>${amsEsc(sa.holder)}</td><td class="mono">${sa.holderId ? amsEsc(sa.holderId) : "-"}</td><td>${amsEsc(sa.site || "-")}</td><td>${amsEsc(sa.issueDate || "-")}</td></tr>`;
+                    const mobileNo = (sa.simMobileNo && sa.simMobileNo !== "0")
+                        ? (typeof amsFormatMobileSimNo === "function" ? amsFormatMobileSimNo(sa.simMobileNo) : sa.simMobileNo)
+                        : "-";
+                    return `<tr><td>${i + 1}</td><td class="mono">${sa.id}</td><td>${amsEsc(sa.type || "-")}${mm ? ` (${amsEsc(mm)})` : ""}</td><td class="mono pf-wrap">${amsEsc(sa.imei1 || "-")}</td><td class="mono">${amsEsc(mobileNo)}</td><td>${amsEsc(sa.holder)}</td><td class="mono">${sa.holderId ? amsEsc(sa.holderId) : "-"}</td><td>${amsEsc(sa.site || "-")}</td><td>${amsEsc(sa.issueDate || "-")}</td></tr>`;
                 }).join("")}
             </tbody>
         </table>` : "";
