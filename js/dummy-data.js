@@ -1463,8 +1463,18 @@ function amsFindMobileByRef(ref) {
 
 function amsFindSimByMobileNumber(num) {
     const n = String(num || "").trim();
-    if (!n || n === "0") return null;
+    if (!n || n === "0" || n === "__personal__") return null;
     return AMS_DUMMY_SIM_CARDS.find(s => String(s.mobileNumber || "").trim() === n) || null;
+}
+
+function amsIsPersonalSimChoice(val) {
+    return String(val || "").trim() === "__personal__";
+}
+
+function amsFormatMobileSimNo(val) {
+    const n = String(val == null ? "0" : val).trim() || "0";
+    if (n === "__personal__") return "Personal SIM Card";
+    return n;
 }
 
 function amsSimMatchesMobile(s, m) {
@@ -1587,8 +1597,8 @@ function amsSyncMobileToSimNumber(mobile, simNumber, empId, assignDate) {
             simsChanged = true;
         }
     });
-    if (num === "0") {
-        mobile.simMobileNo = "0";
+    if (num === "0" || num === "__personal__") {
+        mobile.simMobileNo = num === "__personal__" ? "__personal__" : "0";
         return simsChanged;
     }
     const s = amsFindSimByMobileNumber(num);
@@ -1638,7 +1648,7 @@ function amsUnlinkMobileSim(mobile, returnSim) {
     const num = String(mobile.simMobileNo || "0").trim();
     let simsChanged = false;
     AMS_DUMMY_SIM_CARDS.forEach(s => {
-        const sameNumber = num && num !== "0" && String(s.mobileNumber || "").trim() === num && !s.personalMobile;
+        const sameNumber = num && num !== "0" && num !== "__personal__" && String(s.mobileNumber || "").trim() === num && !s.personalMobile;
         const matched = amsSimMatchesMobile(s, mobile)
             || (sameNumber && (!s.linkedMobileId || amsSimMatchesMobile(s, mobile)));
         if (!matched) return;
@@ -2831,7 +2841,9 @@ function amsBuildPrintMobilesSectionHtml(directList, subList, opts) {
         const mm = amsAssetMakeModel(m);
         return `${amsEsc(m.type || "-")}${mm ? ` (${amsEsc(mm)})` : ""}`;
     };
-    const mobileNo = m => (m.simMobileNo && m.simMobileNo !== "0") ? m.simMobileNo : "-";
+    const mobileNo = m => (m.simMobileNo && m.simMobileNo !== "0")
+        ? (typeof amsFormatMobileSimNo === "function" ? amsFormatMobileSimNo(m.simMobileNo) : m.simMobileNo)
+        : "-";
     let html = "";
     const mobileTitle = (opts && opts.returnedLabel) ? "Mobiles Returned" : "Mobiles Issued";
     if (directList && directList.length) {
@@ -2851,9 +2863,9 @@ function amsBuildPrintMobilesSectionHtml(directList, subList, opts) {
                         <td>${i + 1}</td>
                         <td class="mono">${amsEsc(amsPrintAssetId(m))}</td>
                         <td>${typeLabel(m)}</td>
-                        <td class="mono">${amsEsc(m.imei1 || "-")}</td>
-                        <td class="mono">${amsEsc(m.imei2 || "-")}</td>
-                        <td class="mono">${amsEsc(m.batteryNo || "-")}</td>
+                        <td class="mono pf-wrap">${amsEsc(m.imei1 || "-")}</td>
+                        <td class="mono pf-wrap">${amsEsc(m.imei2 || "-")}</td>
+                        <td class="mono pf-wrap">${amsEsc(m.batteryNo || "-")}</td>
                         <td class="mono">${amsEsc(m.chargerNo || "-")}</td>
                         <td class="mono">${amsEsc(mobileNo(m))}</td>
                         <td>${amsEsc(m.currentSite || m.site || "-")}</td>
@@ -2879,7 +2891,7 @@ function amsBuildPrintMobilesSectionHtml(directList, subList, opts) {
                         <td>${i + 1}</td>
                         <td class="mono">${amsEsc(m.id || amsPrintAssetId(m))}</td>
                         <td>${typeLabel(m)}</td>
-                        <td class="mono">${amsEsc(m.imei1 || "-")}</td>
+                        <td class="mono pf-wrap">${amsEsc(m.imei1 || "-")}</td>
                         <td class="mono">${amsEsc(mobileNo(m))}</td>
                         <td>${amsEsc(m.holder || m.subName || "-")}</td>
                         <td class="mono">${m.holderId || m.subEmpId ? amsEsc(m.holderId || m.subEmpId) : "-"}</td>

@@ -1,12 +1,9 @@
 /*==============================================================================
 #-------------- Start Code for : UI STYLES (ui-styles.css) ---------------------
 #
-#  PURPOSE   : Plain solid surfaces for lower GPU/RAM use. Color still comes
-#              from data-theme (themes.css). Glass, blur, streaks, and
-#              color-mix overlays are off.
-#
-#  LOOK      : Opaque cards, sidebar, topbar, modals, and inputs. No
-#              backdrop-filter, no Halo streaks, no geometric lattice.
+#  PURPOSE   : Surface look. Default is Plain (solid, no blur). Optional
+#              Styles: Apple, macOS, iOS, iPadOS (data-ui-style). Color
+#              still comes from data-theme (themes.css).
 #------------------------------------------------------------------------------*/
 
 html:not(.login-page) body {
@@ -127,6 +124,422 @@ html.login-page .login-wrap::before,
 html.login-page .login-wrap::after {
     display: none;
     content: none;
+}
+
+/* =============================================================================
+   APPLE STYLE  (optional; default remains Plain)
+   ===========================================================================*/
+html[data-ui-style="apple"] body {
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", system-ui, sans-serif;
+    letter-spacing: -0.011em;
+}
+
+html[data-ui-style="apple"] .sidebar,
+html[data-ui-style="apple"] .topbar,
+html[data-ui-style="apple"] .user-chip-menu,
+html[data-ui-style="apple"] .notif-bell-panel,
+html[data-ui-style="apple"] .ams-toast,
+html[data-ui-style="apple"] .actions-menu,
+html[data-ui-style="apple"] .ams-date-pop,
+html[data-ui-style="apple"] .modal,
+html[data-ui-style="apple"] .login-card {
+    background: color-mix(in srgb, var(--bg-card) 82%, transparent);
+    backdrop-filter: saturate(180%) blur(12px);
+    -webkit-backdrop-filter: saturate(180%) blur(12px);
+    border-radius: 16px;
+    box-shadow: var(--shadow);
+}
+
+html[data-ui-style="apple"] .sidebar {
+    background: color-mix(in srgb, var(--bg-sidebar) 86%, transparent);
+    border-radius: 0;
+}
+
+html[data-ui-style="apple"] .topbar {
+    border-radius: 0;
+}
+
+html[data-ui-style="apple"] .card,
+html[data-ui-style="apple"] .kpi-card {
+    background: var(--bg-card);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    border-radius: 12px;
+    box-shadow: var(--shadow);
+}
+
+html[data-ui-style="apple"] .user-chip,
+html[data-ui-style="apple"] .btn,
+html[data-ui-style="apple"] .input,
+html[data-ui-style="apple"] .select,
+html[data-ui-style="apple"] .textarea,
+html[data-ui-style="apple"] .col-filter-input,
+html[data-ui-style="apple"] .actions-trigger,
+html[data-ui-style="apple"] .actions-btn,
+html[data-ui-style="apple"] input[type="date"],
+html[data-ui-style="apple"] .form-field input[type="date"],
+html[data-ui-style="apple"] .ams-date-pop-nav,
+html[data-ui-style="apple"] .ams-date-pop-foot button,
+html[data-ui-style="apple"] .ams-date-pop-title-btn,
+html[data-ui-style="apple"] .login-theme-bar .select,
+html[data-ui-style="apple"] .login-form input {
+    border-radius: 10px;
+}
+
+html[data-ui-style="apple"] .login-form input,
+html[data-ui-style="apple"] .input,
+html[data-ui-style="apple"] .select,
+html[data-ui-style="apple"] .textarea,
+html[data-ui-style="apple"] .col-filter-input {
+    min-height: 36px;
+}
+
+html[data-ui-style="apple"] .btn-primary,
+html[data-ui-style="apple"] .btn-login {
+    border-radius: 999px;
+    background: var(--accent);
+    color: var(--accent-contrast);
+}
+
+html[data-ui-style="apple"] .btn-primary:hover,
+html[data-ui-style="apple"] .btn-login:hover {
+    background: var(--accent-hover);
+    color: var(--accent-contrast);
+}
+
+html[data-ui-style="apple"] .quickadd-popover {
+    background: var(--bg-elevated);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+}
+
+html[data-ui-style="apple"] .col-filter-row th.col-filter-cell,
+html[data-ui-style="apple"] .table thead th {
+    background: var(--bg-elevated);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+}
+
+@media (max-width: 768px) {
+    html[data-ui-style="apple"] .btn,
+    html[data-ui-style="apple"] .btn-primary,
+    html[data-ui-style="apple"] .btn-login,
+    html[data-ui-style="apple"] .input,
+    html[data-ui-style="apple"] .select,
+    html[data-ui-style="apple"] .login-form input {
+        min-height: 44px;
+    }
+    html[data-ui-style="apple"] .app-content {
+        padding: 20px 18px 40px;
+    }
+}
+
+@media (prefers-reduced-transparency: reduce) {
+    html[data-ui-style="apple"] .sidebar,
+    html[data-ui-style="apple"] .topbar,
+    html[data-ui-style="apple"] .user-chip-menu,
+    html[data-ui-style="apple"] .notif-bell-panel,
+    html[data-ui-style="apple"] .ams-toast,
+    html[data-ui-style="apple"] .actions-menu,
+    html[data-ui-style="apple"] .ams-date-pop,
+    html[data-ui-style="apple"] .modal,
+    html[data-ui-style="apple"] .login-card {
+        background: var(--bg-card);
+        backdrop-filter: none;
+        -webkit-backdrop-filter: none;
+    }
+    html[data-ui-style="apple"] .sidebar {
+        background: var(--bg-sidebar);
+    }
+}
+
+/* =============================================================================
+   macOS  (compact desktop chrome)
+   ===========================================================================*/
+html[data-ui-style="macos"] body {
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", system-ui, sans-serif;
+    letter-spacing: -0.011em;
+}
+
+html[data-ui-style="macos"] .sidebar,
+html[data-ui-style="macos"] .topbar,
+html[data-ui-style="macos"] .user-chip-menu,
+html[data-ui-style="macos"] .notif-bell-panel,
+html[data-ui-style="macos"] .ams-toast,
+html[data-ui-style="macos"] .actions-menu,
+html[data-ui-style="macos"] .ams-date-pop,
+html[data-ui-style="macos"] .modal,
+html[data-ui-style="macos"] .login-card {
+    background: color-mix(in srgb, var(--bg-card) 90%, transparent);
+    backdrop-filter: saturate(160%) blur(8px);
+    -webkit-backdrop-filter: saturate(160%) blur(8px);
+    border-radius: 10px;
+    box-shadow: var(--shadow);
+}
+
+html[data-ui-style="macos"] .sidebar,
+html[data-ui-style="macos"] .topbar {
+    background: color-mix(in srgb, var(--bg-sidebar) 92%, transparent);
+    border-radius: 0;
+}
+
+html[data-ui-style="macos"] .card,
+html[data-ui-style="macos"] .kpi-card {
+    background: var(--bg-card);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    border-radius: 10px;
+    box-shadow: var(--shadow);
+}
+
+html[data-ui-style="macos"] .user-chip,
+html[data-ui-style="macos"] .btn,
+html[data-ui-style="macos"] .input,
+html[data-ui-style="macos"] .select,
+html[data-ui-style="macos"] .textarea,
+html[data-ui-style="macos"] .col-filter-input,
+html[data-ui-style="macos"] .actions-trigger,
+html[data-ui-style="macos"] .actions-btn,
+html[data-ui-style="macos"] input[type="date"],
+html[data-ui-style="macos"] .form-field input[type="date"],
+html[data-ui-style="macos"] .login-theme-bar .select,
+html[data-ui-style="macos"] .login-form input {
+    border-radius: 8px;
+}
+
+html[data-ui-style="macos"] .btn-primary,
+html[data-ui-style="macos"] .btn-login {
+    border-radius: 8px;
+    background: var(--accent);
+    color: var(--accent-contrast);
+}
+
+html[data-ui-style="macos"] .btn-primary:hover,
+html[data-ui-style="macos"] .btn-login:hover {
+    background: var(--accent-hover);
+    color: var(--accent-contrast);
+}
+
+html[data-ui-style="macos"] .quickadd-popover {
+    background: var(--bg-elevated);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+}
+
+html[data-ui-style="macos"] .col-filter-row th.col-filter-cell,
+html[data-ui-style="macos"] .table thead th {
+    background: var(--bg-elevated);
+}
+
+/* =============================================================================
+   iOS  (pill buttons, 44px taps, sheet modals)
+   ===========================================================================*/
+html[data-ui-style="ios"] body {
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", system-ui, sans-serif;
+    letter-spacing: -0.016em;
+}
+
+html[data-ui-style="ios"] .sidebar,
+html[data-ui-style="ios"] .topbar,
+html[data-ui-style="ios"] .user-chip-menu,
+html[data-ui-style="ios"] .notif-bell-panel,
+html[data-ui-style="ios"] .ams-toast,
+html[data-ui-style="ios"] .actions-menu,
+html[data-ui-style="ios"] .ams-date-pop,
+html[data-ui-style="ios"] .modal,
+html[data-ui-style="ios"] .login-card {
+    background: color-mix(in srgb, var(--bg-card) 78%, transparent);
+    backdrop-filter: saturate(180%) blur(16px);
+    -webkit-backdrop-filter: saturate(180%) blur(16px);
+    border-radius: 20px;
+    box-shadow: var(--shadow);
+}
+
+html[data-ui-style="ios"] .sidebar,
+html[data-ui-style="ios"] .topbar {
+    background: color-mix(in srgb, var(--bg-sidebar) 82%, transparent);
+    border-radius: 0;
+}
+
+html[data-ui-style="ios"] .card,
+html[data-ui-style="ios"] .kpi-card {
+    background: var(--bg-card);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    border-radius: 16px;
+    box-shadow: var(--shadow);
+}
+
+html[data-ui-style="ios"] .user-chip,
+html[data-ui-style="ios"] .btn,
+html[data-ui-style="ios"] .input,
+html[data-ui-style="ios"] .select,
+html[data-ui-style="ios"] .textarea,
+html[data-ui-style="ios"] .col-filter-input,
+html[data-ui-style="ios"] .actions-trigger,
+html[data-ui-style="ios"] .actions-btn,
+html[data-ui-style="ios"] input[type="date"],
+html[data-ui-style="ios"] .form-field input[type="date"],
+html[data-ui-style="ios"] .login-theme-bar .select,
+html[data-ui-style="ios"] .login-form input {
+    border-radius: 12px;
+    min-height: 44px;
+}
+
+html[data-ui-style="ios"] .user-chip {
+    border-radius: 999px;
+}
+
+html[data-ui-style="ios"] .btn-primary,
+html[data-ui-style="ios"] .btn-login {
+    border-radius: 999px;
+    min-height: 44px;
+    background: var(--accent);
+    color: var(--accent-contrast);
+}
+
+html[data-ui-style="ios"] .btn-primary:hover,
+html[data-ui-style="ios"] .btn-login:hover {
+    background: var(--accent-hover);
+    color: var(--accent-contrast);
+}
+
+html[data-ui-style="ios"] .app-content {
+    padding: 22px 20px 48px;
+}
+
+html[data-ui-style="ios"] .quickadd-popover {
+    background: var(--bg-elevated);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+}
+
+html[data-ui-style="ios"] .col-filter-row th.col-filter-cell,
+html[data-ui-style="ios"] .table thead th {
+    background: var(--bg-elevated);
+}
+
+/* =============================================================================
+   iPadOS  (spacious rounded chrome, 44px taps)
+   ===========================================================================*/
+html[data-ui-style="ipados"] body {
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", system-ui, sans-serif;
+    letter-spacing: -0.013em;
+}
+
+html[data-ui-style="ipados"] .sidebar,
+html[data-ui-style="ipados"] .topbar,
+html[data-ui-style="ipados"] .user-chip-menu,
+html[data-ui-style="ipados"] .notif-bell-panel,
+html[data-ui-style="ipados"] .ams-toast,
+html[data-ui-style="ipados"] .actions-menu,
+html[data-ui-style="ipados"] .ams-date-pop,
+html[data-ui-style="ipados"] .modal,
+html[data-ui-style="ipados"] .login-card {
+    background: color-mix(in srgb, var(--bg-card) 84%, transparent);
+    backdrop-filter: saturate(170%) blur(14px);
+    -webkit-backdrop-filter: saturate(170%) blur(14px);
+    border-radius: 14px;
+    box-shadow: var(--shadow);
+}
+
+html[data-ui-style="ipados"] .sidebar,
+html[data-ui-style="ipados"] .topbar {
+    background: color-mix(in srgb, var(--bg-sidebar) 88%, transparent);
+    border-radius: 0;
+}
+
+html[data-ui-style="ipados"] .card,
+html[data-ui-style="ipados"] .kpi-card {
+    background: var(--bg-card);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    border-radius: 14px;
+    box-shadow: var(--shadow);
+}
+
+html[data-ui-style="ipados"] .user-chip,
+html[data-ui-style="ipados"] .btn,
+html[data-ui-style="ipados"] .input,
+html[data-ui-style="ipados"] .select,
+html[data-ui-style="ipados"] .textarea,
+html[data-ui-style="ipados"] .col-filter-input,
+html[data-ui-style="ipados"] .actions-trigger,
+html[data-ui-style="ipados"] .actions-btn,
+html[data-ui-style="ipados"] input[type="date"],
+html[data-ui-style="ipados"] .form-field input[type="date"],
+html[data-ui-style="ipados"] .login-theme-bar .select,
+html[data-ui-style="ipados"] .login-form input {
+    border-radius: 12px;
+    min-height: 44px;
+}
+
+html[data-ui-style="ipados"] .btn-primary,
+html[data-ui-style="ipados"] .btn-login {
+    border-radius: 12px;
+    min-height: 44px;
+    background: var(--accent);
+    color: var(--accent-contrast);
+}
+
+html[data-ui-style="ipados"] .btn-primary:hover,
+html[data-ui-style="ipados"] .btn-login:hover {
+    background: var(--accent-hover);
+    color: var(--accent-contrast);
+}
+
+html[data-ui-style="ipados"] .app-content {
+    padding: 28px 32px 52px;
+}
+
+html[data-ui-style="ipados"] .quickadd-popover {
+    background: var(--bg-elevated);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+}
+
+html[data-ui-style="ipados"] .col-filter-row th.col-filter-cell,
+html[data-ui-style="ipados"] .table thead th {
+    background: var(--bg-elevated);
+}
+
+@media (prefers-reduced-transparency: reduce) {
+    html[data-ui-style="macos"] .sidebar,
+    html[data-ui-style="macos"] .topbar,
+    html[data-ui-style="macos"] .user-chip-menu,
+    html[data-ui-style="macos"] .notif-bell-panel,
+    html[data-ui-style="macos"] .ams-toast,
+    html[data-ui-style="macos"] .actions-menu,
+    html[data-ui-style="macos"] .ams-date-pop,
+    html[data-ui-style="macos"] .modal,
+    html[data-ui-style="macos"] .login-card,
+    html[data-ui-style="ios"] .sidebar,
+    html[data-ui-style="ios"] .topbar,
+    html[data-ui-style="ios"] .user-chip-menu,
+    html[data-ui-style="ios"] .notif-bell-panel,
+    html[data-ui-style="ios"] .ams-toast,
+    html[data-ui-style="ios"] .actions-menu,
+    html[data-ui-style="ios"] .ams-date-pop,
+    html[data-ui-style="ios"] .modal,
+    html[data-ui-style="ios"] .login-card,
+    html[data-ui-style="ipados"] .sidebar,
+    html[data-ui-style="ipados"] .topbar,
+    html[data-ui-style="ipados"] .user-chip-menu,
+    html[data-ui-style="ipados"] .notif-bell-panel,
+    html[data-ui-style="ipados"] .ams-toast,
+    html[data-ui-style="ipados"] .actions-menu,
+    html[data-ui-style="ipados"] .ams-date-pop,
+    html[data-ui-style="ipados"] .modal,
+    html[data-ui-style="ipados"] .login-card {
+        background: var(--bg-card);
+        backdrop-filter: none;
+        -webkit-backdrop-filter: none;
+    }
+    html[data-ui-style="macos"] .sidebar,
+    html[data-ui-style="ios"] .sidebar,
+    html[data-ui-style="ipados"] .sidebar {
+        background: var(--bg-sidebar);
+    }
 }
 
 /*------------------------------------------------------------------------------

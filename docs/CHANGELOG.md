@@ -1,5 +1,28 @@
 # AMS-v4-0 change log
 
+## 2026-10-28 — Default Style is Apple
+
+Default Theme stays **Dark Grey**. Default Style is now **Apple**
+(was Plain). HTML `data-ui-style="apple"`. Users with no saved Style
+get Apple. Saved per-user Style is unchanged. Cache-bust `?v=v40u`.
+Hard-refresh (Ctrl+F5). If Style still shows Plain, pick Apple once.
+
+## 2026-10-27 — Nine themes (Dark Grey default) + Appearance Style
+
+Same nine palettes as AMS-Test. Default Theme is **Dark Grey**. Default
+Style is **Apple**. Optional Styles: Plain, macOS, iOS, iPadOS.
+
+- Topbar and login: Theme + Style dropdowns.
+- Settings > Appearance: Theme gallery (9) and Style gallery.
+- Saved per signed-in username (`ams-theme-by-user`, `ams-ui-style-by-user`).
+- Removed names map: platinum/blue -> dark-grey, obsidian -> midnight,
+  teal -> ice, emerald -> forest, violet -> purple, wine/rose-gold/amber/copper
+  -> dark-gold, crimson -> contrast.
+- `applyTheme` no longer forces `data-ui-style="plain"`.
+- Cache-bust `?v=v40u` on `css/themes.css`, `css/ui-styles.css`, `js/theme.js`.
+
+Hard-refresh (Ctrl+F5). Try Dark Grey + Apple, then Plain.
+
 ## 2026-10-23 — Django HTTPS packages
 
 `server/ams_django/requirements.txt` now includes `uvicorn==0.34.2` and

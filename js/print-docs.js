@@ -189,6 +189,11 @@ function amsPrintDocument(printContent, pageTitle, orientation) {
                     border-top: 1px solid #ccc; margin-top: 20px; padding-top: 8px; }
 
                 .mono { font-family: 'Consolas', monospace; }
+                .pf-asset-table td.pf-wrap {
+                    overflow-wrap: anywhere;
+                    word-break: break-word;
+                    max-width: 7.2em;
+                }
                 ${pageRule}
                 @media print { body { padding: ${landscape ? "10mm 14mm" : "8mm 12mm"}; } }
                 /*-------------- End of the code --------------------------------*/

@@ -11,8 +11,9 @@
 #
 #  LOOK      : Plain solid login pane (theme tokens). Username / password
 #              only - no Sign Up, no social.
-#              Theme dropdown here writes the shared ams-theme key. After
-#              sign-in, Theme and sidebar Show/Hide are stored per username.
+#              Theme and Style dropdowns here write shared ams-theme and
+#              ams-ui-style keys. After sign-in, Theme, Style, and sidebar
+#              Show/Hide are stored per username.
 #
 #  FILES USED BY THIS PAGE :
 #    - css/themes.css   (color themes)
@@ -26,14 +27,14 @@
 #    password : Sr#Ops@2026   (Supreme Root)
 #------------------------------------------------------------------------------
 -->
-<html lang="en" class="login-page" data-theme="platinum" data-ui-style="plain">
+<html lang="en" class="login-page" data-theme="dark-grey" data-ui-style="apple">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sign In | Asset Management System</title>
-    <link rel="stylesheet" href="css/themes.css">
+    <link rel="stylesheet" href="css/themes.css?v=v40u">
     <link rel="stylesheet" href="css/main.css">
-    <link rel="stylesheet" href="css/ui-styles.css">
+    <link rel="stylesheet" href="css/ui-styles.css?v=v40u">
     <style>
         html.login-page .login-wrap {
             min-height: 100vh;
@@ -52,6 +53,10 @@
             top: 18px;
             right: 18px;
             z-index: 2;
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            justify-content: flex-end;
         }
         html.login-page .login-theme-bar .select {
             width: auto;
@@ -212,6 +217,7 @@
     <div class="login-wrap">
         <div class="login-theme-bar">
             <select class="select" id="theme-select" aria-label="Theme"></select>
+            <select class="select" id="style-select" aria-label="Style"></select>
         </div>
         <div class="login-card">
             <div class="login-brand">
@@ -250,7 +256,7 @@
     </div>
 
     <script defer src="js/dummy-data.js"></script>
-    <script defer src="js/theme.js"></script>
+    <script defer src="js/theme.js?v=v40u"></script>
     <script defer src="js/login.js"></script>
 </body>
 </html>

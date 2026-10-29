@@ -3,8 +3,8 @@
 #
 #  PURPOSE   : Styles unique to the Settings page - the tab strip (mirrors the
 #              System Admin / Report tab look), the theme gallery cards with
-#              live CSS-variable previews, font-size picker, stat rows.
-#              Style gallery was removed: Theme is the only appearance control.
+#              live CSS-variable previews, Style gallery (Plain / Apple),
+#              font-size picker, stat rows.
 #
 #  COLORS    : theme-variable only (see themes.css) - no hardcoded hex here.
 #------------------------------------------------------------------------------*/
