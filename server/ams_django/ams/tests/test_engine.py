@@ -29,6 +29,7 @@ class RegistryTests(unittest.TestCase):
             "reportPrefs", "users", "exitRecords", "consumableLog", "sparePartLog",
             "simCards", "simOperators", "simPlans", "consumableCategories",
             "consumableUnits", "sparePartCategories", "vendorCategories",
+            "assignmentEvents", "activityLog",
         }
         self.assertEqual(ALLOWED_KEYS, expected)
         self.assertEqual(len(TABLE_DEFS), len(expected))
@@ -42,8 +43,24 @@ class RegistryTests(unittest.TestCase):
             self.assertIsNotNone(d.fixed_key)
 
     def test_log_collections_have_no_key_field(self):
-        for key in ("consumableLog", "sparePartLog"):
+        for key in ("consumableLog", "sparePartLog", "assignmentEvents", "activityLog"):
             self.assertIsNone(KEY_INDEX[key].key_field)
+
+    def test_assignment_columns_promoted(self):
+        asset_cols = {c.sql for c in KEY_INDEX["assets"].columns}
+        mobile_cols = {c.sql for c in KEY_INDEX["mobiles"].columns}
+        sim_cols = {c.sql for c in KEY_INDEX["simCards"].columns}
+        event_cols = {c.sql for c in KEY_INDEX["assignmentEvents"].columns}
+        log_cols = {c.sql for c in KEY_INDEX["activityLog"].columns}
+        self.assertIn("assigned_to_subordinate", asset_cols)
+        self.assertIn("assigned_date", asset_cols)
+        self.assertIn("assigned_to_subordinate", mobile_cols)
+        self.assertIn("assigned_date", mobile_cols)
+        self.assertIn("assigned_to_subordinate", sim_cols)
+        self.assertIn("item_kind", event_cols)
+        self.assertIn("item_key", event_cols)
+        self.assertIn("log_time", log_cols)
+        self.assertIn("message", log_cols)
 
     def test_employees_table_has_site_column(self):
         cols = {c.sql for c in KEY_INDEX["employees"].columns}

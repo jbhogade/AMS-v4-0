@@ -373,6 +373,9 @@ BEGIN
         current_site   NVARCHAR(200) NULL,
         purchase_site  NVARCHAR(200) NULL,
         assigned_to    NVARCHAR(200) NULL,
+        assigned_to_subordinate NVARCHAR(200) NULL,
+        assigned_sub_text NVARCHAR(300) NULL,
+        assigned_date  NVARCHAR(20)  NULL,
         model          NVARCHAR(200) NULL,
         serial_number  NVARCHAR(200) NULL,
         vendor         NVARCHAR(200) NULL,
@@ -423,6 +426,9 @@ BEGIN
         current_site   NVARCHAR(200) NULL,
         purchase_site  NVARCHAR(200) NULL,
         assigned_to    NVARCHAR(200) NULL,
+        assigned_to_subordinate NVARCHAR(200) NULL,
+        assigned_sub_text NVARCHAR(300) NULL,
+        assigned_date  NVARCHAR(20)  NULL,
         model          NVARCHAR(200) NULL,
         model_number   NVARCHAR(200) NULL,
         serial_number  NVARCHAR(200) NULL,
@@ -621,6 +627,8 @@ BEGIN
         vendor           NVARCHAR(200) NULL,
         cost             NVARCHAR(50)  NULL,
         assigned_date    NVARCHAR(20)  NULL,
+        assigned_to_subordinate NVARCHAR(200) NULL,
+        assigned_sub_text NVARCHAR(300) NULL,
         linked_mobile_id NVARCHAR(200) NULL,
         personal_mobile  BIT           NULL,
         site             NVARCHAR(200) NULL,
@@ -1073,6 +1081,70 @@ IF OBJECT_ID(N'dbo.ams_spare_part_log', N'U') IS NOT NULL
     CREATE INDEX IX_ams_spare_part_log_part_id ON dbo.ams_spare_part_log(part_id);
 GO
 
+/* Assignment / unassignment event log (assets, mobiles, SIMs). */
+IF OBJECT_ID(N'dbo.ams_assignment_events', N'U') IS NULL
+BEGIN
+    CREATE TABLE dbo.ams_assignment_events (
+        row_id                  BIGINT IDENTITY(1,1) NOT NULL,
+        record_key              NVARCHAR(200) NOT NULL,
+        event_date              NVARCHAR(20)  NULL,
+        action                  NVARCHAR(200) NULL,
+        item_kind               NVARCHAR(50)  NULL,
+        item_key                NVARCHAR(200) NULL,
+        assigned_to             NVARCHAR(200) NULL,
+        emp_id                  NVARCHAR(100) NULL,
+        emp_name                NVARCHAR(300) NULL,
+        emp_dept                NVARCHAR(200) NULL,
+        assigned_to_subordinate NVARCHAR(200) NULL,
+        assigned_sub_text       NVARCHAR(300) NULL,
+        accessories             NVARCHAR(500) NULL,
+        status_after            NVARCHAR(100) NULL,
+        item_id_full            NVARCHAR(200) NULL,
+        remarks                 NVARCHAR(500) NULL,
+        actor_username          NVARCHAR(100) NULL,
+        actor_role              NVARCHAR(50)  NULL,
+        data_json               NVARCHAR(MAX) NOT NULL,
+        updated_at              DATETIME2     NOT NULL DEFAULT SYSUTCDATETIME(),
+        CONSTRAINT PK_ams_assignment_events PRIMARY KEY (row_id)
+    );
+END
+GO
+IF OBJECT_ID(N'dbo.ams_assignment_events', N'U') IS NOT NULL
+    AND COL_LENGTH(N'dbo.ams_assignment_events', N'item_kind') IS NOT NULL
+    AND COL_LENGTH(N'dbo.ams_assignment_events', N'item_key') IS NOT NULL
+    AND NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = N'IX_ams_assignment_events_item' AND object_id = OBJECT_ID(N'dbo.ams_assignment_events'))
+    CREATE INDEX IX_ams_assignment_events_item ON dbo.ams_assignment_events(item_kind, item_key);
+GO
+IF OBJECT_ID(N'dbo.ams_assignment_events', N'U') IS NOT NULL
+    AND COL_LENGTH(N'dbo.ams_assignment_events', N'assigned_to') IS NOT NULL
+    AND NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = N'IX_ams_assignment_events_assigned_to' AND object_id = OBJECT_ID(N'dbo.ams_assignment_events'))
+    CREATE INDEX IX_ams_assignment_events_assigned_to ON dbo.ams_assignment_events(assigned_to);
+GO
+
+/* Portal activity / Log Report (shared SQL trail, not browser localStorage). */
+IF OBJECT_ID(N'dbo.ams_activity_log', N'U') IS NULL
+BEGIN
+    CREATE TABLE dbo.ams_activity_log (
+        row_id          BIGINT IDENTITY(1,1) NOT NULL,
+        record_key      NVARCHAR(200) NOT NULL,
+        log_time        NVARCHAR(40)  NULL,
+        actor_role      NVARCHAR(50)  NULL,
+        actor_username  NVARCHAR(100) NULL,
+        page            NVARCHAR(200) NULL,
+        log_type        NVARCHAR(50)  NULL,
+        message         NVARCHAR(1000) NULL,
+        data_json       NVARCHAR(MAX) NOT NULL,
+        updated_at      DATETIME2     NOT NULL DEFAULT SYSUTCDATETIME(),
+        CONSTRAINT PK_ams_activity_log PRIMARY KEY (row_id)
+    );
+END
+GO
+IF OBJECT_ID(N'dbo.ams_activity_log', N'U') IS NOT NULL
+    AND COL_LENGTH(N'dbo.ams_activity_log', N'log_time') IS NOT NULL
+    AND NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = N'IX_ams_activity_log_time' AND object_id = OBJECT_ID(N'dbo.ams_activity_log'))
+    CREATE INDEX IX_ams_activity_log_time ON dbo.ams_activity_log(log_time);
+GO
+
 /* Profile columns for dbo.ams_users. Databases created by an older script
    version lack display_name / contact_no / address / dob / gender, which makes
    the My Profile page (GET+PUT /api/auth/me) throw "API error 500". Each ALTER
@@ -1120,6 +1192,40 @@ GO
 IF OBJECT_ID(N'dbo.ams_user_profiles', N'U') IS NOT NULL
    AND COL_LENGTH(N'dbo.ams_user_profiles', N'gender') IS NULL
    ALTER TABLE dbo.ams_user_profiles ADD gender NVARCHAR(20) NULL;
+GO
+
+/* Assignment columns on assets / mobiles / SIMs (subordinate + assigned date). */
+IF OBJECT_ID(N'dbo.ams_assets', N'U') IS NOT NULL
+   AND COL_LENGTH(N'dbo.ams_assets', N'assigned_to_subordinate') IS NULL
+   ALTER TABLE dbo.ams_assets ADD assigned_to_subordinate NVARCHAR(200) NULL;
+GO
+IF OBJECT_ID(N'dbo.ams_assets', N'U') IS NOT NULL
+   AND COL_LENGTH(N'dbo.ams_assets', N'assigned_sub_text') IS NULL
+   ALTER TABLE dbo.ams_assets ADD assigned_sub_text NVARCHAR(300) NULL;
+GO
+IF OBJECT_ID(N'dbo.ams_assets', N'U') IS NOT NULL
+   AND COL_LENGTH(N'dbo.ams_assets', N'assigned_date') IS NULL
+   ALTER TABLE dbo.ams_assets ADD assigned_date NVARCHAR(20) NULL;
+GO
+IF OBJECT_ID(N'dbo.ams_mobiles', N'U') IS NOT NULL
+   AND COL_LENGTH(N'dbo.ams_mobiles', N'assigned_to_subordinate') IS NULL
+   ALTER TABLE dbo.ams_mobiles ADD assigned_to_subordinate NVARCHAR(200) NULL;
+GO
+IF OBJECT_ID(N'dbo.ams_mobiles', N'U') IS NOT NULL
+   AND COL_LENGTH(N'dbo.ams_mobiles', N'assigned_sub_text') IS NULL
+   ALTER TABLE dbo.ams_mobiles ADD assigned_sub_text NVARCHAR(300) NULL;
+GO
+IF OBJECT_ID(N'dbo.ams_mobiles', N'U') IS NOT NULL
+   AND COL_LENGTH(N'dbo.ams_mobiles', N'assigned_date') IS NULL
+   ALTER TABLE dbo.ams_mobiles ADD assigned_date NVARCHAR(20) NULL;
+GO
+IF OBJECT_ID(N'dbo.ams_sim_cards', N'U') IS NOT NULL
+   AND COL_LENGTH(N'dbo.ams_sim_cards', N'assigned_to_subordinate') IS NULL
+   ALTER TABLE dbo.ams_sim_cards ADD assigned_to_subordinate NVARCHAR(200) NULL;
+GO
+IF OBJECT_ID(N'dbo.ams_sim_cards', N'U') IS NOT NULL
+   AND COL_LENGTH(N'dbo.ams_sim_cards', N'assigned_sub_text') IS NULL
+   ALTER TABLE dbo.ams_sim_cards ADD assigned_sub_text NVARCHAR(300) NULL;
 GO
 
 /* ---- Exit Records (handover snapshots) --------------------------------------- */

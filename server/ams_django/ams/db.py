@@ -358,6 +358,9 @@ BEGIN
         current_site   NVARCHAR(200) NULL,
         purchase_site  NVARCHAR(200) NULL,
         assigned_to    NVARCHAR(200) NULL,
+        assigned_to_subordinate NVARCHAR(200) NULL,
+        assigned_sub_text NVARCHAR(300) NULL,
+        assigned_date  NVARCHAR(20)  NULL,
         model          NVARCHAR(200) NULL,
         serial_number  NVARCHAR(200) NULL,
         vendor         NVARCHAR(200) NULL,
@@ -387,6 +390,9 @@ BEGIN
         current_site   NVARCHAR(200) NULL,
         purchase_site  NVARCHAR(200) NULL,
         assigned_to    NVARCHAR(200) NULL,
+        assigned_to_subordinate NVARCHAR(200) NULL,
+        assigned_sub_text NVARCHAR(300) NULL,
+        assigned_date  NVARCHAR(20)  NULL,
         model          NVARCHAR(200) NULL,
         model_number   NVARCHAR(200) NULL,
         serial_number  NVARCHAR(200) NULL,
@@ -529,6 +535,8 @@ BEGIN
         vendor           NVARCHAR(200) NULL,
         cost             NVARCHAR(50)  NULL,
         assigned_date    NVARCHAR(20)  NULL,
+        assigned_to_subordinate NVARCHAR(200) NULL,
+        assigned_sub_text NVARCHAR(300) NULL,
         linked_mobile_id NVARCHAR(200) NULL,
         personal_mobile  BIT           NULL,
         site             NVARCHAR(200) NULL,
@@ -578,6 +586,50 @@ BEGIN
         data_json  NVARCHAR(MAX) NOT NULL,
         updated_at DATETIME2     NOT NULL DEFAULT SYSUTCDATETIME(),
         CONSTRAINT PK_ams_documents PRIMARY KEY (record_key)
+    );
+END;
+
+IF OBJECT_ID(N'dbo.ams_assignment_events', N'U') IS NULL
+BEGIN
+    CREATE TABLE dbo.ams_assignment_events (
+        row_id                  BIGINT IDENTITY(1,1) NOT NULL,
+        record_key              NVARCHAR(200) NOT NULL,
+        event_date              NVARCHAR(20)  NULL,
+        action                  NVARCHAR(200) NULL,
+        item_kind               NVARCHAR(50)  NULL,
+        item_key                NVARCHAR(200) NULL,
+        assigned_to             NVARCHAR(200) NULL,
+        emp_id                  NVARCHAR(100) NULL,
+        emp_name                NVARCHAR(300) NULL,
+        emp_dept                NVARCHAR(200) NULL,
+        assigned_to_subordinate NVARCHAR(200) NULL,
+        assigned_sub_text       NVARCHAR(300) NULL,
+        accessories             NVARCHAR(500) NULL,
+        status_after            NVARCHAR(100) NULL,
+        item_id_full            NVARCHAR(200) NULL,
+        remarks                 NVARCHAR(500) NULL,
+        actor_username          NVARCHAR(100) NULL,
+        actor_role              NVARCHAR(50)  NULL,
+        data_json               NVARCHAR(MAX) NOT NULL,
+        updated_at              DATETIME2     NOT NULL DEFAULT SYSUTCDATETIME(),
+        CONSTRAINT PK_ams_assignment_events PRIMARY KEY (row_id)
+    );
+END;
+
+IF OBJECT_ID(N'dbo.ams_activity_log', N'U') IS NULL
+BEGIN
+    CREATE TABLE dbo.ams_activity_log (
+        row_id          BIGINT IDENTITY(1,1) NOT NULL,
+        record_key      NVARCHAR(200) NOT NULL,
+        log_time        NVARCHAR(40)  NULL,
+        actor_role      NVARCHAR(50)  NULL,
+        actor_username  NVARCHAR(100) NULL,
+        page            NVARCHAR(200) NULL,
+        log_type        NVARCHAR(50)  NULL,
+        message         NVARCHAR(1000) NULL,
+        data_json       NVARCHAR(MAX) NOT NULL,
+        updated_at      DATETIME2     NOT NULL DEFAULT SYSUTCDATETIME(),
+        CONSTRAINT PK_ams_activity_log PRIMARY KEY (row_id)
     );
 END;
 """
@@ -865,6 +917,30 @@ IF OBJECT_ID(N'dbo.ams_user_profiles', N'U') IS NOT NULL
 IF OBJECT_ID(N'dbo.ams_user_profiles', N'U') IS NOT NULL
     AND COL_LENGTH(N'dbo.ams_user_profiles', N'remarks') IS NULL
     ALTER TABLE dbo.ams_user_profiles ADD remarks NVARCHAR(500) NULL;
+IF OBJECT_ID(N'dbo.ams_assets', N'U') IS NOT NULL
+    AND COL_LENGTH(N'dbo.ams_assets', N'assigned_to_subordinate') IS NULL
+    ALTER TABLE dbo.ams_assets ADD assigned_to_subordinate NVARCHAR(200) NULL;
+IF OBJECT_ID(N'dbo.ams_assets', N'U') IS NOT NULL
+    AND COL_LENGTH(N'dbo.ams_assets', N'assigned_sub_text') IS NULL
+    ALTER TABLE dbo.ams_assets ADD assigned_sub_text NVARCHAR(300) NULL;
+IF OBJECT_ID(N'dbo.ams_assets', N'U') IS NOT NULL
+    AND COL_LENGTH(N'dbo.ams_assets', N'assigned_date') IS NULL
+    ALTER TABLE dbo.ams_assets ADD assigned_date NVARCHAR(20) NULL;
+IF OBJECT_ID(N'dbo.ams_mobiles', N'U') IS NOT NULL
+    AND COL_LENGTH(N'dbo.ams_mobiles', N'assigned_to_subordinate') IS NULL
+    ALTER TABLE dbo.ams_mobiles ADD assigned_to_subordinate NVARCHAR(200) NULL;
+IF OBJECT_ID(N'dbo.ams_mobiles', N'U') IS NOT NULL
+    AND COL_LENGTH(N'dbo.ams_mobiles', N'assigned_sub_text') IS NULL
+    ALTER TABLE dbo.ams_mobiles ADD assigned_sub_text NVARCHAR(300) NULL;
+IF OBJECT_ID(N'dbo.ams_mobiles', N'U') IS NOT NULL
+    AND COL_LENGTH(N'dbo.ams_mobiles', N'assigned_date') IS NULL
+    ALTER TABLE dbo.ams_mobiles ADD assigned_date NVARCHAR(20) NULL;
+IF OBJECT_ID(N'dbo.ams_sim_cards', N'U') IS NOT NULL
+    AND COL_LENGTH(N'dbo.ams_sim_cards', N'assigned_to_subordinate') IS NULL
+    ALTER TABLE dbo.ams_sim_cards ADD assigned_to_subordinate NVARCHAR(200) NULL;
+IF OBJECT_ID(N'dbo.ams_sim_cards', N'U') IS NOT NULL
+    AND COL_LENGTH(N'dbo.ams_sim_cards', N'assigned_sub_text') IS NULL
+    ALTER TABLE dbo.ams_sim_cards ADD assigned_sub_text NVARCHAR(300) NULL;
 """
 
 SCHEMA_INDEXES_SQL = """
@@ -937,6 +1013,16 @@ IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = N'IX_ams_consumable_log_co
 IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = N'IX_ams_spare_part_log_part_id' AND object_id = OBJECT_ID(N'dbo.ams_spare_part_log'))
     AND COL_LENGTH(N'dbo.ams_spare_part_log', N'part_id') IS NOT NULL
     CREATE INDEX IX_ams_spare_part_log_part_id ON dbo.ams_spare_part_log(part_id);
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = N'IX_ams_assignment_events_item' AND object_id = OBJECT_ID(N'dbo.ams_assignment_events'))
+    AND COL_LENGTH(N'dbo.ams_assignment_events', N'item_kind') IS NOT NULL
+    AND COL_LENGTH(N'dbo.ams_assignment_events', N'item_key') IS NOT NULL
+    CREATE INDEX IX_ams_assignment_events_item ON dbo.ams_assignment_events(item_kind, item_key);
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = N'IX_ams_assignment_events_assigned_to' AND object_id = OBJECT_ID(N'dbo.ams_assignment_events'))
+    AND COL_LENGTH(N'dbo.ams_assignment_events', N'assigned_to') IS NOT NULL
+    CREATE INDEX IX_ams_assignment_events_assigned_to ON dbo.ams_assignment_events(assigned_to);
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = N'IX_ams_activity_log_time' AND object_id = OBJECT_ID(N'dbo.ams_activity_log'))
+    AND COL_LENGTH(N'dbo.ams_activity_log', N'log_time') IS NOT NULL
+    CREATE INDEX IX_ams_activity_log_time ON dbo.ams_activity_log(log_time);
 """
 
 SEED_USERS = [
@@ -1049,6 +1135,9 @@ def _build_table_defs():
             c("site", "site"), c("current_site", "currentSite"),
             c("purchase_site", "purchaseSite"),
             c("assigned_to", "assignedTo"),
+            c("assigned_to_subordinate", "assignedToSubordinate"),
+            c("assigned_sub_text", "assignedSubText"),
+            c("assigned_date", "assignedDate"),
             c("model", "model"), c("serial_number", "serialNumber"),
             c("vendor", "vendor"), c("purchase_date", "purchaseDate"),
             c("warranty_end", "warrantyEnd"), c("purchase_cost", "purchaseCost"),
@@ -1061,6 +1150,9 @@ def _build_table_defs():
             c("site", "site"), c("current_site", "currentSite"),
             c("purchase_site", "purchaseSite"),
             c("assigned_to", "assignedTo"),
+            c("assigned_to_subordinate", "assignedToSubordinate"),
+            c("assigned_sub_text", "assignedSubText"),
+            c("assigned_date", "assignedDate"),
             c("model", "model"), c("model_number", "modelNumber"),
             c("serial_number", "serialNumber"),
             c("imei1", "imei1"), c("imei2", "imei2"),
@@ -1155,7 +1247,10 @@ def _build_table_defs():
             c("status", "status"), c("assigned_to", "assignedTo"),
             c("iccid", "iccid"), c("activation_date", "activationDate"),
             c("vendor", "vendor"), c("cost", "cost"),
-            c("assigned_date", "assignedDate"), c("linked_mobile_id", "linkedMobileId"),
+            c("assigned_date", "assignedDate"),
+            c("assigned_to_subordinate", "assignedToSubordinate"),
+            c("assigned_sub_text", "assignedSubText"),
+            c("linked_mobile_id", "linkedMobileId"),
             c("personal_mobile", "personalMobile", "bit"), c("site", "site"),
             c("remarks", "remarks"),
         ]),
@@ -1167,6 +1262,22 @@ def _build_table_defs():
         ]),
         TableDef("exitRecords", "ams_exit_records", key_field="exitId", columns=[
             c("exit_id", "exitId"), c("ams_id", "amsId"), c("emp_name", "empName"),
+        ]),
+        TableDef("assignmentEvents", "ams_assignment_events", key_field=None, columns=[
+            c("event_date", "date"), c("action", "action"),
+            c("item_kind", "itemKind"), c("item_key", "itemKey"),
+            c("assigned_to", "assignedTo"), c("emp_id", "empId"),
+            c("emp_name", "empName"), c("emp_dept", "empDept"),
+            c("assigned_to_subordinate", "assignedToSubordinate"),
+            c("assigned_sub_text", "assignedSubText"),
+            c("accessories", "accessories"), c("status_after", "statusLabel"),
+            c("item_id_full", "assetIdFull"), c("remarks", "remarks"),
+            c("actor_username", "actorUsername"), c("actor_role", "actorRole"),
+        ]),
+        TableDef("activityLog", "ams_activity_log", key_field=None, columns=[
+            c("log_time", "time"), c("actor_role", "actorRole"),
+            c("actor_username", "actorUsername"), c("page", "page"),
+            c("log_type", "type"), c("message", "message"),
         ]),
         TableDef("company", "ams_company", fixed_key="company", is_document=True, columns=[
             c("name", "companyName"), c("address", "address"), c("slogan", "slogan"),

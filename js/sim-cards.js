@@ -730,12 +730,11 @@ function amsSimConfirmAssign() {
     s.assignedDate = assignDate;
     s.status = "Issued";
     const mobilesChanged = amsSimApplyMobileLink(s, mobileChoice, empId, assignDate);
-    if (!Array.isArray(s.history)) s.history = [];
     const usedIn = amsSimUsedInLabel(s);
     const histRemarks = [remarks, usedIn && usedIn !== "None" ? `Used in: ${usedIn}` : ""].filter(Boolean).join(" | ");
     const mode = SIM_STATE.assignMode;
     const histAction = mode === "reassign" ? "Reassigned" : (mode === "edit" ? "Assignment updated" : "Assigned");
-    s.history.push({
+    amsPushItemHistory(s, "sim", {
         date: assignDate,
         action: histAction,
         empId: emp ? emp.empId : "", empName: emp ? emp.name : "", empDept: emp ? emp.dept : "",
@@ -894,8 +893,7 @@ function amsSimReturn(key) {
     const prevEmp = s.assignedTo ? amsGetEmployeeByAmsId(s.assignedTo) : null;
     if (!confirm(`Mark "${s.simId}" as Returned (In Store)?`)) return;
 
-    if (!Array.isArray(s.history)) s.history = [];
-    s.history.push({
+    amsPushItemHistory(s, "sim", {
         date: new Date().toISOString().slice(0, 10), action: "Returned",
         empId: prevEmp ? prevEmp.empId : "", empName: prevEmp ? prevEmp.name : "", empDept: prevEmp ? prevEmp.dept : "",
         remarks: "", statusLabel: "In Store",
@@ -913,8 +911,7 @@ function amsSimBlock(key) {
     if (!s) return;
     if (!confirm(`Block "${s.simId}"? The SIM stays on record but is unusable until unblocked.`)) return;
 
-    if (!Array.isArray(s.history)) s.history = [];
-    s.history.push({
+    amsPushItemHistory(s, "sim", {
         date: new Date().toISOString().slice(0, 10), action: "Blocked",
         empId: "", empName: "", empDept: "",
         remarks: "", statusLabel: "Blocked",
@@ -930,8 +927,7 @@ function amsSimRetire(key) {
     if (!s) return;
     if (!confirm(`Retire "${s.simId}"? This normally ends its lifecycle.`)) return;
 
-    if (!Array.isArray(s.history)) s.history = [];
-    s.history.push({
+    amsPushItemHistory(s, "sim", {
         date: new Date().toISOString().slice(0, 10), action: "Retired",
         empId: "", empName: "", empDept: "",
         remarks: "", statusLabel: "Retired",

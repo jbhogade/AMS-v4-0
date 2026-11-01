@@ -808,6 +808,7 @@ function amsConfirmAssign() {
     a.assignedTo = directId;
     a.assignedToSubordinate = subId && subId !== "__other__" ? subId : null;
     a.assignedSubText = subText || null;
+    a.assignedDate = assignDate;
     a.status = "Assigned";
     a.dept = directEmp ? directEmp.dept : ""; /* keep legacy convenience field in sync */
     a.id = amsComputeFullId(a);
@@ -816,7 +817,7 @@ function amsConfirmAssign() {
     a.accessories = accessories;
 
     const isEdit = AST_STATE.assignMode === "edit";
-    a.history.push({
+    amsPushItemHistory(a, "mobile", {
         date: assignDate,
         action: isEdit ? "Assignment updated" : "Assigned - New",
         empId: directEmp ? directEmp.empId : "", empName: directEmp ? directEmp.name : "", empDept: directEmp ? directEmp.dept : "",
@@ -843,13 +844,13 @@ function amsReturnAsset(key) {
     const prevEmp = a.assignedTo ? amsGetEmployeeByAmsId(a.assignedTo) : null;
     if (!confirm(`Mark "${amsComputeFullId(a)}" as Returned (In Store)?`)) return;
 
-    a.history.push({
+    amsPushItemHistory(a, "mobile", {
         date: new Date().toISOString().slice(0, 10), action: "Returned",
         empId: prevEmp ? prevEmp.empId : "", empName: prevEmp ? prevEmp.name : "", empDept: prevEmp ? prevEmp.dept : "",
         assetIdFull: amsBaseDisplayId(a), statusLabel: "In Store",
     });
 
-    a.assignedTo = null; a.assignedToSubordinate = null; a.assignedSubText = null; a.assignedDepartment = null; a.assignedDeptText = null; a.usageNote = null; a.dept = ""; a.status = "In Store";
+    a.assignedTo = null; a.assignedToSubordinate = null; a.assignedSubText = null; a.assignedDepartment = null; a.assignedDeptText = null; a.usageNote = null; a.dept = ""; a.assignedDate = ""; a.status = "In Store";
     a.id = amsComputeFullId(a); /* reverts to base display id */
     amsNotify(`Asset returned: ${a.id}${prevEmp ? ` (from ${prevEmp.name})` : ""}`, "info");
     amsDbSaveAsync("mobiles");
@@ -880,11 +881,11 @@ function amsConfirmTransfer() {
     a.status = newStatus;
     const emp = a.assignedTo ? amsGetEmployeeByAmsId(a.assignedTo) : null; /* captured before clearing, for the history log */
     if (["Transfer", "Not Working", "Retired / Scrapped", "Replaced"].includes(newStatus)) {
-        a.assignedTo = null; a.assignedToSubordinate = null; a.assignedSubText = null; a.assignedDepartment = null; a.assignedDeptText = null; a.usageNote = null; a.dept = "";
+        a.assignedTo = null; a.assignedToSubordinate = null; a.assignedSubText = null; a.assignedDepartment = null; a.assignedDeptText = null; a.usageNote = null; a.dept = ""; a.assignedDate = "";
     }
     a.id = amsComputeFullId(a);
 
-    a.history.push({
+    amsPushItemHistory(a, "mobile", {
         date: transferDate, action: `Transferred to ${newSite}`,
         empId: emp ? emp.empId : "", empName: emp ? emp.name : "", empDept: emp ? emp.dept : "",
         assetIdFull: a.id, statusLabel: newStatus,
@@ -905,9 +906,9 @@ function amsMarkNotWorking(key) {
     if (!confirm(`Mark "${amsComputeFullId(a)}" as Not Working?`)) return;
     const emp = a.assignedTo ? amsGetEmployeeByAmsId(a.assignedTo) : null;
     a.status = "Not Working";
-    a.assignedTo = null; a.assignedToSubordinate = null; a.assignedSubText = null; a.assignedDepartment = null; a.assignedDeptText = null; a.usageNote = null; a.dept = "";
+    a.assignedTo = null; a.assignedToSubordinate = null; a.assignedSubText = null; a.assignedDepartment = null; a.assignedDeptText = null; a.usageNote = null; a.dept = ""; a.assignedDate = "";
     a.id = amsComputeFullId(a);
-    a.history.push({
+    amsPushItemHistory(a, "mobile", {
         date: new Date().toISOString().slice(0, 10), action: "Not Working",
         empId: emp ? emp.empId : "", empName: emp ? emp.name : "", empDept: emp ? emp.dept : "",
         assetIdFull: a.id, statusLabel: "Not Working",
@@ -923,9 +924,9 @@ function amsRetireAsset(key) {
     if (!confirm(`Retire / Scrap "${amsComputeFullId(a)}"? This is normally the end of its lifecycle.`)) return;
     const emp = a.assignedTo ? amsGetEmployeeByAmsId(a.assignedTo) : null;
     a.status = "Retired / Scrapped";
-    a.assignedTo = null; a.assignedToSubordinate = null; a.assignedSubText = null; a.assignedDepartment = null; a.assignedDeptText = null; a.usageNote = null; a.dept = "";
+    a.assignedTo = null; a.assignedToSubordinate = null; a.assignedSubText = null; a.assignedDepartment = null; a.assignedDeptText = null; a.usageNote = null; a.dept = ""; a.assignedDate = "";
     a.id = amsComputeFullId(a);
-    a.history.push({
+    amsPushItemHistory(a, "mobile", {
         date: new Date().toISOString().slice(0, 10), action: "Retired / Scrapped",
         empId: emp ? emp.empId : "", empName: emp ? emp.name : "", empDept: emp ? emp.dept : "",
         assetIdFull: a.id, statusLabel: "Retired / Scrapped",
@@ -1065,7 +1066,8 @@ function amsSubmitReplaceForm(e) {
     newAsset.replacesPurchaseDate = old.purchaseDate || "";
     newAsset.id = amsComputeFullId(newAsset);
 
-    newAsset.history.push({
+    newAsset.assignedDate = issueDate;
+    amsPushItemHistory(newAsset, "mobile", {
         date: issueDate, action: `Assigned (Replacement for ${amsBaseDisplayId(old)})`,
         empId: old.assignedTo || "", empName: oldEmp ? oldEmp.name : "", empDept: old.dept || "", assetIdFull: newAsset.id, statusLabel: newAsset.status,
         accessories: (newAsset.accessories && newAsset.accessories.length) ? newAsset.accessories.join(", ") : "",
@@ -1075,10 +1077,10 @@ function amsSubmitReplaceForm(e) {
     /* ---- Mark the old asset Replaced, clear its assignment, link to the new asset ---- */
     const oldPrevEmp = old.assignedTo ? amsGetEmployeeByAmsId(old.assignedTo) : null;
     old.status = "Replaced";
-    old.assignedTo = null; old.assignedToSubordinate = null; old.assignedDepartment = null; old.assignedDeptText = null; old.usageNote = null; old.dept = "";
+    old.assignedTo = null; old.assignedToSubordinate = null; old.assignedDepartment = null; old.assignedDeptText = null; old.usageNote = null; old.dept = ""; old.assignedDate = "";
     old.replacedByAssetId = amsBaseDisplayId(newAsset);
     old.id = amsComputeFullId(old);
-    old.history.push({
+    amsPushItemHistory(old, "mobile", {
         date: today, action: `Replaced by ${amsBaseDisplayId(newAsset)}`, note: replDetail,
         empId: oldPrevEmp ? oldPrevEmp.empId : "", empName: oldPrevEmp ? oldPrevEmp.name : "", empDept: oldPrevEmp ? oldPrevEmp.dept : "",
         assetIdFull: old.id, statusLabel: "Replaced",
