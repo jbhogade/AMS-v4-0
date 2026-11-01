@@ -24,6 +24,7 @@ public class CollectionsController : ControllerBase
         "reportPrefs", "users", "exitRecords", "consumableLog", "sparePartLog",
         "simCards", "simOperators", "simPlans", "consumableCategories",
         "consumableUnits", "sparePartCategories", "vendorCategories",
+        "assignmentEvents", "activityLog",
     };
 
     private readonly AmsDb _db;

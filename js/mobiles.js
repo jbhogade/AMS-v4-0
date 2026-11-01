@@ -995,6 +995,7 @@ function amsConfirmAssign() {
     a.assignedTo = directId;
     a.assignedToSubordinate = subId && subId !== "__other__" ? subId : null;
     a.assignedSubText = subText || null;
+    a.assignedDate = assignDate;
     a.status = "Assigned";
     a.dept = directEmp ? directEmp.dept : ""; /* keep legacy convenience field in sync */
     a.id = amsComputeFullId(a);
@@ -1010,7 +1011,7 @@ function amsConfirmAssign() {
     }
 
     const isEdit = AST_STATE.assignMode === "edit";
-    a.history.push({
+    amsPushItemHistory(a, "mobile", {
         date: assignDate,
         action: isEdit ? "Assignment updated" : "Assigned - New",
         empId: directEmp ? directEmp.empId : "", empName: directEmp ? directEmp.name : "", empDept: directEmp ? directEmp.dept : "",
@@ -1042,14 +1043,14 @@ function amsReturnAsset(key) {
     const prevEmp = a.assignedTo ? amsGetEmployeeByAmsId(a.assignedTo) : null;
     if (!confirm(`Mark "${amsComputeFullId(a)}" as Returned (In Store)?`)) return;
 
-    a.history.push({
+    amsPushItemHistory(a, "mobile", {
         date: new Date().toISOString().slice(0, 10), action: "Returned",
         empId: prevEmp ? prevEmp.empId : "", empName: prevEmp ? prevEmp.name : "", empDept: prevEmp ? prevEmp.dept : "",
         assetIdFull: amsBaseDisplayId(a), statusLabel: "In Store",
     });
 
     if (typeof amsUnlinkMobileSim === "function" && amsUnlinkMobileSim(a, false)) amsDbSaveAsync("simCards");
-    a.assignedTo = null; a.assignedToSubordinate = null; a.assignedSubText = null; a.assignedDepartment = null; a.assignedDeptText = null; a.usageNote = null; a.dept = ""; a.status = "In Store";
+    a.assignedTo = null; a.assignedToSubordinate = null; a.assignedSubText = null; a.assignedDepartment = null; a.assignedDeptText = null; a.usageNote = null; a.dept = ""; a.assignedDate = ""; a.status = "In Store";
     a.id = amsComputeFullId(a); /* reverts to base display id */
     amsNotify(`Mobile returned: ${a.id}${prevEmp ? ` (from ${prevEmp.name})` : ""}`, "info");
     amsDbSaveAsync("mobiles");
@@ -1081,11 +1082,11 @@ function amsConfirmTransfer() {
     const emp = a.assignedTo ? amsGetEmployeeByAmsId(a.assignedTo) : null; /* captured before clearing, for the history log */
     if (["Transfer", "Not Working", "Retired / Scrapped", "Replaced"].includes(newStatus)) {
         if (typeof amsUnlinkMobileSim === "function" && amsUnlinkMobileSim(a, false)) amsDbSaveAsync("simCards");
-        a.assignedTo = null; a.assignedToSubordinate = null; a.assignedSubText = null; a.assignedDepartment = null; a.assignedDeptText = null; a.usageNote = null; a.dept = "";
+        a.assignedTo = null; a.assignedToSubordinate = null; a.assignedSubText = null; a.assignedDepartment = null; a.assignedDeptText = null; a.usageNote = null; a.dept = ""; a.assignedDate = "";
     }
     a.id = amsComputeFullId(a);
 
-    a.history.push({
+    amsPushItemHistory(a, "mobile", {
         date: transferDate, action: `Transferred to ${newSite}`,
         empId: emp ? emp.empId : "", empName: emp ? emp.name : "", empDept: emp ? emp.dept : "",
         assetIdFull: a.id, statusLabel: newStatus,
@@ -1107,9 +1108,9 @@ function amsMarkNotWorking(key) {
     const emp = a.assignedTo ? amsGetEmployeeByAmsId(a.assignedTo) : null;
     a.status = "Not Working";
     if (typeof amsUnlinkMobileSim === "function" && amsUnlinkMobileSim(a, false)) amsDbSaveAsync("simCards");
-    a.assignedTo = null; a.assignedToSubordinate = null; a.assignedSubText = null; a.assignedDepartment = null; a.assignedDeptText = null; a.usageNote = null; a.dept = "";
+    a.assignedTo = null; a.assignedToSubordinate = null; a.assignedSubText = null; a.assignedDepartment = null; a.assignedDeptText = null; a.usageNote = null; a.dept = ""; a.assignedDate = "";
     a.id = amsComputeFullId(a);
-    a.history.push({
+    amsPushItemHistory(a, "mobile", {
         date: new Date().toISOString().slice(0, 10), action: "Not Working",
         empId: emp ? emp.empId : "", empName: emp ? emp.name : "", empDept: emp ? emp.dept : "",
         assetIdFull: a.id, statusLabel: "Not Working",
@@ -1126,9 +1127,9 @@ function amsRetireAsset(key) {
     const emp = a.assignedTo ? amsGetEmployeeByAmsId(a.assignedTo) : null;
     a.status = "Retired / Scrapped";
     if (typeof amsUnlinkMobileSim === "function" && amsUnlinkMobileSim(a, false)) amsDbSaveAsync("simCards");
-    a.assignedTo = null; a.assignedToSubordinate = null; a.assignedSubText = null; a.assignedDepartment = null; a.assignedDeptText = null; a.usageNote = null; a.dept = "";
+    a.assignedTo = null; a.assignedToSubordinate = null; a.assignedSubText = null; a.assignedDepartment = null; a.assignedDeptText = null; a.usageNote = null; a.dept = ""; a.assignedDate = "";
     a.id = amsComputeFullId(a);
-    a.history.push({
+    amsPushItemHistory(a, "mobile", {
         date: new Date().toISOString().slice(0, 10), action: "Retired / Scrapped",
         empId: emp ? emp.empId : "", empName: emp ? emp.name : "", empDept: emp ? emp.dept : "",
         assetIdFull: a.id, statusLabel: "Retired / Scrapped",
@@ -1290,7 +1291,8 @@ function amsSubmitReplaceForm(e) {
     newAsset.replacesPurchaseDate = old.purchaseDate || "";
     newAsset.id = amsComputeFullId(newAsset);
 
-    newAsset.history.push({
+    newAsset.assignedDate = issueDate;
+    amsPushItemHistory(newAsset, "mobile", {
         date: issueDate, action: `Assigned (Replacement for ${amsBaseDisplayId(old)})`,
         empId: old.assignedTo || "", empName: oldEmp ? oldEmp.name : "", empDept: old.dept || "", assetIdFull: newAsset.id, statusLabel: newAsset.status,
         accessories: (newAsset.accessories && newAsset.accessories.length) ? newAsset.accessories.join(", ") : "",
@@ -1301,13 +1303,13 @@ function amsSubmitReplaceForm(e) {
     const oldPrevEmp = old.assignedTo ? amsGetEmployeeByAmsId(old.assignedTo) : null;
     old.status = "Replaced";
     if (typeof amsUnlinkMobileSim === "function" && amsUnlinkMobileSim(old, false)) amsDbSaveAsync("simCards");
-    old.assignedTo = null; old.assignedToSubordinate = null; old.assignedDepartment = null; old.assignedDeptText = null; old.usageNote = null; old.dept = "";
+    old.assignedTo = null; old.assignedToSubordinate = null; old.assignedDepartment = null; old.assignedDeptText = null; old.usageNote = null; old.dept = ""; old.assignedDate = "";
     old.replacedByAssetId = amsBaseDisplayId(newAsset);
     old.id = amsComputeFullId(old);
     if (typeof amsSyncMobileToSimNumber === "function") {
         if (amsSyncMobileToSimNumber(newAsset, newAsset.simMobileNo, newAsset.assignedTo, issueDate)) amsDbSaveAsync("simCards");
     }
-    old.history.push({
+    amsPushItemHistory(old, "mobile", {
         date: today, action: `Replaced by ${amsBaseDisplayId(newAsset)}`, note: replDetail,
         empId: oldPrevEmp ? oldPrevEmp.empId : "", empName: oldPrevEmp ? oldPrevEmp.name : "", empDept: oldPrevEmp ? oldPrevEmp.dept : "",
         assetIdFull: old.id, statusLabel: "Replaced",
@@ -1387,8 +1389,7 @@ function amsRelinkSimAfterSwap(mobile, simNumber, date, note) {
         }
     } else if (s.assignedTo && s.status !== "Retired") {
         const emp = typeof amsGetEmployeeByAmsId === "function" ? amsGetEmployeeByAmsId(s.assignedTo) : null;
-        if (!Array.isArray(s.history)) s.history = [];
-        s.history.push({
+        amsPushItemHistory(s, "sim", {
             date: date || new Date().toISOString().slice(0, 10),
             action: "Returned",
             empId: emp ? emp.empId : "",
@@ -1407,9 +1408,8 @@ function amsRelinkSimAfterSwap(mobile, simNumber, date, note) {
 function amsPushSimSwapHistory(simNumber, date, action, remarks) {
     const s = typeof amsFindSimByMobileNumber === "function" ? amsFindSimByMobileNumber(simNumber) : null;
     if (!s) return;
-    if (!Array.isArray(s.history)) s.history = [];
     const emp = s.assignedTo && typeof amsGetEmployeeByAmsId === "function" ? amsGetEmployeeByAmsId(s.assignedTo) : null;
-    s.history.push({
+    amsPushItemHistory(s, "sim", {
         date: date,
         action: action,
         empId: emp ? emp.empId : "",
@@ -1581,9 +1581,7 @@ function amsSubmitSwapForm(e) {
     if (amsRelinkSimAfterSwap(src, srcSimAfter, swapDate, `Linked after swap with ${tgtIdLabel}`)) simsChanged = true;
     if (amsRelinkSimAfterSwap(tgt, tgtSimAfter, swapDate, `Linked after swap with ${srcIdLabel}`)) simsChanged = true;
 
-    if (!Array.isArray(src.history)) src.history = [];
-    if (!Array.isArray(tgt.history)) tgt.history = [];
-    src.history.push({
+    amsPushItemHistory(src, "mobile", {
         date: swapDate,
         action: `Swapped with ${tgtIdLabel}`,
         note: `${simModeLabel}${noteBit}`,
@@ -1593,7 +1591,7 @@ function amsSubmitSwapForm(e) {
         assetIdFull: src.id,
         statusLabel: src.status,
     });
-    tgt.history.push({
+    amsPushItemHistory(tgt, "mobile", {
         date: swapDate,
         action: `Swapped with ${srcIdLabel}`,
         note: `${simModeLabel}${noteBit}`,

@@ -166,6 +166,8 @@ const AMS_COLLECTIONS = {
     vendorCategories: () => AMS_DUMMY_VENDOR_CATEGORIES,
     users:           () => AMS_DUMMY_USERS,
     exitRecords:     () => AMS_DUMMY_EXIT_RECORDS,
+    assignmentEvents: () => AMS_DUMMY_ASSIGNMENT_EVENTS,
+    activityLog:     () => AMS_DUMMY_ACTIVITY_LOG,
 };
 
 /* ---- document (object) collections: stored as a single JSON object ---------- */
@@ -295,6 +297,10 @@ async function amsDbLoadAll() {
         amsInvalidateLookupCaches();
         AMS_DB_READY = true;
         if (typeof amsMigrateRoleAccessDocument === "function") amsMigrateRoleAccessDocument();
+        if (typeof amsMigrateActivityLogFromLocal === "function") amsMigrateActivityLogFromLocal();
+        if (typeof amsBackfillAssignmentEvents === "function" && amsBackfillAssignmentEvents()) {
+            amsDbSaveAsync("assignmentEvents");
+        }
         if (makesBackfilled) amsDbSaveAsync("assetMakes");
         await amsYieldToBrowser();
         if (typeof amsRepairExitedEmployeeHoldings === "function") {
@@ -761,16 +767,145 @@ function amsSaveNotifications(list) {
 }
 
 /* Separate from the bell on purpose - the bell's "Clear All" must never erase
-   the permanent audit trail Log Report reads from. Append-only from amsNotify(). */
+   the permanent audit trail Log Report reads from. Append-only from amsNotify().
+   SQL collection activityLog is the source of truth; localStorage is a cache. */
 const AMS_LOG_STORAGE_KEY = "ams_activity_log";
 const AMS_LOG_MAX = 1000;
+const AMS_DUMMY_ACTIVITY_LOG = [];
+const AMS_DUMMY_ASSIGNMENT_EVENTS = [];
 
 function amsGetActivityLog() {
-    try { return JSON.parse(localStorage.getItem(AMS_LOG_STORAGE_KEY)) || []; }
-    catch (e) { return []; }
+    return AMS_DUMMY_ACTIVITY_LOG;
 }
 function amsSaveActivityLog(list) {
-    try { localStorage.setItem(AMS_LOG_STORAGE_KEY, JSON.stringify(list.slice(0, AMS_LOG_MAX))); } catch (e) { /* storage full */ }
+    AMS_DUMMY_ACTIVITY_LOG.length = 0;
+    if (Array.isArray(list) && list.length) {
+        AMS_DUMMY_ACTIVITY_LOG.push.apply(AMS_DUMMY_ACTIVITY_LOG, list.slice(0, AMS_LOG_MAX));
+    }
+    try { localStorage.setItem(AMS_LOG_STORAGE_KEY, JSON.stringify(AMS_DUMMY_ACTIVITY_LOG)); } catch (e) { /* storage full */ }
+    amsDbSaveAsync("activityLog");
+}
+
+function amsActorMeta() {
+    const sess = typeof amsGetSession === "function" ? amsGetSession() : null;
+    return {
+        actorUsername: sess && sess.username ? String(sess.username) : "",
+        actorRole: (typeof amsGetViewingAsRole === "function") ? amsGetViewingAsRole() : "Standard User",
+    };
+}
+
+function amsItemKindOf(item) {
+    if (!item) return "asset";
+    if (item.simId && !item.serialNumber && !item.imei1) return "sim";
+    if (typeof DUMMY_MOBILES !== "undefined" && DUMMY_MOBILES.indexOf(item) !== -1) return "mobile";
+    if (typeof AMS_DUMMY_SIM_CARDS !== "undefined" && AMS_DUMMY_SIM_CARDS.indexOf(item) !== -1) return "sim";
+    if (typeof DUMMY_ASSETS !== "undefined" && DUMMY_ASSETS.indexOf(item) !== -1) return "asset";
+    if (item.simId) return "sim";
+    if (item.imei1 || item.imei2 || item.simMobileNo) return "mobile";
+    return "asset";
+}
+
+function amsItemKeyOf(item, kind) {
+    if (!item) return "";
+    if (kind === "sim") return item.simId || "";
+    if (typeof amsBaseDisplayId === "function") return amsBaseDisplayId(item) || item.id || "";
+    return item.id || item.amsAssetId || "";
+}
+
+function amsAccessoriesText(value) {
+    if (Array.isArray(value)) return value.filter(Boolean).join(", ");
+    return value ? String(value) : "";
+}
+
+function amsRecordAssignmentEvent(item, kind, hist) {
+    if (!hist) return;
+    kind = kind || amsItemKindOf(item);
+    const actor = amsActorMeta();
+    const event = {
+        date: hist.date || new Date().toISOString().slice(0, 10),
+        action: hist.action || "",
+        itemKind: kind,
+        itemKey: amsItemKeyOf(item, kind),
+        assignedTo: (item && item.assignedTo) || hist.assignedTo || "",
+        empId: hist.empId || "",
+        empName: hist.empName || "",
+        empDept: hist.empDept || "",
+        assignedToSubordinate: (item && item.assignedToSubordinate) || hist.assignedToSubordinate || null,
+        assignedSubText: (item && item.assignedSubText) || hist.assignedSubText || null,
+        accessories: amsAccessoriesText(hist.accessories),
+        statusLabel: hist.statusLabel || (item && item.status) || "",
+        assetIdFull: hist.assetIdFull || (item && item.id) || "",
+        remarks: hist.remarks || hist.note || "",
+        actorUsername: actor.actorUsername,
+        actorRole: actor.actorRole,
+    };
+    AMS_DUMMY_ASSIGNMENT_EVENTS.unshift(event);
+    amsSaveAssignmentEventsSoon();
+}
+
+let AMS_ASSIGNMENT_SAVE_TIMER = null;
+function amsSaveAssignmentEventsSoon() {
+    if (AMS_ASSIGNMENT_SAVE_TIMER) clearTimeout(AMS_ASSIGNMENT_SAVE_TIMER);
+    AMS_ASSIGNMENT_SAVE_TIMER = setTimeout(() => {
+        AMS_ASSIGNMENT_SAVE_TIMER = null;
+        amsDbSaveAsync("assignmentEvents");
+    }, 50);
+}
+
+function amsPushItemHistory(item, kind, hist) {
+    if (!item || !hist) return;
+    if (!Array.isArray(item.history)) item.history = [];
+    item.history.push(hist);
+    amsRecordAssignmentEvent(item, kind, hist);
+}
+
+function amsMigrateActivityLogFromLocal() {
+    if (AMS_DUMMY_ACTIVITY_LOG.length) {
+        try { localStorage.setItem(AMS_LOG_STORAGE_KEY, JSON.stringify(AMS_DUMMY_ACTIVITY_LOG.slice(0, AMS_LOG_MAX))); } catch (e) { /* storage full */ }
+        return false;
+    }
+    let local = [];
+    try { local = JSON.parse(localStorage.getItem(AMS_LOG_STORAGE_KEY) || "[]") || []; } catch (e) { local = []; }
+    if (!Array.isArray(local) || !local.length) return false;
+    AMS_DUMMY_ACTIVITY_LOG.push.apply(AMS_DUMMY_ACTIVITY_LOG, local.slice(0, AMS_LOG_MAX));
+    amsDbSaveAsync("activityLog");
+    return true;
+}
+
+function amsBackfillAssignmentEvents() {
+    if (AMS_DUMMY_ASSIGNMENT_EVENTS.length) return false;
+    const packs = [
+        { arr: typeof DUMMY_ASSETS !== "undefined" ? DUMMY_ASSETS : [], kind: "asset" },
+        { arr: typeof DUMMY_MOBILES !== "undefined" ? DUMMY_MOBILES : [], kind: "mobile" },
+        { arr: typeof AMS_DUMMY_SIM_CARDS !== "undefined" ? AMS_DUMMY_SIM_CARDS : [], kind: "sim" },
+    ];
+    packs.forEach(pack => {
+        pack.arr.forEach(item => {
+            (Array.isArray(item.history) ? item.history : []).forEach(h => {
+                if (!h) return;
+                AMS_DUMMY_ASSIGNMENT_EVENTS.push({
+                    date: h.date || "",
+                    action: h.action || "",
+                    itemKind: pack.kind,
+                    itemKey: amsItemKeyOf(item, pack.kind),
+                    assignedTo: h.assignedTo || "",
+                    empId: h.empId || "",
+                    empName: h.empName || "",
+                    empDept: h.empDept || "",
+                    assignedToSubordinate: h.assignedToSubordinate || null,
+                    assignedSubText: h.assignedSubText || null,
+                    accessories: amsAccessoriesText(h.accessories),
+                    statusLabel: h.statusLabel || "",
+                    assetIdFull: h.assetIdFull || item.id || item.simId || "",
+                    remarks: h.remarks || h.note || "",
+                    actorUsername: "",
+                    actorRole: "",
+                });
+            });
+        });
+    });
+    AMS_DUMMY_ASSIGNMENT_EVENTS.sort((a, b) => String(b.date || "").localeCompare(String(a.date || "")));
+    return AMS_DUMMY_ASSIGNMENT_EVENTS.length > 0;
 }
 
 function amsTimeAgo(iso) {
@@ -786,17 +921,20 @@ function amsTimeAgo(iso) {
 /* Call this from ANY page to notify: amsNotify("message", "success") */
 function amsNotify(message, type) {
     type = type || "info";
+    const actor = amsActorMeta();
     const entry = {
         message, type, time: new Date().toISOString(),
-        actorRole: (typeof amsGetViewingAsRole === "function") ? amsGetViewingAsRole() : "Standard User",
+        actorRole: actor.actorRole,
+        actorUsername: actor.actorUsername,
         page: document.title.replace(/^.* - /, "") || location.pathname,
     };
     const list = amsGetNotifications();
     list.unshift(entry);
     amsSaveNotifications(list);
-    const log = amsGetActivityLog();
-    log.unshift(entry);
-    amsSaveActivityLog(log);
+    AMS_DUMMY_ACTIVITY_LOG.unshift(entry);
+    if (AMS_DUMMY_ACTIVITY_LOG.length > AMS_LOG_MAX) AMS_DUMMY_ACTIVITY_LOG.length = AMS_LOG_MAX;
+    try { localStorage.setItem(AMS_LOG_STORAGE_KEY, JSON.stringify(AMS_DUMMY_ACTIVITY_LOG)); } catch (e) { /* storage full */ }
+    amsDbSaveAsync("activityLog");
     amsToast(message, type);
     amsRenderBell();
 }
@@ -1544,8 +1682,7 @@ function amsIssueSimToEmployee(s, empId, assignDate, remarks) {
     s.assignedDate = assignDate || s.assignedDate || new Date().toISOString().slice(0, 10);
     s.status = "Issued";
     if (!already) {
-        if (!Array.isArray(s.history)) s.history = [];
-        s.history.push({
+        amsPushItemHistory(s, "sim", {
             date: s.assignedDate,
             action: "Assigned",
             empId: emp ? emp.empId : "",
@@ -1565,13 +1702,13 @@ function amsIssueMobileToEmployee(m, empId, assignDate, remarks) {
     const already = m.assignedTo === empId && m.status === "Assigned";
     const emp = typeof amsGetEmployeeByAmsId === "function" ? amsGetEmployeeByAmsId(empId) : null;
     m.assignedTo = empId;
+    m.assignedDate = assignDate || m.assignedDate || new Date().toISOString().slice(0, 10);
     m.status = "Assigned";
     m.dept = emp ? emp.dept : (m.dept || "");
     if (typeof amsComputeFullId === "function") m.id = amsComputeFullId(m);
     if (!already) {
-        if (!Array.isArray(m.history)) m.history = [];
-        m.history.push({
-            date: assignDate || new Date().toISOString().slice(0, 10),
+        amsPushItemHistory(m, "mobile", {
+            date: m.assignedDate,
             action: "Assigned - New",
             empId: emp ? emp.empId : "",
             empName: emp ? emp.name : "",
@@ -1653,9 +1790,8 @@ function amsUnlinkMobileSim(mobile, returnSim) {
             || (sameNumber && (!s.linkedMobileId || amsSimMatchesMobile(s, mobile)));
         if (!matched) return;
         if (returnSim && empId && s.assignedTo === empId && s.status !== "Retired") {
-            if (!Array.isArray(s.history)) s.history = [];
             const emp = typeof amsGetEmployeeByAmsId === "function" ? amsGetEmployeeByAmsId(empId) : null;
-            s.history.push({
+            amsPushItemHistory(s, "sim", {
                 date: new Date().toISOString().slice(0, 10),
                 action: "Returned",
                 empId: emp ? emp.empId : "",
@@ -2319,11 +2455,10 @@ function amsMarkHoldingReturnedOnExit(item, emp, returnDate, note, kind) {
     if (!item || !emp || item.assignedTo !== emp.amsId) return false;
     const alreadyNoted = amsHoldingHasExitReturnNote(item);
     if (!alreadyNoted) {
-        if (!Array.isArray(item.history)) item.history = [];
         const displayId = kind === "sim"
             ? (item.simId || "")
             : (typeof amsBaseDisplayId === "function" ? amsBaseDisplayId(item) : (item.id || ""));
-        item.history.push({
+        amsPushItemHistory(item, kind === "sim" ? "sim" : (kind === "mobile" ? "mobile" : "asset"), {
             date: returnDate,
             action: "Returned",
             empId: emp ? emp.empId : "",
@@ -2575,7 +2710,22 @@ function getUnassignedAssets() {
 /* Assigns an asset to an employee */
 function assignAsset(assetId, amsId) {
     const asset = DUMMY_ASSETS.find(a => a.id === assetId);
-    if (asset) asset.assignedTo = amsId;
+    if (!asset) return;
+    const emp = typeof amsGetEmployeeByAmsId === "function" ? amsGetEmployeeByAmsId(amsId) : null;
+    const today = new Date().toISOString().slice(0, 10);
+    asset.assignedTo = amsId;
+    asset.assignedDate = today;
+    asset.status = "Assigned";
+    if (emp) asset.dept = emp.dept || emp.department || "";
+    amsPushItemHistory(asset, "asset", {
+        date: today,
+        action: "Assigned - New",
+        empId: emp ? emp.empId : "",
+        empName: emp ? emp.name : "",
+        empDept: emp ? (emp.dept || emp.department || "") : "",
+        assetIdFull: asset.id,
+        statusLabel: "Assigned",
+    });
     amsDbSaveAsync("assets");
 }
 
