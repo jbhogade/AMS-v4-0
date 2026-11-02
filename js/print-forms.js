@@ -27,14 +27,13 @@ function amsGenerateFormNo(prefix) {
     return `${prefix}-${String(AMS_PRINT_COUNTERS[prefix]).padStart(6, "0")}`;
 }
 
-/* ---- "Remarks / Notes" body: ONLY each asset's stored remarks (added when
-       the asset was created in the system). The typed pre-print note is
-       rendered separately by amsBuildAdditionalRemarks() below. */
+/* ---- "Remarks / Notes" body: stored remarks plus replacement reason/date/old ID. */
 function amsBuildReportRemarks(assetsList) {
     const lines = [];
     assetsList.forEach(oa => {
         const assetLabel = typeof amsPrintRemarkId === "function" ? amsPrintRemarkId(oa) : amsPrintAssetId(oa);
-        if (oa.remarks) lines.push(`<div><strong>${amsEsc(assetLabel)} - Remarks (on record):</strong> ${amsEsc(oa.remarks)}</div>`);
+        const text = typeof amsItemPrintRemarksText === "function" ? amsItemPrintRemarksText(oa) : (oa.remarks || "");
+        if (text) lines.push(`<div><strong>${amsEsc(assetLabel)} - Remarks (on record):</strong> ${amsEsc(text)}</div>`);
     });
     if (!lines.length) lines.push(`<div class="pf-notes-empty">No remarks recorded against the asset(s) in the system.</div>`);
     return lines.join("");
