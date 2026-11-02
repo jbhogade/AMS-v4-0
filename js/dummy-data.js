@@ -301,6 +301,7 @@ async function amsDbLoadAll() {
         if (typeof amsBackfillAssignmentEvents === "function" && amsBackfillAssignmentEvents()) {
             amsDbSaveAsync("assignmentEvents");
         }
+        if (typeof amsBackfillReplacementRemarks === "function") amsBackfillReplacementRemarks();
         if (makesBackfilled) amsDbSaveAsync("assetMakes");
         await amsYieldToBrowser();
         if (typeof amsRepairExitedEmployeeHoldings === "function") {
@@ -409,6 +410,79 @@ function amsItemLastIssueDate(item) {
 function amsPrintItemIssueDate(item) {
     const formatted = amsFormatDate(amsItemLastIssueDate(item));
     return formatted || "-";
+}
+
+function amsAppendItemRemark(item, note) {
+    if (!item || !note) return;
+    const existing = (item.remarks || "").trim();
+    item.remarks = existing ? `${existing} | ${note}` : note;
+}
+
+function amsReplacementRemark(oldItem, date, reason, extraNote) {
+    const oldId = typeof amsBaseDisplayId === "function"
+        ? (amsBaseDisplayId(oldItem) || "")
+        : ((oldItem && (oldItem.id || oldItem.simId)) || "");
+    const dateText = amsFormatDate(date) || date || "";
+    const reasonBits = [reason, extraNote].filter(Boolean).join(" - ");
+    return `Replacement for ${oldId} on ${dateText}. Reason: ${reasonBits}`;
+}
+
+function amsItemReplacementDate(item) {
+    if (!item) return "";
+    if (item.assignedDate) return item.assignedDate;
+    const hist = Array.isArray(item.history) ? item.history : [];
+    for (let i = hist.length - 1; i >= 0; i--) {
+        const act = String((hist[i] && hist[i].action) || "");
+        if (act.indexOf("Replacement") !== -1 || act.indexOf("Replaced") !== -1) {
+            if (hist[i].date) return hist[i].date;
+        }
+    }
+    return "";
+}
+
+function amsItemReplacementRemarkText(item) {
+    if (!item) return "";
+    const oldId = item.replacesAssetId || "";
+    const reasonBits = [item.replacesReason, item.replacesNote].filter(Boolean).join(" - ");
+    if (!oldId && !reasonBits) return "";
+    const dateText = amsFormatDate(amsItemReplacementDate(item)) || amsItemReplacementDate(item) || "";
+    const idBit = oldId || "previous item";
+    const dateBit = dateText ? ` on ${dateText}` : "";
+    const reasonBit = reasonBits ? ` Reason: ${reasonBits}` : "";
+    return `Replacement for ${idBit}${dateBit}.${reasonBit}`;
+}
+
+function amsItemPrintRemarksText(item) {
+    if (!item) return "";
+    const existing = String(item.remarks || "").trim();
+    const replacement = amsItemReplacementRemarkText(item);
+    if (!replacement) return existing;
+    if (existing && existing.indexOf("Replacement for ") !== -1) return existing;
+    return existing ? `${existing} | ${replacement}` : replacement;
+}
+
+function amsBackfillReplacementRemarks() {
+    const packs = [
+        typeof DUMMY_ASSETS !== "undefined" ? DUMMY_ASSETS : [],
+        typeof DUMMY_MOBILES !== "undefined" ? DUMMY_MOBILES : [],
+    ];
+    let changedAssets = false;
+    let changedMobiles = false;
+    packs.forEach((arr, idx) => {
+        arr.forEach(item => {
+            if (!item || (!item.replacesAssetId && !item.replacesReason)) return;
+            const note = amsItemReplacementRemarkText(item);
+            if (!note) return;
+            const existing = String(item.remarks || "");
+            if (existing.indexOf("Replacement for ") !== -1) return;
+            amsAppendItemRemark(item, note);
+            if (idx === 0) changedAssets = true;
+            else changedMobiles = true;
+        });
+    });
+    if (changedAssets) amsDbSaveAsync("assets");
+    if (changedMobiles) amsDbSaveAsync("mobiles");
+    return changedAssets || changedMobiles;
 }
 
 /* Normalises any imported / stored date to ISO yyyy-mm-dd for <input type="date">.

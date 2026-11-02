@@ -1169,6 +1169,7 @@ function amsSubmitReplaceForm(e) {
     newAsset.replacesReason = replacesReason;
     newAsset.replacesNote = replacesNote;
     newAsset.replacesPurchaseDate = old.purchaseDate || "";
+    amsAppendItemRemark(newAsset, amsReplacementRemark(old, issueDate, replacesReason, replacesNote));
     newAsset.id = amsComputeFullId(newAsset);
 
     newAsset.assignedDate = issueDate;
@@ -1275,13 +1276,13 @@ function amsGenerateAssetFormNo() {
     return `AIF-${String(seq).padStart(6, "0")}`;
 }
 
-/* Builds the "Remarks / Notes" section body: ONLY each asset's own stored
-   Remarks. The typed pre-print note is rendered separately by
-   amsBuildAdditionalRemarksHtml() below. */
+/* Builds the "Remarks / Notes" section body: each item's stored Remarks plus
+   replacement reason/date/old ID when this item replaced another. */
 function amsBuildRemarksLinesHtml(assetsList) {
     const lines = [];
     assetsList.forEach(oa => {
-        if (oa.remarks) lines.push(`<div><strong>${amsEsc(typeof amsPrintRemarkId === "function" ? amsPrintRemarkId(oa) : amsPrintAssetId(oa))} - Remarks (on record):</strong> ${amsEsc(oa.remarks)}</div>`);
+        const text = typeof amsItemPrintRemarksText === "function" ? amsItemPrintRemarksText(oa) : (oa.remarks || "");
+        if (text) lines.push(`<div><strong>${amsEsc(typeof amsPrintRemarkId === "function" ? amsPrintRemarkId(oa) : amsPrintAssetId(oa))} - Remarks (on record):</strong> ${amsEsc(text)}</div>`);
     });
     if (!lines.length) lines.push(`<div class="pf-notes-empty">No remarks recorded against the asset(s) in the system.</div>`);
     return lines.join("");

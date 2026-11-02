@@ -816,7 +816,8 @@ function amsPrintSimIssueForm(key) {
 
     const remarksLines = [];
     (simPrint.direct || []).forEach(row => {
-        if (row.remarks) remarksLines.push(`<div><strong>${amsEsc(row.simId)} - Remarks (on record):</strong> ${amsEsc(row.remarks)}</div>`);
+        const text = typeof amsItemPrintRemarksText === "function" ? amsItemPrintRemarksText(row) : (row.remarks || "");
+        if (text) remarksLines.push(`<div><strong>${amsEsc(row.simId)} - Remarks (on record):</strong> ${amsEsc(text)}</div>`);
     });
     if (!remarksLines.length) remarksLines.push(`<div class="pf-notes-empty">No remarks recorded against the SIM card(s) in the system.</div>`);
 
