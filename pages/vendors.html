@@ -124,7 +124,7 @@
                     { key: "phone", label: "Phone" },
                     { key: "email", label: "Email" },
                     { key: "city", label: "City" },
-                    { key: "category", label: "Supplies", type: "select", includeBlank: true,
+                    { key: "category", label: "Supplies", type: "multiselect",
                         optionsFrom: () => amsGetActiveVendorCategoryNames(),
                         quickAdd: { fields: [{ key: "name", label: "New Category Name" }, { key: "description", label: "Description (optional)" }],
                             onAdd: (v) => {

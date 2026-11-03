@@ -241,7 +241,7 @@ BEGIN
         record_key NVARCHAR(200) NOT NULL,
         vendor_id      NVARCHAR(50)  NULL,
         name           NVARCHAR(200) NULL,
-        category       NVARCHAR(200) NULL,
+        category       NVARCHAR(250) NULL,
         city           NVARCHAR(200) NULL,
         contact_person NVARCHAR(200) NULL,
         phone          NVARCHAR(50)  NULL,
@@ -750,6 +750,10 @@ IF OBJECT_ID(N'dbo.ams_vendors', N'U') IS NOT NULL
 IF OBJECT_ID(N'dbo.ams_vendors', N'U') IS NOT NULL
     AND COL_LENGTH(N'dbo.ams_vendors', N'remarks') IS NULL
     ALTER TABLE dbo.ams_vendors ADD remarks NVARCHAR(500) NULL;
+IF OBJECT_ID(N'dbo.ams_vendors', N'U') IS NOT NULL
+    AND COL_LENGTH(N'dbo.ams_vendors', N'category') IS NOT NULL
+    AND COL_LENGTH(N'dbo.ams_vendors', N'category') < 500
+    ALTER TABLE dbo.ams_vendors ALTER COLUMN category NVARCHAR(250) NULL;
 IF OBJECT_ID(N'dbo.ams_sim_cards', N'U') IS NOT NULL
     AND COL_LENGTH(N'dbo.ams_sim_cards', N'status') IS NULL
     ALTER TABLE dbo.ams_sim_cards ADD status NVARCHAR(50) NULL;
