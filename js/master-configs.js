@@ -205,7 +205,7 @@ const AMS_MASTER_CONFIGS = {
             { key: "description", label: "Description" },
         ],
         /* Blocks delete while any vendor uses this category */
-        usageCount: (item) => AMS_DUMMY_VENDORS.filter(v => v.category === item.name).length,
+        usageCount: (item) => AMS_DUMMY_VENDORS.filter(v => amsVendorHasCategory(v, item.name)).length,
     },
 };
 

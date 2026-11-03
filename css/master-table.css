@@ -176,6 +176,35 @@
     accent-color: var(--accent);
 }
 
+/* ---- MULTISELECT (checkbox group used by Vendor Master Supplies) ------------ */
+.mt-multiselect {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 16px;
+    width: 100%;
+    background: var(--bg-input);
+    border: 1px solid var(--border);
+    color: var(--text-primary);
+    border-radius: 8px;
+    padding: 8px 10px;
+}
+.mt-multiselect .mt-ms-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0;
+    font-weight: 400;
+    font-size: 13px;
+    color: var(--text-primary);
+    white-space: nowrap;
+}
+.mt-multiselect input[type="checkbox"] {
+    width: auto;
+    margin: 0;
+    flex-shrink: 0;
+}
+.select-with-add .mt-multiselect { flex: 1; min-width: 0; }
+
 /* ---- QUICK-ADD (+) button + popover (add a dropdown option inline) ------------ */
 .select-with-add { position: relative; display: flex; gap: 6px; }
 .select-with-add select { flex: 1; }

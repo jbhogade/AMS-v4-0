@@ -101,13 +101,14 @@ function amsExportMaster() {
 function amsDownloadTemplate() {
     const cfg = AMS_MASTER_CONFIG;
     const headers = [...cfg.fields.map(f => f.key + (f.required ? "*" : "")), "active"];
-    const sample = cfg.fields.map(f => f.upper ? "EX" : f.type === "date" ? "13-07-2026" : `Example ${f.label}`);
+    const sample = cfg.fields.map(f => f.upper ? "EX" : f.type === "date" ? "13-07-2026" : f.type === "multiselect" ? "Assets, Services" : `Example ${f.label}`);
     amsWriteWorkbook(`${cfg.pageTitle.replace(/\s+/g, "_")}_import_template.xlsx`, [
         { name: "Instructions", cols: [{ wch: 80 }], aoa: [
             [`${cfg.pageTitle} Import Template - Instructions`],
             ["Fields marked with * are required."],
             ["Do not delete the header row (row 2)."],
             ['"active" = true/false.'],
+            ["Multi-select fields (e.g. Supplies) accept comma, pipe, or semicolon separated values."],
         ] },
         { name: "Template", aoa: [headers, [...sample, "true"]] },
     ]);
@@ -143,6 +144,7 @@ function amsHandleImportFile(file) {
             cfg.fields.forEach(f => {
                 if (f.upper && obj[f.key]) obj[f.key] = obj[f.key].toUpperCase();
                 if (f.type === "date" && obj[f.key]) obj[f.key] = amsParseDMY(obj[f.key]);
+                if (f.type === "multiselect" && obj[f.key]) obj[f.key] = amsMtJoinMulti(obj[f.key]);
                 if (f.required && !obj[f.key]) { valid = false; missingFields.push(f.label); }
             });
             if (!valid) {
@@ -328,12 +330,18 @@ function amsMtBuildFormFields() {
     const container = document.getElementById("mtFormFields");
     container.innerHTML = cfg.fields.map(f => {
         let control;
-        if (f.type === "select") {
+        if (f.type === "select" || f.type === "multiselect") {
             const opts = f.optionsFrom ? f.optionsFrom() : (f.options || []);
             const optHtml = o => typeof o === "object"
                 ? `<option value="${amsEsc(o.value)}">${amsEsc(o.label)}</option>`
                 : `<option value="${amsEsc(o)}">${amsEsc(o)}</option>`;
-            const selectHtml = `<select id="mt-${f.key}">${f.includeBlank ? '<option value="">(None - optional)</option>' : ""}${opts.map(optHtml).join("")}</select>`;
+            const msOptValue = o => (typeof o === "object" ? o.value : o);
+            const msOptLabel = o => (typeof o === "object" ? o.label : o);
+            const selectHtml = f.type === "multiselect"
+                ? `<div class="mt-multiselect" id="mt-${f.key}">${opts.map(o =>
+                    `<label class="form-checkbox mt-ms-item"><input type="checkbox" value="${amsEsc(msOptValue(o))}"> ${amsEsc(msOptLabel(o))}</label>`
+                ).join("")}</div>`
+                : `<select id="mt-${f.key}">${f.includeBlank ? '<option value="">(None - optional)</option>' : ""}${opts.map(optHtml).join("")}</select>`;
             control = f.quickAdd
                 ? `<div class="select-with-add">
                     ${selectHtml}
@@ -379,7 +387,10 @@ function amsMtOpenAdd() {
     AMS_MT_STATE.editingKey = null;
     document.getElementById("mtModalTitle").textContent = `Add ${cfg.pageTitle.replace(" Master", "")}`;
     amsMtBuildFormFields();
-    cfg.fields.forEach(f => { document.getElementById(`mt-${f.key}`).value = ""; });
+    cfg.fields.forEach(f => {
+        if (f.type === "multiselect") amsMtSetMultiselect(`mt-${f.key}`, "");
+        else document.getElementById(`mt-${f.key}`).value = "";
+    });
     document.getElementById("mt-active").checked = true;
     amsMtOpenModal();
 }
@@ -396,6 +407,60 @@ function amsMtEnsureOption(sel, value) {
     }
 }
 
+function amsMtSplitMulti(value) {
+    if (typeof amsSplitVendorCategories === "function") return amsSplitVendorCategories(value);
+    return String(value || "").split(/[,|;]/).map(s => s.trim()).filter(Boolean);
+}
+
+function amsMtJoinMulti(names) {
+    if (typeof amsJoinVendorCategories === "function") return amsJoinVendorCategories(names);
+    const seen = new Set();
+    const result = [];
+    (Array.isArray(names) ? names : amsMtSplitMulti(names)).forEach(n => {
+        const t = String(n || "").trim();
+        if (!t || seen.has(t.toLowerCase())) return;
+        seen.add(t.toLowerCase());
+        result.push(t);
+    });
+    return result.join(", ");
+}
+
+function amsMtGetMultiselect(id) {
+    const el = document.getElementById(id);
+    if (!el) return "";
+    const names = Array.from(el.querySelectorAll("input[type=checkbox]:checked")).map(cb => cb.value);
+    return amsMtJoinMulti(names);
+}
+
+function amsMtSetMultiselect(id, value) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const selected = amsMtSplitMulti(value);
+    selected.forEach(name => {
+        if (!Array.from(el.querySelectorAll("input[type=checkbox]")).some(cb => cb.value === name)) {
+            const label = document.createElement("label");
+            label.className = "form-checkbox mt-ms-item";
+            label.innerHTML = `<input type="checkbox" value="${amsEsc(name)}"> ${amsEsc(name)}`;
+            el.appendChild(label);
+        }
+    });
+    el.querySelectorAll("input[type=checkbox]").forEach(cb => {
+        cb.checked = selected.some(n => n.toLowerCase() === cb.value.toLowerCase());
+    });
+}
+
+function amsMtRebuildMultiselect(id, opts, selectedValue) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const keep = selectedValue !== undefined ? selectedValue : amsMtGetMultiselect(id);
+    const msOptValue = o => (typeof o === "object" ? o.value : o);
+    const msOptLabel = o => (typeof o === "object" ? o.label : o);
+    el.innerHTML = (opts || []).map(o =>
+        `<label class="form-checkbox mt-ms-item"><input type="checkbox" value="${amsEsc(msOptValue(o))}"> ${amsEsc(msOptLabel(o))}</label>`
+    ).join("");
+    amsMtSetMultiselect(id, keep);
+}
+
 function amsMtOpenEdit(key) {
     const cfg = AMS_MASTER_CONFIG;
     const item = cfg.dataArray.find(i => i[cfg.idKey] === key);
@@ -404,6 +469,7 @@ function amsMtOpenEdit(key) {
     amsMtBuildFormFields();
     cfg.fields.forEach(f => {
         const el = document.getElementById(`mt-${f.key}`);
+        if (f.type === "multiselect") { amsMtSetMultiselect(`mt-${f.key}`, item[f.key] || ""); return; }
         if (f.type === "select" && item[f.key]) amsMtEnsureOption(el, item[f.key]);
         if (f.type === "password") { el.value = ""; return; } // never render a stored password back
         if (f.type === "date") { amsSetDateInput(el, item[f.key]); return; }
@@ -420,7 +486,9 @@ document.getElementById("mtForm").addEventListener("submit", async (e) => {
 
     const values = {};
     for (const f of cfg.fields) {
-        let val = document.getElementById(`mt-${f.key}`).value.trim();
+        let val = f.type === "multiselect"
+            ? amsMtGetMultiselect(`mt-${f.key}`)
+            : document.getElementById(`mt-${f.key}`).value.trim();
         if (f.upper) val = val.toUpperCase();
         if (f.required && !val && !(f.editOnly && AMS_MT_STATE.editingKey)) { amsToast(`${f.label} is required.`, "warning"); return; }
         values[f.key] = val;
@@ -623,10 +691,15 @@ document.addEventListener("click", (e) => {
         if (!newValue) return; // onAdd already alerted the validation problem
 
         const opts = field.optionsFrom ? field.optionsFrom() : (field.options || []);
-        const select = document.getElementById(`mt-${key}`);
-        select.innerHTML = (field.includeBlank ? '<option value="">(None - optional)</option>' : "") +
-            opts.map(o => `<option value="${amsEsc(o)}">${amsEsc(o)}</option>`).join("");
-        select.value = newValue;
+        if (field.type === "multiselect") {
+            const current = amsMtGetMultiselect(`mt-${key}`);
+            amsMtRebuildMultiselect(`mt-${key}`, opts, amsMtJoinMulti([...amsMtSplitMulti(current), newValue]));
+        } else {
+            const select = document.getElementById(`mt-${key}`);
+            select.innerHTML = (field.includeBlank ? '<option value="">(None - optional)</option>' : "") +
+                opts.map(o => `<option value="${amsEsc(o)}">${amsEsc(o)}</option>`).join("");
+            select.value = newValue;
+        }
 
         field.quickAdd.fields.forEach(qf => { document.getElementById(`mtQa-${key}-${qf.key}`).value = ""; });
         amsMtCloseAllQuickAdd();

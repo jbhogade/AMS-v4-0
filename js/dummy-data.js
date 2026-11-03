@@ -1905,8 +1905,8 @@ function amsUnlinkMobileSim(mobile, returnSim) {
 let AMS_VENDOR_SEQ = 12;
 
 /* Vendor Category Master - DB-backed (vendorCategories collection). Feeds the
-   "Supplies" dropdown on the Vendor Master form. Previously a hardcoded string
-   list; now managed from System Admin > Vendor Category Master. */
+   "Supplies" multi-select on the Vendor Master form. Previously a hardcoded
+   string list; now managed from System Admin > Vendor Category Master. */
 const AMS_DUMMY_VENDOR_CATEGORIES = [
     { name: "Assets",       description: "Supplies assets / capital equipment", active: true },
     { name: "Consumables",  description: "Supplies consumable items",           active: true },
@@ -1917,6 +1917,37 @@ const AMS_DUMMY_VENDOR_CATEGORIES = [
 
 function amsGetActiveVendorCategoryNames() {
     return AMS_DUMMY_VENDOR_CATEGORIES.filter(c => c.active).map(c => c.name);
+}
+
+function amsSplitVendorCategories(value) {
+    return String(value || "").split(/[,|;]/).map(s => s.trim()).filter(Boolean);
+}
+
+function amsJoinVendorCategories(names) {
+    const parts = Array.isArray(names)
+        ? names.map(n => String(n || "").trim()).filter(Boolean)
+        : amsSplitVendorCategories(names);
+    const seen = new Set();
+    const result = [];
+    AMS_DUMMY_VENDOR_CATEGORIES.forEach(c => {
+        if (parts.some(p => p.toLowerCase() === c.name.toLowerCase()) && !seen.has(c.name.toLowerCase())) {
+            seen.add(c.name.toLowerCase());
+            result.push(c.name);
+        }
+    });
+    parts.forEach(p => {
+        if (seen.has(p.toLowerCase())) return;
+        seen.add(p.toLowerCase());
+        result.push(p);
+    });
+    return result.join(", ");
+}
+
+function amsVendorHasCategory(vendorOrValue, categoryName) {
+    const raw = vendorOrValue && typeof vendorOrValue === "object" ? vendorOrValue.category : vendorOrValue;
+    const want = String(categoryName || "").toLowerCase();
+    if (!want) return false;
+    return amsSplitVendorCategories(raw).some(n => n.toLowerCase() === want);
 }
 function amsQuickAddVendorCategory(name, description) {
     const trimmed = (name || "").trim();
