@@ -33,7 +33,7 @@ function amsBuildReportRemarks(assetsList) {
     assetsList.forEach(oa => {
         const assetLabel = typeof amsPrintRemarkId === "function" ? amsPrintRemarkId(oa) : amsPrintAssetId(oa);
         const text = typeof amsItemPrintRemarksText === "function" ? amsItemPrintRemarksText(oa) : (oa.remarks || "");
-        if (text) lines.push(`<div><strong>${amsEsc(assetLabel)} - Remarks (on record):</strong> ${amsEsc(text)}</div>`);
+        if (text) lines.push(`<div><strong>${amsEsc(assetLabel)} - Remarks (on record):</strong> ${typeof amsFormatRemarksHtml === "function" ? amsFormatRemarksHtml(text) : amsEsc(text)}</div>`);
     });
     if (!lines.length) lines.push(`<div class="pf-notes-empty">No remarks recorded against the asset(s) in the system.</div>`);
     return lines.join("");
