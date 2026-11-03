@@ -461,6 +461,11 @@ function amsItemPrintRemarksText(item) {
     return existing ? `${existing} | ${replacement}` : replacement;
 }
 
+function amsFormatRemarksHtml(text) {
+    if (!text) return "";
+    return String(text).split(" | ").map(part => amsEsc(part)).join(" <strong>|</strong> ");
+}
+
 function amsBackfillReplacementRemarks() {
     const packs = [
         typeof DUMMY_ASSETS !== "undefined" ? DUMMY_ASSETS : [],

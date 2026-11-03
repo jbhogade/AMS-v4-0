@@ -466,7 +466,7 @@ function amsSimOpenViewModal(key) {
         <div class="detail-row"><span class="detail-label">Assignment Date</span><span class="detail-value">${amsFormatDate(s.assignedDate) || "-"}</span></div>
         <div class="detail-row"><span class="detail-label">Vendor</span><span class="detail-value">${amsEsc(s.vendor) || "-"}</span></div>
         <div class="detail-row"><span class="detail-label">Cost</span><span class="detail-value">${s.cost ? formatCurrency(s.cost) : "-"}</span></div>
-        <div class="detail-row"><span class="detail-label">Remarks</span><span class="detail-value">${amsEsc(s.remarks) || "-"}</span></div>
+        <div class="detail-row"><span class="detail-label">Remarks</span><span class="detail-value">${s.remarks ? (typeof amsFormatRemarksHtml === "function" ? amsFormatRemarksHtml(s.remarks) : amsEsc(s.remarks)) : "-"}</span></div>
 
         <div class="card" style="margin-top:14px;">
             <div class="card-title">Lifecycle History</div>
@@ -817,7 +817,7 @@ function amsPrintSimIssueForm(key) {
     const remarksLines = [];
     (simPrint.direct || []).forEach(row => {
         const text = typeof amsItemPrintRemarksText === "function" ? amsItemPrintRemarksText(row) : (row.remarks || "");
-        if (text) remarksLines.push(`<div><strong>${amsEsc(row.simId)} - Remarks (on record):</strong> ${amsEsc(text)}</div>`);
+        if (text) remarksLines.push(`<div><strong>${amsEsc(row.simId)} - Remarks (on record):</strong> ${typeof amsFormatRemarksHtml === "function" ? amsFormatRemarksHtml(text) : amsEsc(text)}</div>`);
     });
     if (!remarksLines.length) remarksLines.push(`<div class="pf-notes-empty">No remarks recorded against the SIM card(s) in the system.</div>`);
 

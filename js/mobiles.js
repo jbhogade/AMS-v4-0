@@ -798,7 +798,7 @@ function amsOpenViewModal(key) {
         <div class="detail-row"><span class="detail-label">Assigned To (Subordinate)</span><span class="detail-value">${subEmp ? amsEsc(subEmp.name) + " (" + amsEsc(amsGetEmployeeDisplayId(subEmp)) + ")" : (a.assignedSubText ? amsEsc(a.assignedSubText) : "-")}</span></div>
         <div class="detail-row"><span class="detail-label">Vendor</span><span class="detail-value">${amsEsc(a.vendor) || "-"}</span></div>
         <div class="detail-row"><span class="detail-label">Purchase Cost</span><span class="detail-value">${a.purchaseCost ? formatCurrency(a.purchaseCost) : "-"}</span></div>
-        <div class="detail-row"><span class="detail-label">Remarks</span><span class="detail-value">${amsEsc(a.remarks) || "-"}</span></div>
+        <div class="detail-row"><span class="detail-label">Remarks</span><span class="detail-value">${a.remarks ? (typeof amsFormatRemarksHtml === "function" ? amsFormatRemarksHtml(a.remarks) : amsEsc(a.remarks)) : "-"}</span></div>
         ${a.replacesReason ? `<div class="detail-row"><span class="detail-label">Replacement Reason</span><span class="detail-value">${amsEsc(a.replacesReason)}${a.replacesNote ? ` - ${amsEsc(a.replacesNote)}` : ""}</span></div>` : ""}
         ${a.replacesPurchaseDate ? `<div class="detail-row"><span class="detail-label">Old Mobile Purchase Date</span><span class="detail-value">${amsFormatDate(a.replacesPurchaseDate)}</span></div>` : ""}
         <div class="detail-row"><span class="detail-label">Accessories Issued</span><span class="detail-value">${(a.accessories && a.accessories.length) ? amsEsc(a.accessories.join(", ")) : "-"}</span></div>
@@ -1703,7 +1703,7 @@ function amsBuildRemarksLinesHtml(assetsList) {
     const lines = [];
     assetsList.forEach(oa => {
         const text = typeof amsItemPrintRemarksText === "function" ? amsItemPrintRemarksText(oa) : (oa.remarks || "");
-        if (text) lines.push(`<div><strong>${amsEsc(typeof amsPrintRemarkId === "function" ? amsPrintRemarkId(oa) : amsPrintAssetId(oa))} - Remarks (on record):</strong> ${amsEsc(text)}</div>`);
+        if (text) lines.push(`<div><strong>${amsEsc(typeof amsPrintRemarkId === "function" ? amsPrintRemarkId(oa) : amsPrintAssetId(oa))} - Remarks (on record):</strong> ${typeof amsFormatRemarksHtml === "function" ? amsFormatRemarksHtml(text) : amsEsc(text)}</div>`);
     });
     if (!lines.length) lines.push(`<div class="pf-notes-empty">No remarks recorded against the asset(s) in the system.</div>`);
     return lines.join("");
