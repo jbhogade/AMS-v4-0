@@ -123,18 +123,9 @@ function amsGenerateReport(amsId, type, extraRemarks, printScope) {
     const managerName = managerEmp ? getEmployeeFullName(managerEmp) : "-";
     const exitDate = exitRecord ? amsFormatDate(exitRecord.exitDate) : today;
 
-    const terms = isIssue ? [
-        "The employee acknowledges receipt of the above asset(s) in the condition noted, unless otherwise stated.",
-        "The asset(s) remain company property and must be returned upon request, transfer, or exit.",
-        "The employee is responsible for the safekeeping and proper use of the asset(s).",
-        "Any loss, theft, or damage must be reported to IT/Admin immediately.",
-        "This form must be retained for company records and produced upon asset return or audit.",
-    ] : [
-        "The exiting employee confirms that all company asset(s) listed above have been returned in the condition stated.",
-        "The IT/Admin representative confirms physical verification of all returned asset(s).",
-        "Any asset(s) lost or found damaged beyond normal wear may be subject to recovery as per company policy.",
-        "This form serves as the official record of asset handover and must be retained for audit purposes.",
-    ];
+    const termsHtml = typeof amsBuildPrintTermsHtml === "function"
+        ? amsBuildPrintTermsHtml(isIssue ? "Asset Issue Form" : "Asset Handover Form")
+        : "";
 
     const infoBox = (label, value) => `<div class="pf-box"><div class="pf-box-label">${amsEsc(label)}</div><div class="pf-box-value">${value || "&nbsp;"}</div></div>`;
 
@@ -287,9 +278,7 @@ function amsGenerateReport(amsId, type, extraRemarks, printScope) {
             <div class="pf-section-bar pf-bar-accent">Additional Remarks/Notes (IT/HR/Admin)</div>
             ${amsBuildAdditionalRemarks(extraRemarks)}
 
-            <ol class="pf-declaration">
-                ${terms.map(t => `<li>${t}</li>`).join("")}
-            </ol>
+            ${termsHtml}
 
             <div class="pf-sign-grid">
                 ${isIssue ? `

@@ -28,7 +28,7 @@ class RegistryTests(unittest.TestCase):
             "spareParts", "accessories", "mobiles", "company", "roleAccess", "accessRights",
             "reportPrefs", "users", "exitRecords", "consumableLog", "sparePartLog",
             "simCards", "simOperators", "simPlans", "consumableCategories",
-            "consumableUnits", "sparePartCategories", "vendorCategories",
+            "consumableUnits", "sparePartCategories", "vendorCategories", "printTerms",
             "assignmentEvents", "activityLog",
         }
         self.assertEqual(ALLOWED_KEYS, expected)

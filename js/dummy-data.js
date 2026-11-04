@@ -164,6 +164,7 @@ const AMS_COLLECTIONS = {
     consumableUnits: () => AMS_DUMMY_CONSUMABLE_UNITS,
     sparePartCategories: () => AMS_DUMMY_SPAREPART_CATEGORIES,
     vendorCategories: () => AMS_DUMMY_VENDOR_CATEGORIES,
+    printTerms:      () => AMS_DUMMY_PRINT_TERMS,
     users:           () => AMS_DUMMY_USERS,
     exitRecords:     () => AMS_DUMMY_EXIT_RECORDS,
     assignmentEvents: () => AMS_DUMMY_ASSIGNMENT_EVENTS,
@@ -303,6 +304,9 @@ async function amsDbLoadAll() {
         }
         if (typeof amsBackfillReplacementRemarks === "function") amsBackfillReplacementRemarks();
         if (makesBackfilled) amsDbSaveAsync("assetMakes");
+        if (typeof amsBackfillPrintTermIds === "function" && amsBackfillPrintTermIds()) {
+            amsDbSaveAsync("printTerms");
+        }
         await amsYieldToBrowser();
         if (typeof amsRepairExitedEmployeeHoldings === "function") {
             const repair = () => { try { amsRepairExitedEmployeeHoldings(); } catch (e) { /* ignore */ } };
@@ -1958,6 +1962,134 @@ function amsQuickAddVendorCategory(name, description) {
     return trimmed;
 }
 
+const AMS_PRINT_TERMS_USED_ON = [
+    "Asset Issue Form",
+    "Asset Handover Form",
+    "Mobile Issue Form",
+    "SIM Card Issue Form",
+    "All",
+];
+const AMS_PRINT_TERMS_FORMS = AMS_PRINT_TERMS_USED_ON.filter(v => v !== "All");
+const AMS_PRINT_TERMS_MIN = 2;
+const AMS_PRINT_TERMS_MAX = 50;
+const AMS_DUMMY_PRINT_TERMS = [];
+let AMS_PRINT_TERM_SEQ = 0;
+
+function amsNextPrintTermId() {
+    AMS_PRINT_TERM_SEQ += 1;
+    return `PT-${String(AMS_PRINT_TERM_SEQ).padStart(3, "0")}`;
+}
+
+function amsBackfillPrintTermIds() {
+    const max = AMS_DUMMY_PRINT_TERMS.reduce((m, item) =>
+        Math.max(m, parseInt(String(item.termId || "0").replace(/\D/g, ""), 10) || 0), 0);
+    if (max >= AMS_PRINT_TERM_SEQ) AMS_PRINT_TERM_SEQ = max;
+    let assigned = false;
+    AMS_DUMMY_PRINT_TERMS.forEach(item => {
+        if (!item.termId) {
+            item.termId = amsNextPrintTermId();
+            assigned = true;
+        }
+        if (item.sortOrder == null || item.sortOrder === "") item.sortOrder = 10;
+        else item.sortOrder = Number(item.sortOrder) || 0;
+        if (item.active == null) item.active = true;
+    });
+    return assigned;
+}
+
+function amsPrintTermText(item) {
+    return String(item && item.text != null ? item.text : "").trim();
+}
+
+function amsPrintTermIsCountable(item) {
+    return !!(item && item.active && amsPrintTermText(item));
+}
+
+function amsPrintTermMatchesForm(item, formUsedOn) {
+    if (!amsPrintTermIsCountable(item)) return false;
+    return item.usedOn === "All" || item.usedOn === formUsedOn;
+}
+
+function amsCountPrintTermsForForm(formUsedOn, proposed) {
+    const list = proposed || AMS_DUMMY_PRINT_TERMS;
+    return list.filter(item => amsPrintTermMatchesForm(item, formUsedOn)).length;
+}
+
+function amsGetPrintTerms(formUsedOn) {
+    const rows = AMS_DUMMY_PRINT_TERMS
+        .filter(item => amsPrintTermMatchesForm(item, formUsedOn))
+        .slice()
+        .sort((a, b) => {
+            const sa = Number(a.sortOrder) || 0;
+            const sb = Number(b.sortOrder) || 0;
+            if (sa !== sb) return sa - sb;
+            return amsPrintTermText(a).localeCompare(amsPrintTermText(b));
+        })
+        .slice(0, AMS_PRINT_TERMS_MAX);
+    if (rows.length < AMS_PRINT_TERMS_MIN) return [];
+    return rows.map(item => amsPrintTermText(item));
+}
+
+function amsBuildPrintTermsHtml(formUsedOn) {
+    const terms = amsGetPrintTerms(formUsedOn);
+    if (!terms.length) return "";
+    return `<ol class="pf-declaration">${terms.map(t => `<li>${amsEsc(t)}</li>`).join("")}</ol>`;
+}
+
+function amsPrintTermsWouldBreak(proposed) {
+    for (let i = 0; i < AMS_PRINT_TERMS_FORMS.length; i++) {
+        const form = AMS_PRINT_TERMS_FORMS[i];
+        const nextCount = amsCountPrintTermsForForm(form, proposed);
+        if (nextCount > AMS_PRINT_TERMS_MAX) {
+            return `${form} would exceed ${AMS_PRINT_TERMS_MAX} rules.`;
+        }
+        const currentCount = amsCountPrintTermsForForm(form, AMS_DUMMY_PRINT_TERMS);
+        if (currentCount >= AMS_PRINT_TERMS_MIN && nextCount < AMS_PRINT_TERMS_MIN) {
+            return `${form} must keep at least ${AMS_PRINT_TERMS_MIN} active rules.`;
+        }
+    }
+    return "";
+}
+
+function amsValidatePrintTermWrite(values, existing) {
+    const text = String(values && values.text != null ? values.text : "").trim();
+    if (!text) return { allowed: false, reason: "Rule Text is required." };
+    if (!values.usedOn) return { allowed: false, reason: "Used On is required." };
+    const sortOrder = parseInt(values.sortOrder, 10);
+    if (values.sortOrder === "" || values.sortOrder == null || Number.isNaN(sortOrder)) {
+        return { allowed: false, reason: "Sort Order is required." };
+    }
+    const nextActive = !["false", "0", "no"].includes(String(values.active).toLowerCase());
+    const proposedItem = {
+        ...(existing || {}),
+        ...values,
+        text,
+        sortOrder,
+        active: nextActive,
+    };
+    const proposed = AMS_DUMMY_PRINT_TERMS.map(item => item === existing ? proposedItem : { ...item });
+    if (!existing) proposed.push(proposedItem);
+    const reason = amsPrintTermsWouldBreak(proposed);
+    if (reason) return { allowed: false, reason };
+    values.text = text;
+    values.sortOrder = sortOrder;
+    return { allowed: true };
+}
+
+function amsValidatePrintTermToggle(item, newActive) {
+    const proposed = AMS_DUMMY_PRINT_TERMS.map(row =>
+        row === item ? { ...row, active: newActive } : { ...row });
+    const reason = amsPrintTermsWouldBreak(proposed);
+    if (reason) throw new Error(reason);
+}
+
+function amsValidatePrintTermDelete(item) {
+    const proposed = AMS_DUMMY_PRINT_TERMS.filter(row => row !== item).map(row => ({ ...row }));
+    const reason = amsPrintTermsWouldBreak(proposed);
+    if (reason) return { allowed: false, reason };
+    return { allowed: true };
+}
+
 const AMS_DUMMY_VENDORS = [];
 
 
@@ -3278,6 +3410,7 @@ const AMS_PAGE_REGISTRY = [
     { key: "unitOfMeasure", label: "Unit of Measure Master" },
     { key: "sparePartCategory", label: "Spare Part Category Master" },
     { key: "vendorCategory", label: "Vendor Category Master" },
+    { key: "printTerms",    label: "Print Terms Master" },
     { key: "company",       label: "Company Master" },
     { key: "userMaster",    label: "User Master" },
     { key: "accessRights",  label: "Access Rights Control Master (Supreme Root only)" },
@@ -3333,6 +3466,7 @@ const AMS_ROLE_ACCESS_RECOMMENDED = {
     unitOfMeasure:          { "Standard User": "none", "Viewer (Read-Only)": "none", "Admin": "full", "Super Root": "full", "Supreme Root": "full" },
     sparePartCategory:      { "Standard User": "none", "Viewer (Read-Only)": "none", "Admin": "full", "Super Root": "full", "Supreme Root": "full" },
     vendorCategory:         { "Standard User": "none", "Viewer (Read-Only)": "none", "Admin": "full", "Super Root": "full", "Supreme Root": "full" },
+    printTerms:             { "Standard User": "none", "Viewer (Read-Only)": "none", "Admin": "full", "Super Root": "full", "Supreme Root": "full" },
     accessRights:           { "Standard User": "none", "Viewer (Read-Only)": "none", "Admin": "none", "Super Root": "none", "Supreme Root": "full" },
     roleAccess:             { "Standard User": "none", "Viewer (Read-Only)": "none", "Admin": "none", "Super Root": "none", "Supreme Root": "full" },
     log:                    { "Standard User": "none", "Viewer (Read-Only)": "none", "Admin": "none", "Super Root": "full", "Supreme Root": "full" },
@@ -3492,6 +3626,7 @@ const AMS_NAV_TO_REGISTRY = {
     "master-unit-of-measure": "unitOfMeasure",
     "master-spare-part-category": "sparePartCategory",
     "master-vendor-category": "vendorCategory",
+    "master-print-terms": "printTerms",
 };
 
 function amsGetCurrentUserRecord() {
