@@ -360,6 +360,22 @@ public class AmsDb
             );
         END;
 
+        IF OBJECT_ID(N'dbo.ams_print_terms', N'U') IS NULL
+        BEGIN
+            CREATE TABLE dbo.ams_print_terms (
+                row_id      BIGINT IDENTITY(1,1) NOT NULL,
+                record_key  NVARCHAR(200) NOT NULL,
+                term_id     NVARCHAR(20)  NULL,
+                rule_text   NVARCHAR(1000) NULL,
+                used_on     NVARCHAR(50)  NULL,
+                sort_order  INT           NULL,
+                active      BIT           NOT NULL DEFAULT 1,
+                data_json   NVARCHAR(MAX) NOT NULL,
+                updated_at  DATETIME2     NOT NULL DEFAULT SYSUTCDATETIME(),
+                CONSTRAINT PK_ams_print_terms PRIMARY KEY (record_key)
+            );
+        END;
+
         IF OBJECT_ID(N'dbo.ams_assets', N'U') IS NULL
         BEGIN
             CREATE TABLE dbo.ams_assets (
@@ -1401,6 +1417,12 @@ public class AmsDb
         });
         defs.Add(new TableDef
         {
+            Key = "printTerms", Table = "ams_print_terms", KeyField = "termId",
+            Columns = { C("term_id", "termId"), C("rule_text", "text"), C("used_on", "usedOn"),
+                        C("sort_order", "sortOrder", "int"), C("active", "active", "bit") },
+        });
+        defs.Add(new TableDef
+        {
             Key = "consumables", Table = "ams_consumables", KeyField = "consumableId",
             Columns =
             {
@@ -1618,6 +1640,27 @@ public class AmsDb
             {""name"":""Spare Parts"",""description"":""Supplies spare / repair parts"",""active"":true},
             {""name"":""Services"",""description"":""Provides services (AMC, repair, etc.)"",""active"":true},
             {""name"":""All"",""description"":""General supplier - multiple categories"",""active"":true}
+        ]"),
+        ("printTerms", @"[
+            {""termId"":""PT-001"",""text"":""The employee acknowledges receipt of the above asset(s) in the condition noted, unless otherwise stated."",""usedOn"":""Asset Issue Form"",""sortOrder"":10,""active"":true},
+            {""termId"":""PT-002"",""text"":""The asset(s) remain company property and must be returned upon request, transfer, or exit."",""usedOn"":""Asset Issue Form"",""sortOrder"":20,""active"":true},
+            {""termId"":""PT-003"",""text"":""The employee is responsible for the safekeeping and proper use of the asset(s)."",""usedOn"":""Asset Issue Form"",""sortOrder"":30,""active"":true},
+            {""termId"":""PT-004"",""text"":""Any loss, theft, or damage must be reported to IT/Admin immediately."",""usedOn"":""Asset Issue Form"",""sortOrder"":40,""active"":true},
+            {""termId"":""PT-005"",""text"":""This form must be retained for company records and produced upon asset return or audit."",""usedOn"":""Asset Issue Form"",""sortOrder"":50,""active"":true},
+            {""termId"":""PT-006"",""text"":""The exiting employee confirms that all company asset(s) listed above have been returned in the condition stated."",""usedOn"":""Asset Handover Form"",""sortOrder"":10,""active"":true},
+            {""termId"":""PT-007"",""text"":""The IT/Admin representative confirms physical verification of all returned asset(s)."",""usedOn"":""Asset Handover Form"",""sortOrder"":20,""active"":true},
+            {""termId"":""PT-008"",""text"":""Any asset(s) lost or found damaged beyond normal wear may be subject to recovery as per company policy."",""usedOn"":""Asset Handover Form"",""sortOrder"":30,""active"":true},
+            {""termId"":""PT-009"",""text"":""This form serves as the official record of asset handover and must be retained for audit purposes."",""usedOn"":""Asset Handover Form"",""sortOrder"":40,""active"":true},
+            {""termId"":""PT-010"",""text"":""The employee acknowledges receipt of the above mobile(s) in the condition noted, unless otherwise stated."",""usedOn"":""Mobile Issue Form"",""sortOrder"":10,""active"":true},
+            {""termId"":""PT-011"",""text"":""The mobile(s) remain company property and must be returned upon request, transfer, or exit."",""usedOn"":""Mobile Issue Form"",""sortOrder"":20,""active"":true},
+            {""termId"":""PT-012"",""text"":""The employee is responsible for the safekeeping and proper use of the mobile(s)."",""usedOn"":""Mobile Issue Form"",""sortOrder"":30,""active"":true},
+            {""termId"":""PT-013"",""text"":""Any loss, theft, or damage must be reported to IT/Admin immediately."",""usedOn"":""Mobile Issue Form"",""sortOrder"":40,""active"":true},
+            {""termId"":""PT-014"",""text"":""This form must be retained for company records and produced upon mobile return or audit."",""usedOn"":""Mobile Issue Form"",""sortOrder"":50,""active"":true},
+            {""termId"":""PT-015"",""text"":""The employee acknowledges receipt of the above SIM card(s) in working condition, unless otherwise stated."",""usedOn"":""SIM Card Issue Form"",""sortOrder"":10,""active"":true},
+            {""termId"":""PT-016"",""text"":""The SIM card(s) remain company property and must be returned upon request, transfer, or exit."",""usedOn"":""SIM Card Issue Form"",""sortOrder"":20,""active"":true},
+            {""termId"":""PT-017"",""text"":""The employee is responsible for the safekeeping and proper use of the SIM card(s)."",""usedOn"":""SIM Card Issue Form"",""sortOrder"":30,""active"":true},
+            {""termId"":""PT-018"",""text"":""Any loss, theft, or misuse must be reported to IT/Admin immediately."",""usedOn"":""SIM Card Issue Form"",""sortOrder"":40,""active"":true},
+            {""termId"":""PT-019"",""text"":""This form must be retained for company records and produced upon SIM return or audit."",""usedOn"":""SIM Card Issue Form"",""sortOrder"":50,""active"":true}
         ]"),
     };
 

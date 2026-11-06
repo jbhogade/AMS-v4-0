@@ -368,6 +368,7 @@ function amsPopulateAssetDropdowns(selected) {
     document.getElementById("fPurchaseSite").innerHTML = siteOptions;
     document.getElementById("fCurrentSite").innerHTML = siteOptions;
     document.getElementById("fStatus").innerHTML = AMS_ASSET_STATUS_OPTIONS.map(s => `<option value="${amsEsc(s)}">${amsEsc(s)}</option>`).join("");
+    if (typeof amsPopulateVendorSelects === "function") amsPopulateVendorSelects();
 }
 
 /* =============================================================================
@@ -1391,13 +1392,9 @@ function amsGenerateAssetIssueFormPrint(key, extraRemarks, printScope) {
     const managerEmp = emp.reportsTo ? amsGetEmployeeByAmsId(emp.reportsTo) : null;
     const managerName = managerEmp ? managerEmp.name : "-";
 
-    const terms = [
-        "The employee acknowledges receipt of the above asset(s) in the condition noted, unless otherwise stated.",
-        "The asset(s) remain company property and must be returned upon request, transfer, or exit.",
-        "The employee is responsible for the safekeeping and proper use of the asset(s).",
-        "Any loss, theft, or damage must be reported to IT/Admin immediately.",
-        "This form must be retained for company records and produced upon asset return or audit.",
-    ];
+    const termsHtml = typeof amsBuildPrintTermsHtml === "function"
+        ? amsBuildPrintTermsHtml("Asset Issue Form")
+        : "";
 
     const conditionRow = () => ["Good", "Needs Repair / Service", "Damaged"].map(o => `
         <label class="pf-check-inline"><input type="checkbox" disabled> ${o}</label>`).join("");
@@ -1498,9 +1495,7 @@ function amsGenerateAssetIssueFormPrint(key, extraRemarks, printScope) {
             <div class="pf-section-bar pf-bar-accent">Additional Remarks/Notes (IT/HR/Admin)</div>
             ${amsBuildAdditionalRemarksHtml(extraRemarks)}
 
-            <ol class="pf-declaration">
-                ${terms.map(t => `<li>${t}</li>`).join("")}
-            </ol>
+            ${termsHtml}
 
             <div class="pf-sign-grid">
                 <div class="pf-sign-box">

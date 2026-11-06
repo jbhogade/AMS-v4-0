@@ -207,6 +207,24 @@ const AMS_MASTER_CONFIGS = {
         /* Blocks delete while any vendor uses this category */
         usageCount: (item) => AMS_DUMMY_VENDORS.filter(v => amsVendorHasCategory(v, item.name)).length,
     },
+
+    "print-terms": {
+        pageTitle: "Print Terms Master",
+        pageSub: "Numbered acknowledgement rules printed on Issue and Handover forms",
+        dataArray: AMS_DUMMY_PRINT_TERMS,
+        idKey: "termId",
+        autoIdField: "termId",
+        autoIdGenerate: () => amsNextPrintTermId(),
+        importMatchKeys: ["text", "usedOn"],
+        fields: [
+            { key: "text", label: "Rule Text", required: true, multiline: true, maxLength: 1000 },
+            { key: "usedOn", label: "Used On", required: true, type: "select", options: AMS_PRINT_TERMS_USED_ON },
+            { key: "sortOrder", label: "Sort Order", required: true, type: "number", min: 0 },
+        ],
+        writeGuard: (values, existing) => amsValidatePrintTermWrite(values, existing),
+        onBeforeToggle: (item, newActive) => amsValidatePrintTermToggle(item, newActive),
+        deleteGuard: (item) => amsValidatePrintTermDelete(item),
+    },
 };
 
 /* ---- Resolve the active config from the "type" query parameter ------------- */

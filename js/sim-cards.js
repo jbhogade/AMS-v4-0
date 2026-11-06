@@ -277,6 +277,7 @@ function amsPopulateSimFormSelects() {
     document.getElementById("simOperatorList").innerHTML = amsGetActiveSimOperatorNames().map(o => `<option value="${amsEsc(o)}"></option>`).join("");
     document.getElementById("simPlanList").innerHTML = amsGetActiveSimPlanNames().map(p => `<option value="${amsEsc(p)}"></option>`).join("");
     amsPopulateSimSiteSelect(document.getElementById("fSimSite"));
+    if (typeof amsPopulateVendorSelects === "function") amsPopulateVendorSelects();
 }
 
 function amsSimUpdateIdPreview() {
@@ -792,13 +793,9 @@ function amsPrintSimIssueForm(key) {
     const managerName = managerEmp ? managerEmp.name : "-";
     const infoBox = (label, value) => `<div class="pf-box"><div class="pf-box-label">${amsEsc(label)}</div><div class="pf-box-value">${value || "&nbsp;"}</div></div>`;
 
-    const terms = [
-        "The employee acknowledges receipt of the above SIM card(s) in working condition, unless otherwise stated.",
-        "The SIM card(s) remain company property and must be returned upon request, transfer, or exit.",
-        "The employee is responsible for the safekeeping and proper use of the SIM card(s).",
-        "Any loss, theft, or misuse must be reported to IT/Admin immediately.",
-        "This form must be retained for company records and produced upon SIM return or audit.",
-    ];
+    const termsHtml = typeof amsBuildPrintTermsHtml === "function"
+        ? amsBuildPrintTermsHtml("SIM Card Issue Form")
+        : "";
 
     const headerHtml = typeof amsBuildPrintHeader === "function"
         ? amsBuildPrintHeader(title, `
@@ -857,9 +854,7 @@ function amsPrintSimIssueForm(key) {
             <div class="pf-section-bar pf-bar-accent">Additional Remarks/Notes (IT/HR/Admin)</div>
             ${additionalHtml}
 
-            <ol class="pf-declaration">
-                ${terms.map(t => `<li>${t}</li>`).join("")}
-            </ol>
+            ${termsHtml}
 
             <div class="pf-sign-grid">
                 <div class="pf-sign-box">

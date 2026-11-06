@@ -370,7 +370,7 @@ function amsMtBuildFormFields() {
         } else if (f.type === "date") {
             control = `<input type="date" id="mt-${f.key}">`;
         } else if (f.multiline) {
-            control = `<textarea id="mt-${f.key}" rows="3"></textarea>`;
+            control = `<textarea id="mt-${f.key}" rows="3" ${f.maxLength ? `maxlength="${f.maxLength}"` : ""}></textarea>`;
         } else {
             control = `<input type="text" id="mt-${f.key}" ${f.maxLength ? `maxlength="${f.maxLength}"` : ""} ${f.upper ? 'style="text-transform:uppercase;"' : ""}>`;
         }

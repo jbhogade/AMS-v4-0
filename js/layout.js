@@ -78,6 +78,7 @@ const PAGE_TITLES = {
     "master-unit-of-measure":     { title: "Unit of Measure Master",     sub: "Units used by the Consumable Master" },
     "master-spare-part-category": { title: "Spare Part Category Master", sub: "Categories used by the Spare Parts Master" },
     "master-vendor-category":     { title: "Vendor Category Master",     sub: "Supply categories used by the Vendor Master" },
+    "master-print-terms":         { title: "Print Terms Master",         sub: "Acknowledgement rules on Issue and Handover forms" },
     "access-rights": { title: "Access Rights Control Master", sub: "Per-user page access (Supreme Root)" },
     "role-access":   { title: "Role Access Master",           sub: "Default page access per role (Supreme Root)" },
     "log":           { title: "Log Report",                   sub: "Activity audit trail (Super Root + Supreme Root)" }

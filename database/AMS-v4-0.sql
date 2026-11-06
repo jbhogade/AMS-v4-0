@@ -363,6 +363,24 @@ BEGIN
 END
 GO
 
+/* ---- Print Terms Master ----------------------------------------------------- */
+IF OBJECT_ID(N'dbo.ams_print_terms', N'U') IS NULL
+BEGIN
+    CREATE TABLE dbo.ams_print_terms (
+        row_id      BIGINT IDENTITY(1,1) NOT NULL,
+        record_key  NVARCHAR(200) NOT NULL,
+        term_id     NVARCHAR(20)  NULL,
+        rule_text   NVARCHAR(1000) NULL,
+        used_on     NVARCHAR(50)  NULL,
+        sort_order  INT           NULL,
+        active      BIT           NOT NULL DEFAULT 1,
+        data_json   NVARCHAR(MAX) NOT NULL,
+        updated_at  DATETIME2     NOT NULL DEFAULT SYSUTCDATETIME(),
+        CONSTRAINT PK_ams_print_terms PRIMARY KEY (record_key)
+    );
+END
+GO
+
 /* =============================================================================
    4) BUSINESS ENTITIES  (one table per entity)
    =========================================================================== */
@@ -1423,6 +1441,84 @@ GO
 IF NOT EXISTS (SELECT 1 FROM dbo.ams_vendor_categories WHERE record_key = N'All')
     INSERT INTO dbo.ams_vendor_categories (record_key, name, description, active, data_json)
     VALUES (N'All', N'All', N'General supplier - multiple categories', 1, N'{"name":"All","description":"General supplier - multiple categories","active":true}');
+GO
+
+/* ---- Print Terms ------------------------------------------------------------ */
+IF NOT EXISTS (SELECT 1 FROM dbo.ams_print_terms WHERE record_key = N'PT-001')
+    INSERT INTO dbo.ams_print_terms (record_key, term_id, rule_text, used_on, sort_order, active, data_json)
+    VALUES (N'PT-001', N'PT-001', N'The employee acknowledges receipt of the above asset(s) in the condition noted, unless otherwise stated.', N'Asset Issue Form', 10, 1, N'{"termId":"PT-001","text":"The employee acknowledges receipt of the above asset(s) in the condition noted, unless otherwise stated.","usedOn":"Asset Issue Form","sortOrder":10,"active":true}');
+GO
+IF NOT EXISTS (SELECT 1 FROM dbo.ams_print_terms WHERE record_key = N'PT-002')
+    INSERT INTO dbo.ams_print_terms (record_key, term_id, rule_text, used_on, sort_order, active, data_json)
+    VALUES (N'PT-002', N'PT-002', N'The asset(s) remain company property and must be returned upon request, transfer, or exit.', N'Asset Issue Form', 20, 1, N'{"termId":"PT-002","text":"The asset(s) remain company property and must be returned upon request, transfer, or exit.","usedOn":"Asset Issue Form","sortOrder":20,"active":true}');
+GO
+IF NOT EXISTS (SELECT 1 FROM dbo.ams_print_terms WHERE record_key = N'PT-003')
+    INSERT INTO dbo.ams_print_terms (record_key, term_id, rule_text, used_on, sort_order, active, data_json)
+    VALUES (N'PT-003', N'PT-003', N'The employee is responsible for the safekeeping and proper use of the asset(s).', N'Asset Issue Form', 30, 1, N'{"termId":"PT-003","text":"The employee is responsible for the safekeeping and proper use of the asset(s).","usedOn":"Asset Issue Form","sortOrder":30,"active":true}');
+GO
+IF NOT EXISTS (SELECT 1 FROM dbo.ams_print_terms WHERE record_key = N'PT-004')
+    INSERT INTO dbo.ams_print_terms (record_key, term_id, rule_text, used_on, sort_order, active, data_json)
+    VALUES (N'PT-004', N'PT-004', N'Any loss, theft, or damage must be reported to IT/Admin immediately.', N'Asset Issue Form', 40, 1, N'{"termId":"PT-004","text":"Any loss, theft, or damage must be reported to IT/Admin immediately.","usedOn":"Asset Issue Form","sortOrder":40,"active":true}');
+GO
+IF NOT EXISTS (SELECT 1 FROM dbo.ams_print_terms WHERE record_key = N'PT-005')
+    INSERT INTO dbo.ams_print_terms (record_key, term_id, rule_text, used_on, sort_order, active, data_json)
+    VALUES (N'PT-005', N'PT-005', N'This form must be retained for company records and produced upon asset return or audit.', N'Asset Issue Form', 50, 1, N'{"termId":"PT-005","text":"This form must be retained for company records and produced upon asset return or audit.","usedOn":"Asset Issue Form","sortOrder":50,"active":true}');
+GO
+IF NOT EXISTS (SELECT 1 FROM dbo.ams_print_terms WHERE record_key = N'PT-006')
+    INSERT INTO dbo.ams_print_terms (record_key, term_id, rule_text, used_on, sort_order, active, data_json)
+    VALUES (N'PT-006', N'PT-006', N'The exiting employee confirms that all company asset(s) listed above have been returned in the condition stated.', N'Asset Handover Form', 10, 1, N'{"termId":"PT-006","text":"The exiting employee confirms that all company asset(s) listed above have been returned in the condition stated.","usedOn":"Asset Handover Form","sortOrder":10,"active":true}');
+GO
+IF NOT EXISTS (SELECT 1 FROM dbo.ams_print_terms WHERE record_key = N'PT-007')
+    INSERT INTO dbo.ams_print_terms (record_key, term_id, rule_text, used_on, sort_order, active, data_json)
+    VALUES (N'PT-007', N'PT-007', N'The IT/Admin representative confirms physical verification of all returned asset(s).', N'Asset Handover Form', 20, 1, N'{"termId":"PT-007","text":"The IT/Admin representative confirms physical verification of all returned asset(s).","usedOn":"Asset Handover Form","sortOrder":20,"active":true}');
+GO
+IF NOT EXISTS (SELECT 1 FROM dbo.ams_print_terms WHERE record_key = N'PT-008')
+    INSERT INTO dbo.ams_print_terms (record_key, term_id, rule_text, used_on, sort_order, active, data_json)
+    VALUES (N'PT-008', N'PT-008', N'Any asset(s) lost or found damaged beyond normal wear may be subject to recovery as per company policy.', N'Asset Handover Form', 30, 1, N'{"termId":"PT-008","text":"Any asset(s) lost or found damaged beyond normal wear may be subject to recovery as per company policy.","usedOn":"Asset Handover Form","sortOrder":30,"active":true}');
+GO
+IF NOT EXISTS (SELECT 1 FROM dbo.ams_print_terms WHERE record_key = N'PT-009')
+    INSERT INTO dbo.ams_print_terms (record_key, term_id, rule_text, used_on, sort_order, active, data_json)
+    VALUES (N'PT-009', N'PT-009', N'This form serves as the official record of asset handover and must be retained for audit purposes.', N'Asset Handover Form', 40, 1, N'{"termId":"PT-009","text":"This form serves as the official record of asset handover and must be retained for audit purposes.","usedOn":"Asset Handover Form","sortOrder":40,"active":true}');
+GO
+IF NOT EXISTS (SELECT 1 FROM dbo.ams_print_terms WHERE record_key = N'PT-010')
+    INSERT INTO dbo.ams_print_terms (record_key, term_id, rule_text, used_on, sort_order, active, data_json)
+    VALUES (N'PT-010', N'PT-010', N'The employee acknowledges receipt of the above mobile(s) in the condition noted, unless otherwise stated.', N'Mobile Issue Form', 10, 1, N'{"termId":"PT-010","text":"The employee acknowledges receipt of the above mobile(s) in the condition noted, unless otherwise stated.","usedOn":"Mobile Issue Form","sortOrder":10,"active":true}');
+GO
+IF NOT EXISTS (SELECT 1 FROM dbo.ams_print_terms WHERE record_key = N'PT-011')
+    INSERT INTO dbo.ams_print_terms (record_key, term_id, rule_text, used_on, sort_order, active, data_json)
+    VALUES (N'PT-011', N'PT-011', N'The mobile(s) remain company property and must be returned upon request, transfer, or exit.', N'Mobile Issue Form', 20, 1, N'{"termId":"PT-011","text":"The mobile(s) remain company property and must be returned upon request, transfer, or exit.","usedOn":"Mobile Issue Form","sortOrder":20,"active":true}');
+GO
+IF NOT EXISTS (SELECT 1 FROM dbo.ams_print_terms WHERE record_key = N'PT-012')
+    INSERT INTO dbo.ams_print_terms (record_key, term_id, rule_text, used_on, sort_order, active, data_json)
+    VALUES (N'PT-012', N'PT-012', N'The employee is responsible for the safekeeping and proper use of the mobile(s).', N'Mobile Issue Form', 30, 1, N'{"termId":"PT-012","text":"The employee is responsible for the safekeeping and proper use of the mobile(s).","usedOn":"Mobile Issue Form","sortOrder":30,"active":true}');
+GO
+IF NOT EXISTS (SELECT 1 FROM dbo.ams_print_terms WHERE record_key = N'PT-013')
+    INSERT INTO dbo.ams_print_terms (record_key, term_id, rule_text, used_on, sort_order, active, data_json)
+    VALUES (N'PT-013', N'PT-013', N'Any loss, theft, or damage must be reported to IT/Admin immediately.', N'Mobile Issue Form', 40, 1, N'{"termId":"PT-013","text":"Any loss, theft, or damage must be reported to IT/Admin immediately.","usedOn":"Mobile Issue Form","sortOrder":40,"active":true}');
+GO
+IF NOT EXISTS (SELECT 1 FROM dbo.ams_print_terms WHERE record_key = N'PT-014')
+    INSERT INTO dbo.ams_print_terms (record_key, term_id, rule_text, used_on, sort_order, active, data_json)
+    VALUES (N'PT-014', N'PT-014', N'This form must be retained for company records and produced upon mobile return or audit.', N'Mobile Issue Form', 50, 1, N'{"termId":"PT-014","text":"This form must be retained for company records and produced upon mobile return or audit.","usedOn":"Mobile Issue Form","sortOrder":50,"active":true}');
+GO
+IF NOT EXISTS (SELECT 1 FROM dbo.ams_print_terms WHERE record_key = N'PT-015')
+    INSERT INTO dbo.ams_print_terms (record_key, term_id, rule_text, used_on, sort_order, active, data_json)
+    VALUES (N'PT-015', N'PT-015', N'The employee acknowledges receipt of the above SIM card(s) in working condition, unless otherwise stated.', N'SIM Card Issue Form', 10, 1, N'{"termId":"PT-015","text":"The employee acknowledges receipt of the above SIM card(s) in working condition, unless otherwise stated.","usedOn":"SIM Card Issue Form","sortOrder":10,"active":true}');
+GO
+IF NOT EXISTS (SELECT 1 FROM dbo.ams_print_terms WHERE record_key = N'PT-016')
+    INSERT INTO dbo.ams_print_terms (record_key, term_id, rule_text, used_on, sort_order, active, data_json)
+    VALUES (N'PT-016', N'PT-016', N'The SIM card(s) remain company property and must be returned upon request, transfer, or exit.', N'SIM Card Issue Form', 20, 1, N'{"termId":"PT-016","text":"The SIM card(s) remain company property and must be returned upon request, transfer, or exit.","usedOn":"SIM Card Issue Form","sortOrder":20,"active":true}');
+GO
+IF NOT EXISTS (SELECT 1 FROM dbo.ams_print_terms WHERE record_key = N'PT-017')
+    INSERT INTO dbo.ams_print_terms (record_key, term_id, rule_text, used_on, sort_order, active, data_json)
+    VALUES (N'PT-017', N'PT-017', N'The employee is responsible for the safekeeping and proper use of the SIM card(s).', N'SIM Card Issue Form', 30, 1, N'{"termId":"PT-017","text":"The employee is responsible for the safekeeping and proper use of the SIM card(s).","usedOn":"SIM Card Issue Form","sortOrder":30,"active":true}');
+GO
+IF NOT EXISTS (SELECT 1 FROM dbo.ams_print_terms WHERE record_key = N'PT-018')
+    INSERT INTO dbo.ams_print_terms (record_key, term_id, rule_text, used_on, sort_order, active, data_json)
+    VALUES (N'PT-018', N'PT-018', N'Any loss, theft, or misuse must be reported to IT/Admin immediately.', N'SIM Card Issue Form', 40, 1, N'{"termId":"PT-018","text":"Any loss, theft, or misuse must be reported to IT/Admin immediately.","usedOn":"SIM Card Issue Form","sortOrder":40,"active":true}');
+GO
+IF NOT EXISTS (SELECT 1 FROM dbo.ams_print_terms WHERE record_key = N'PT-019')
+    INSERT INTO dbo.ams_print_terms (record_key, term_id, rule_text, used_on, sort_order, active, data_json)
+    VALUES (N'PT-019', N'PT-019', N'This form must be retained for company records and produced upon SIM return or audit.', N'SIM Card Issue Form', 50, 1, N'{"termId":"PT-019","text":"This form must be retained for company records and produced upon SIM return or audit.","usedOn":"SIM Card Issue Form","sortOrder":50,"active":true}');
 GO
 
 /* =============================================================================
