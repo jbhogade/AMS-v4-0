@@ -413,7 +413,7 @@ function viewEmployee(amsId) {
 }
 
 /* Downloads the employee profile + asset holdings shown in the View modal as a
-   CSV report (uses the shared amsCsvRow / amsDownloadFile helpers). */
+   formatted Excel report. */
 function amsDownloadEmployeeView() {
     if (!currentEmployeeAmsId) return;
     const emp = findEmployee(currentEmployeeAmsId);
@@ -422,8 +422,8 @@ function amsDownloadEmployeeView() {
     const team = amsTeamEmployeeHoldings(emp.amsId) || [];
     const manager = emp.managerAmsId ? findEmployee(emp.managerAmsId) : null;
 
-    const rows = [["Field", "Value", "", "Kind", "Asset ID", "Make / Model", "Status", "Holder"]];
-    const p = (label, value) => rows.push([label, value == null || value === "" ? "-" : value, "", "", "", "", "", ""]);
+    const details = [["Field", "Value"]];
+    const p = (label, value) => details.push([label, value == null || value === "" ? "-" : value]);
     if (isAmsVisible()) p("AMS Employee ID", emp.amsId);
     p("Employee ID", amsGetEmployeeDisplayId(emp));
     p("Name", getEmployeeFullName(emp));
@@ -436,11 +436,14 @@ function amsDownloadEmployeeView() {
     p("Status", emp.status);
     p("Exit Date", emp.exitDate || "-");
 
-    owned.forEach(a => rows.push(["", "", "", "Owned", amsHoldingDisplayId(a), amsHoldingMakeModel(a) || "-", a.status || "-", (typeof amsAssetHolderLabel === "function" && amsAssetHolderLabel(a)) || "-"]));
-    team.forEach(a => rows.push(["", "", "", "Team", amsHoldingDisplayId(a), amsHoldingMakeModel(a) || "-", a.status || "-", "-"]));
+    const holdings = [["Kind", "Asset ID", "Make / Model", "Status", "Holder"]];
+    owned.forEach(a => holdings.push(["Owned", amsHoldingDisplayId(a), amsHoldingMakeModel(a) || "-", a.status || "-", (typeof amsAssetHolderLabel === "function" && amsAssetHolderLabel(a)) || "-"]));
+    team.forEach(a => holdings.push(["Team", amsHoldingDisplayId(a), amsHoldingMakeModel(a) || "-", a.status || "-", "-"]));
 
-    const csv = rows.map(amsCsvRow).join("\r\n");
-    amsDownloadFile(csv, `Employee_${emp.empId}.csv`, "text/csv;charset=utf-8;");
+    amsWriteWorkbook(`Employee_${emp.empId}.xlsx`, [
+        { name: "Details", aoa: details, table: true, tableName: "EmployeeDetails" },
+        { name: "Holdings", aoa: holdings, table: true, tableName: "EmployeeHoldings" },
+    ]);
 }
 
 /* =============================================================================

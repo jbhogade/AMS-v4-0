@@ -8,6 +8,9 @@
 #
 #  EXPORT    : amsExportXlsx(filename, headers, rows)  -> downloads .xlsx
 #              amsExportTableToXlsx(filename, tableEl)  -> DOM table -> .xlsx
+#              Data sheets are written as Excel tables (autofilter, frozen
+#              header, auto column widths). Templates stay plain unless
+#              sheet.table is set.
 #  IMPORT    : amsReadImportRows(file) -> Promise<2D array of strings>, the same
 #              shape amsParseCsv() produces, so every existing import handler
 #              works for BOTH .csv and .xlsx with a one-line change.
@@ -60,12 +63,56 @@ function amsXlsxMissingAlert(err) {
     else alert(msg);
 }
 
+function amsXlsxColWidth(value) {
+    const s = value == null ? "" : String(value);
+    return Math.min(60, Math.max(8, s.length + 2));
+}
+
+function amsXlsxAutosizeCols(aoa) {
+    const colCount = (aoa || []).reduce((m, r) => Math.max(m, (r || []).length), 0);
+    const cols = [];
+    for (let c = 0; c < colCount; c++) {
+        let w = 10;
+        for (let r = 0; r < aoa.length; r++) {
+            w = Math.max(w, amsXlsxColWidth(aoa[r] && aoa[r][c]));
+        }
+        cols.push({ wch: w });
+    }
+    return cols;
+}
+
+function amsApplyExcelTableFormat(ws, aoa, opts) {
+    opts = opts || {};
+    const rows = aoa || [];
+    if (!rows.length) return;
+    const headerRow = opts.headerRow || 0;
+    const colCount = Math.max(1, rows.reduce((m, r) => Math.max(m, (r || []).length), 0));
+    const lastRow = Math.max(headerRow, rows.length - 1);
+    const range = { s: { r: headerRow, c: 0 }, e: { r: lastRow, c: colCount - 1 } };
+    const ref = XLSX.utils.encode_range(range);
+    ws["!autofilter"] = { ref: ref };
+    ws["!views"] = [{
+        state: "frozen",
+        ySplit: headerRow + 1,
+        topLeftCell: XLSX.utils.encode_cell({ r: headerRow + 1, c: 0 }),
+        activeCell: XLSX.utils.encode_cell({ r: headerRow + 1, c: 0 }),
+    }];
+    const tableName = String(opts.tableName || "AMSTable").replace(/[^A-Za-z0-9_]/g, "") || "AMSTable";
+    ws["!tables"] = [{ name: tableName, displayName: tableName, ref: ref, headerRow: true, totalsRow: false }];
+    if (!ws["!cols"]) ws["!cols"] = amsXlsxAutosizeCols(rows);
+}
+
 function amsWriteWorkbook(filename, sheets) {
     return amsEnsureXlsx().then(() => {
         const wb = XLSX.utils.book_new();
-        (sheets || []).forEach((sheet) => {
-            const ws = XLSX.utils.aoa_to_sheet(sheet.aoa || []);
+        (sheets || []).forEach((sheet, idx) => {
+            const aoa = sheet.aoa || [];
+            const ws = XLSX.utils.aoa_to_sheet(aoa);
             if (sheet.cols) ws["!cols"] = sheet.cols;
+            if (sheet.table) amsApplyExcelTableFormat(ws, aoa, {
+                headerRow: sheet.headerRow || 0,
+                tableName: sheet.tableName || ("AMSTable" + (idx + 1)),
+            });
             XLSX.utils.book_append_sheet(wb, ws, sheet.name || "Sheet1");
         });
         XLSX.writeFile(wb, filename);
@@ -74,12 +121,12 @@ function amsWriteWorkbook(filename, sheets) {
 
 /* Downloads a real .xlsx workbook from column headers + 2D row array. */
 function amsExportXlsx(filename, headers, rows) {
-    return amsEnsureXlsx().then(() => {
-        const ws = XLSX.utils.aoa_to_sheet([headers].concat(rows || []));
-        const wb = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(wb, ws, "Sheet1");
-        XLSX.writeFile(wb, `${filename}.xlsx`);
-    }).catch(amsXlsxMissingAlert);
+    return amsWriteWorkbook(`${filename}.xlsx`, [{
+        name: "Report",
+        aoa: [headers].concat(rows || []),
+        table: true,
+        tableName: "AMSReport",
+    }]);
 }
 
 /* Exports a rendered DOM <table> as a real .xlsx workbook. */

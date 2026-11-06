@@ -825,7 +825,7 @@ function amsSparePartsUsedHtml(a) {
         </div>`;
 }
 
-/* Downloads the asset details currently shown in the "View" modal as CSV. */
+/* Downloads the mobile details currently shown in the "View" modal as Excel. */
 function amsDownloadAssetView() {
     const a = AST_STATE.assets.find(x => x.id === AST_STATE.viewKey);
     if (!a) return;
@@ -857,11 +857,10 @@ function amsDownloadAssetView() {
         ["Purchase Cost", a.purchaseCost ? formatCurrency(a.purchaseCost) : "-"],
         ["Remarks", a.remarks || "-"],
     ];
-    const csv = rows.map(amsCsvRow).join("\r\n");
-    amsDownloadFile(csv, `Mobile_${a.id}.csv`, "text/csv;charset=utf-8;");
+    amsWriteWorkbook(`Mobile_${a.id}.xlsx`, [{ name: "Details", aoa: rows, table: true, tableName: "MobileDetails" }]);
 }
 
-/* Downloads the "Mobile ID Record" (lifecycle history) currently shown as CSV. */
+/* Downloads the "Mobile ID Record" (lifecycle history) currently shown as Excel. */
 function amsDownloadAssetHistory() {
     const a = AST_STATE.assets.find(x => x.id === AST_STATE.historyKey);
     if (!a) return;
@@ -877,8 +876,7 @@ function amsDownloadAssetHistory() {
         h.statusLabel || "-",
         h.accessories || "-",
     ]);
-    const csv = [amsCsvRow(headers)].concat(rows.map(r => amsCsvRow(r))).join("\r\n");
-    amsDownloadFile(csv, `Mobile_ID_Record_${a.id}.csv`, "text/csv;charset=utf-8;");
+    amsExportXlsx(`Mobile_ID_Record_${a.id}`, headers, rows);
 }
 
 /* =============================================================================

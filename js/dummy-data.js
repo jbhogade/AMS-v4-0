@@ -225,6 +225,10 @@ function amsWriteCollectionsCache(etag, data) {
     }
 }
 
+function amsInvalidateCollectionsCache() {
+    try { sessionStorage.removeItem(amsCollectionsCacheKey()); } catch (e) { /* storage unavailable */ }
+}
+
 /* Fetch /api/collections with a conditional request. Returns the parsed payload
    even when the API answers 304 (from the session cache). */
 async function amsFetchAllCollections() {
@@ -307,6 +311,8 @@ async function amsDbLoadAll() {
         if (typeof amsBackfillPrintTermIds === "function" && amsBackfillPrintTermIds()) {
             amsDbSaveAsync("printTerms");
         }
+        if (typeof amsMigrateCompanyFromLocal === "function") await amsMigrateCompanyFromLocal();
+        if (typeof amsMigrateReportPrefsFromLocal === "function") await amsMigrateReportPrefsFromLocal();
         await amsYieldToBrowser();
         if (typeof amsRepairExitedEmployeeHoldings === "function") {
             const repair = () => { try { amsRepairExitedEmployeeHoldings(); } catch (e) { /* ignore */ } };
@@ -338,6 +344,7 @@ async function amsDbSave(key) {
     if (!getter) return;
     try { await amsApiPut("/api/collection/" + key, getter()); }
     catch (e) { amsToast("Save failed: " + e.message, "danger"); throw e; }
+    amsInvalidateCollectionsCache();
 }
 
 /* Persist a document collection (object) back to SQL Server. */
@@ -347,6 +354,7 @@ async function amsDbSaveDoc(key) {
     if (!getter) return;
     try { await amsApiPut("/api/collection/" + key, getter()); }
     catch (e) { amsToast("Save failed: " + e.message, "danger"); throw e; }
+    amsInvalidateCollectionsCache();
 }
 
 /* Persist whichever collection owns the given array reference (used by the
@@ -733,9 +741,9 @@ function amsShowImportReport(results) {
     });
     const dlBtn = document.getElementById("ams-download-import-report");
     if (dlBtn) dlBtn.addEventListener("click", () => {
-        const lines = [["Row", "Record", "Result", "Reason"],
-            ...results.map(r => [r.row, r.record, r.result, r.reason])];
-        amsDownloadFile(lines.map(amsCsvRow).join("\r\n"), "Import_Report.csv", "text/csv");
+        const headers = ["Row", "Record", "Result", "Reason"];
+        const rows = results.map(r => [r.row, r.record, r.result, r.reason]);
+        amsExportXlsx("Import_Report", headers, rows);
     });
 
     /* ---- Wire: quick-add missing Department / Designation ---- */
@@ -3758,22 +3766,39 @@ function amsApplyViewOnlyChrome() {
 
 const AMS_DUMMY_COMPANY_DETAILS = {};
 
-/* localStorage-backed (like theme/notifications) so a saved name/logo shows on
-   print letterheads generated from other pages/tabs. */
+/* Legacy browser cache. SQL (ams_company) is the source of truth so every
+   workstation sees the same letterhead. */
 const AMS_COMPANY_STORAGE_KEY = "ams_company_details";
 
+function amsCompanyHasContent(details) {
+    if (!details || typeof details !== "object") return false;
+    return !!(details.companyName || details.address || details.slogan
+        || details.logoDataUrl || details.bannerDataUrl
+        || details.hrAdminContact || details.headTitle || details.headContact);
+}
+
 function amsGetCompanyDetails() {
-    try {
-        const raw = localStorage.getItem(AMS_COMPANY_STORAGE_KEY);
-        if (raw) return Object.assign({}, AMS_DUMMY_COMPANY_DETAILS, JSON.parse(raw));
-    } catch (e) { /* corrupt/unavailable storage - fall back to defaults */ }
     return AMS_DUMMY_COMPANY_DETAILS;
 }
 
 function amsSaveCompanyDetails(details) {
-    try { localStorage.setItem(AMS_COMPANY_STORAGE_KEY, JSON.stringify(details)); } catch (e) { /* storage full */ }
-    Object.assign(AMS_DUMMY_COMPANY_DETAILS, details);
-    amsDbSaveDocAsync("company");
+    Object.assign(AMS_DUMMY_COMPANY_DETAILS, details || {});
+    return amsDbSaveDoc("company");
+}
+
+async function amsMigrateCompanyFromLocal() {
+    try {
+        const raw = localStorage.getItem(AMS_COMPANY_STORAGE_KEY);
+        if (!raw) return;
+        const local = JSON.parse(raw);
+        if (amsCompanyHasContent(local) && !amsCompanyHasContent(AMS_DUMMY_COMPANY_DETAILS)) {
+            Object.assign(AMS_DUMMY_COMPANY_DETAILS, local);
+            try { await amsDbSaveDoc("company"); }
+            catch (e) { return; }
+            if (amsWritesBlocked()) return;
+        }
+        localStorage.removeItem(AMS_COMPANY_STORAGE_KEY);
+    } catch (e) { /* ignore corrupt local cache */ }
 }
 
 /* =============================================================================
@@ -3848,18 +3873,27 @@ const AMS_REPORT_HEADER_DEFAULTS = {
 };
 
 function amsGetReportHeaderPrefs() {
-    const merged = Object.assign({}, AMS_REPORT_HEADER_DEFAULTS, AMS_REPORT_HEADER_PREFS);
-    try {
-        const raw = localStorage.getItem(AMS_REPORT_HEADER_STORAGE_KEY);
-        if (raw) return Object.assign(merged, JSON.parse(raw));
-    } catch (e) { /* corrupt/unavailable storage - fall back to defaults */ }
-    return merged;
+    return Object.assign({}, AMS_REPORT_HEADER_DEFAULTS, AMS_REPORT_HEADER_PREFS);
 }
 
 function amsSaveReportHeaderPrefs(prefs) {
-    Object.assign(AMS_REPORT_HEADER_PREFS, prefs);
-    try { localStorage.setItem(AMS_REPORT_HEADER_STORAGE_KEY, JSON.stringify(prefs)); } catch (e) { /* storage full */ }
-    amsDbSaveDocAsync("reportPrefs");
+    Object.assign(AMS_REPORT_HEADER_PREFS, prefs || {});
+    return amsDbSaveDoc("reportPrefs");
+}
+
+async function amsMigrateReportPrefsFromLocal() {
+    try {
+        const raw = localStorage.getItem(AMS_REPORT_HEADER_STORAGE_KEY);
+        if (!raw) return;
+        const local = JSON.parse(raw);
+        if (local && typeof local === "object" && !Object.keys(AMS_REPORT_HEADER_PREFS).length) {
+            Object.assign(AMS_REPORT_HEADER_PREFS, local);
+            try { await amsDbSaveDoc("reportPrefs"); }
+            catch (e) { return; }
+            if (amsWritesBlocked()) return;
+        }
+        localStorage.removeItem(AMS_REPORT_HEADER_STORAGE_KEY);
+    } catch (e) { /* ignore corrupt local cache */ }
 }
 
 /* =============================================================================

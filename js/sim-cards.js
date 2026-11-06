@@ -480,15 +480,15 @@ function amsSimOpenViewModal(key) {
 }
 
 /* Downloads the SIM card details + lifecycle history shown in the View modal
-   as a CSV report (uses the shared amsCsvRow / amsDownloadFile helpers). */
+   as a formatted Excel report. */
 function amsSimDownloadView() {
     const s = SIM_STATE.sims.find(x => x.simId === SIM_STATE.viewKey);
     if (!s) return;
     const emp = s.assignedTo ? amsGetEmployeeByAmsId(s.assignedTo) : null;
     const subEmp = s.assignedToSubordinate ? amsGetEmployeeByAmsId(s.assignedToSubordinate) : null;
 
-    const rows = [["Field", "Value"]];
-    const p = (label, value) => rows.push([label, value == null || value === "" ? "-" : value]);
+    const details = [["Field", "Value"]];
+    const p = (label, value) => details.push([label, value == null || value === "" ? "-" : value]);
     p("SIM ID", s.simId);
     p("SIM Serial / ICCID", s.iccid);
     p("Mobile Number", s.mobileNumber);
@@ -505,9 +505,8 @@ function amsSimDownloadView() {
     p("Cost", s.cost ? formatCurrency(s.cost) : "-");
     p("Remarks", s.remarks);
 
-    rows.push([]);
-    rows.push(["Date", "Type", "Action", "Emp Name", "Department", "Status", "Remarks"]);
-    (s.history || []).forEach(h => rows.push([
+    const history = [["Date", "Type", "Action", "Emp Name", "Department", "Status", "Remarks"]];
+    (s.history || []).forEach(h => history.push([
         amsFormatDate(h.date) || "-",
         simHistoryEventType(h.action).label,
         h.action,
@@ -517,8 +516,10 @@ function amsSimDownloadView() {
         h.remarks || "-",
     ]));
 
-    const csv = rows.map(amsCsvRow).join("\r\n");
-    amsDownloadFile(csv, `SIM_${s.simId}.csv`, "text/csv;charset=utf-8;");
+    amsWriteWorkbook(`SIM_${s.simId}.xlsx`, [
+        { name: "Details", aoa: details, table: true, tableName: "SimDetails" },
+        { name: "History", aoa: history, table: true, tableName: "SimHistory" },
+    ]);
 }
 
 /* =============================================================================
