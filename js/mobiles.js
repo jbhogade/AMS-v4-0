@@ -365,6 +365,7 @@ function amsPopulateAssetDropdowns(selected) {
     document.getElementById("fPurchaseSite").innerHTML = siteOptions;
     document.getElementById("fCurrentSite").innerHTML = siteOptions;
     document.getElementById("fStatus").innerHTML = AMS_ASSET_STATUS_OPTIONS.map(s => `<option value="${amsEsc(s)}">${amsEsc(s)}</option>`).join("");
+    if (typeof amsPopulateVendorSelects === "function") amsPopulateVendorSelects();
 }
 
 /* =============================================================================

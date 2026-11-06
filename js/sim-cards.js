@@ -277,6 +277,7 @@ function amsPopulateSimFormSelects() {
     document.getElementById("simOperatorList").innerHTML = amsGetActiveSimOperatorNames().map(o => `<option value="${amsEsc(o)}"></option>`).join("");
     document.getElementById("simPlanList").innerHTML = amsGetActiveSimPlanNames().map(p => `<option value="${amsEsc(p)}"></option>`).join("");
     amsPopulateSimSiteSelect(document.getElementById("fSimSite"));
+    if (typeof amsPopulateVendorSelects === "function") amsPopulateVendorSelects();
 }
 
 function amsSimUpdateIdPreview() {
