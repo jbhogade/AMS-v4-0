@@ -8,7 +8,7 @@
 #              CSV, and clears the log (Supreme Root only).
 #
 #  v4-0 ADAPTATIONS :
-#    - Uses the shared amsEsc()/amsFormatDate()/amsCsvRow()/amsDownloadFile()
+#    - Uses the shared amsEsc()/amsFormatDate()/amsExportXlsx()
 #      from js/dummy-data.js (no local copies needed).
 #    - Badges map to the v4-0 badge-* classes.
 #    - Actor badges use .actor-badge.supreme/.super/.other from role-gate.css.
@@ -122,13 +122,13 @@ function renderLogTable() {
 
 /*-------------- Start Code for EXPORT CSV ---------------------------------------*/
 function amsExportLogCsv() {
-    const header = amsCsvRow(["Time", "Actor Role", "Page", "Type", "Message"]);
+    const headers = ["Time", "Actor Role", "Page", "Type", "Message"];
     const toolbar = amsToolbarFilteredLogs();
     const source = typeof amsFilterRows === "function"
         ? amsFilterRows("logTable", toolbar, amsLogTableGetters())
         : toolbar;
-    const rows = source.map(e => amsCsvRow([e.time, e.actorRole, e.page, e.type, e.message]));
-    amsDownloadFile([header, ...rows].join("\n"), "log-report.csv", "text/csv");
+    const rows = source.map(e => [e.time, e.actorRole, e.page, e.type, e.message]);
+    amsExportXlsx("log-report", headers, rows);
 }
 /*-------------- End of the code ------------------------------------------------*/
 

@@ -310,8 +310,8 @@ function amsCsvCell(v) {
     return /[",\r\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
 }
 
-/* Downloads the detail currently shown in the "View Assets" modal as a CSV
-   report. Includes the employee's DISPLAY ID, their current Direct + Team
+/* Downloads the detail currently shown in the "View Assets" modal as Excel.
+   Includes the employee's DISPLAY ID, their current Direct + Team
    holdings, and their complete lifecycle records (assign / return / reassign /
    replace). */
 function distExportDetail() {
@@ -332,8 +332,7 @@ function distExportDetail() {
         ...r.records.map(recordRow),
     ];
     if (!rows.length) rows.push([r.displayId, "", "", "", "", "", "", "No assets"]);
-    const csv = [headers, ...rows].map(row => row.map(amsCsvCell).join(",")).join("\r\n");
-    amsDownloadFile(csv, `Asset_Distribution_${r.displayId}.csv`, "text/csv;charset=utf-8;");
+    amsExportXlsx(`Asset_Distribution_${r.displayId}`, headers, rows);
 }
 
 /* =============================================================================

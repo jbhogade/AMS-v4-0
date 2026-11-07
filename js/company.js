@@ -10,14 +10,11 @@
 #
 #  DATA      : Reads + writes AMS_DUMMY_COMPANY_DETAILS via
 #              amsGetCompanyDetails() / amsSaveCompanyDetails() in
-#              dummy-data.js (localStorage-backed like theme/notifications).
+#              dummy-data.js (SQL-backed so every workstation sees the same).
 #------------------------------------------------------------------------------*/
 
 /*-------------- Start Code for STATE + LOAD EXISTING VALUES ------------------*/
-let CM_STATE = {
-    logoDataUrl: amsGetCompanyDetails().logoDataUrl || "",
-    bannerDataUrl: amsGetCompanyDetails().bannerDataUrl || "",
-};
+let CM_STATE = { logoDataUrl: "", bannerDataUrl: "" };
 
 function amsRenderLogoPreview() {
     const el = document.getElementById("logoPreview");
@@ -35,6 +32,8 @@ function amsRenderBannerPreview() {
 
 function amsLoadCompanyForm() {
     const existing = amsGetCompanyDetails();
+    CM_STATE.logoDataUrl = existing.logoDataUrl || "";
+    CM_STATE.bannerDataUrl = existing.bannerDataUrl || "";
     document.getElementById("cName").value = existing.companyName || "";
     document.getElementById("cAddress").value = existing.address || "";
     document.getElementById("cSlogan").value = existing.slogan || "";
@@ -81,12 +80,13 @@ function amsWireImageControls() {
 
 /*-------------- Start Code for SAVE -------------------------------------------*/
 function amsWireCompanySave() {
-    document.getElementById("companyForm").addEventListener("submit", (e) => {
+    document.getElementById("companyForm").addEventListener("submit", async (e) => {
         e.preventDefault();
+        if (typeof amsGuardViewOnlyWrite === "function" && amsGuardViewOnlyWrite()) return;
         const companyName = document.getElementById("cName").value.trim();
         if (!companyName) { alert("Company Name is required."); return; }
 
-        amsSaveCompanyDetails({
+        const save = amsSaveCompanyDetails({
             companyName,
             address: document.getElementById("cAddress").value.trim(),
             slogan: document.getElementById("cSlogan").value.trim(),
@@ -96,8 +96,10 @@ function amsWireCompanySave() {
             headTitle: document.getElementById("cHeadTitle").value.trim(),
             headContact: document.getElementById("cHeadContact").value.trim(),
         });
-
-        amsToast(`Company details saved: ${companyName}`, "success");
+        try {
+            if (save && typeof save.then === "function") await save;
+            amsToast(`Company details saved: ${companyName}`, "success");
+        } catch (err) { /* amsDbSaveDoc already toasts the failure */ }
     });
 }
 /*-------------- End of the code ----------------------------------------------*/
