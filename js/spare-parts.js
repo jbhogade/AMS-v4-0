@@ -167,18 +167,19 @@ function amsOpenUsedModal(item) {
 
     const empSelect = document.getElementById("usedEmployee");
     empSelect.innerHTML = `<option value="">None</option>` +
-        DUMMY_EMPLOYEES.filter(e => e.status === "Active")
+        amsSortEmployeesByName(DUMMY_EMPLOYEES.filter(e => e.status === "Active"))
             .map(e => `<option value="${e.amsId}">${amsEsc(getEmployeeFullName(e))} (${amsEsc(e.department)})</option>`).join("");
 
     const deptSelect = document.getElementById("usedDepartment");
     deptSelect.innerHTML = `<option value="">None</option>` +
-        AMS_DUMMY_DEPARTMENTS.map(d => `<option value="${amsEsc(d.name)}">${amsEsc(d.name)}</option>`).join("");
+        amsActiveDepartmentNames().map(d => `<option value="${amsEsc(d)}">${amsEsc(d)}</option>`).join("");
 
     /* Compatible assets (matching this part's Asset Type) listed first, then the
        rest. Value = the PERMANENT AMS Asset ID (survives display-ID changes on
        transfer/reassign); the display ID is snapshotted into the log at the time. */
-    const compatible = DUMMY_ASSETS.filter(a => a.type === item.assetType && a.status !== "Retired / Scrapped");
-    const others = DUMMY_ASSETS.filter(a => a.type !== item.assetType && a.status !== "Retired / Scrapped");
+    const byAssetId = (a, b) => amsSortAlpha(a.id, b.id);
+    const compatible = DUMMY_ASSETS.filter(a => a.type === item.assetType && a.status !== "Retired / Scrapped").sort(byAssetId);
+    const others = DUMMY_ASSETS.filter(a => a.type !== item.assetType && a.status !== "Retired / Scrapped").sort(byAssetId);
     const assetOptionHtml = a => `<option value="${amsEsc(a.amsAssetId)}">${amsEsc(a.id)} - ${amsEsc(a.type)} ${amsEsc(a.makeModel)} (${amsEsc(a.site)})</option>`;
     document.getElementById("usedForAsset").innerHTML = `<option value="">Not linked to a specific asset</option>`
         + (compatible.length ? `<optgroup label="Compatible (${amsEsc(item.assetType)})">${compatible.map(assetOptionHtml).join("")}</optgroup>` : "")

@@ -37,6 +37,7 @@ const AMS_ADMIN_TABS = {
     sparePartCategory:  "masters.html?type=spare-part-category",
     vendorCategory:     "masters.html?type=vendor-category",
     printTerms:         "masters.html?type=print-terms",
+    labelPassPrint:     "label-pass-print.html",
     accessRights:  "access-rights.html",
     roleAccess:    "role-access.html",
     log:           "log-report.html",

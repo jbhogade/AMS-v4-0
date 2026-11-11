@@ -453,7 +453,7 @@ function openAssignModal(amsId) {
     const emp = findEmployee(amsId);
     if (!emp) return;
 
-    const unassigned = getUnassignedAssets();
+    const unassigned = getUnassignedAssets().slice().sort((a, b) => amsSortAlpha(a.id, b.id));
     const select = document.getElementById("assign-asset");
 
     /* Fill the asset dropdown with unassigned assets */
@@ -486,7 +486,7 @@ function openReassignModal(amsId) {
     const emp = findEmployee(amsId);
     if (!emp) return;
 
-    const hisAssets = getEmployeeAssets(amsId);
+    const hisAssets = getEmployeeAssets(amsId).slice().sort((a, b) => amsSortAlpha(a.id, b.id));
     const assetSelect = document.getElementById("reassign-asset");
 
     assetSelect.innerHTML = hisAssets.length
@@ -495,8 +495,8 @@ function openReassignModal(amsId) {
 
     /* Target employees = all active employees except himself */
     const targetSelect = document.getElementById("reassign-target");
-    targetSelect.innerHTML = DUMMY_EMPLOYEES
-        .filter(e => e.status === "Active" && e.amsId !== amsId)
+    targetSelect.innerHTML = amsSortEmployeesByName(DUMMY_EMPLOYEES
+        .filter(e => e.status === "Active" && e.amsId !== amsId))
         .map(e => `<option value="${e.amsId}">${escapeHtml(getEmployeeFullName(e))} (${escapeHtml(e.department)})</option>`)
         .join("");
 
@@ -614,9 +614,8 @@ function openExitModal(amsId) {
         }).join("");
 
         const inchargeSel = document.getElementById("exit-incharge");
-        const options = DUMMY_EMPLOYEES
-            .filter(e => e.status === "Active" && e.amsId !== amsId)
-            .sort((a, b) => a.department.localeCompare(b.department) || getEmployeeFullName(a).localeCompare(getEmployeeFullName(b)))
+        const options = amsSortEmployeesByName(DUMMY_EMPLOYEES
+            .filter(e => e.status === "Active" && e.amsId !== amsId))
             .map(e => `<option value="${e.amsId}">${escapeHtml(getEmployeeFullName(e))} - ${escapeHtml(e.designation)} (${escapeHtml(e.department)})</option>`)
             .join("");
         /* Default to this person's own manager, if they are still active */
@@ -831,6 +830,7 @@ function allDeptOptions() {
     AMS_DUMMY_DEPARTMENTS.forEach(d => {
         if (!out.some(x => x.name.toLowerCase() === d.name.toLowerCase())) out.push({ name: d.name, short: d.shortform });
     });
+    out.sort((a, b) => amsSortAlpha(a.name, b.name));
     return out;
 }
 function allDesigOptions() {
@@ -838,6 +838,7 @@ function allDesigOptions() {
     AMS_DESIGNATION_OPTIONS.forEach(d => {
         if (!out.some(x => x.toLowerCase() === d.name.toLowerCase())) out.push(d.name);
     });
+    out.sort(amsSortAlpha);
     return out;
 }
 
@@ -872,7 +873,7 @@ function populateSelects() {
 
     /* Manager (reports-to) dropdown - all active employees */
     managerSelect.innerHTML = `<option value="">(None - top level)</option>` +
-        DUMMY_EMPLOYEES.filter(e => e.status === "Active")
+        amsSortEmployeesByName(DUMMY_EMPLOYEES.filter(e => e.status === "Active"))
             .map(e => `<option value="${e.amsId}">${escapeHtml(getEmployeeFullName(e))} (${escapeHtml(e.department)})</option>`)
             .join("");
 

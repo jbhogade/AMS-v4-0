@@ -815,15 +815,65 @@ function amsUniqueSorted(values) {
         seen[k] = true;
         out.push(s);
     });
-    out.sort((a, b) => a.localeCompare(b));
+    out.sort(amsSortAlpha);
     return out;
+}
+
+function amsSortAlpha(a, b) {
+    return String(a == null ? "" : a).localeCompare(String(b == null ? "" : b), undefined, { numeric: true, sensitivity: "base" });
+}
+
+function amsSortedStrings(values) {
+    return (values || []).slice().sort(amsSortAlpha);
+}
+
+function amsSortEmployeesByName(emps) {
+    return (emps || []).slice().sort((a, b) => {
+        const na = (a && (a.name || ((typeof getEmployeeFullName === "function") ? getEmployeeFullName(a) : ""))) || "";
+        const nb = (b && (b.name || ((typeof getEmployeeFullName === "function") ? getEmployeeFullName(b) : ""))) || "";
+        const c = amsSortAlpha(na, nb);
+        if (c) return c;
+        return amsSortAlpha((a && (a.dept || a.department)) || "", (b && (b.dept || b.department)) || "");
+    });
+}
+
+function amsIsPinnedSelectOption(o) {
+    const value = typeof o === "object" ? String(o.value == null ? "" : o.value) : "";
+    const label = typeof o === "object" ? String(o.label == null ? "" : o.label) : String(o == null ? "" : o);
+    if (!value && typeof o === "object") return true;
+    if (value === "__other__" || value === "__personal__") return true;
+    return /^(none|all|select)\b/i.test(label.trim()) || /not in user master/i.test(label);
+}
+
+function amsSortSelectOptions(opts) {
+    const pinned = [];
+    const rest = [];
+    (opts || []).forEach(o => (amsIsPinnedSelectOption(o) ? pinned : rest).push(o));
+    rest.sort((a, b) => {
+        const la = typeof a === "object" ? a.label : a;
+        const lb = typeof b === "object" ? b.label : b;
+        return amsSortAlpha(la, lb);
+    });
+    return pinned.concat(rest);
+}
+
+function amsActiveSiteNames() {
+    return amsSortedStrings((AMS_DUMMY_SITES || []).filter(s => s.active !== false).map(s => s.name));
+}
+
+function amsActiveDepartmentNames() {
+    return amsSortedStrings((AMS_DUMMY_DEPARTMENTS || []).map(d => d.name).filter(Boolean));
+}
+
+function amsActiveAssetTypeNames() {
+    return amsSortedStrings((AMS_DUMMY_ASSET_TYPES || []).filter(t => t.active).map(t => t.name));
 }
 
 /* Rebuilds a <select> while keeping the current value when it is still valid. */
 function amsFillSelectOptions(selectEl, allLabel, values) {
     if (!selectEl) return;
     const prev = selectEl.value;
-    const list = values || [];
+    const list = amsSortedStrings(values || []);
     selectEl.innerHTML = `<option value="">${amsEsc(allLabel)}</option>` +
         list.map(v => `<option value="${amsEsc(v)}">${amsEsc(v)}</option>`).join("");
     if (prev && (prev === "" || list.indexOf(prev) !== -1)) selectEl.value = prev;
@@ -1101,7 +1151,7 @@ const AMS_DUMMY_ACCESSORIES = [];
 
 /* Options for the Assign/Reassign/Replace checklist - active accessories for an Asset Type */
 function amsGetAccessoryOptions(assetType) {
-    return AMS_DUMMY_ACCESSORIES.filter(a => a.assetType === assetType && a.active).map(a => a.name);
+    return amsSortedStrings(AMS_DUMMY_ACCESSORIES.filter(a => a.assetType === assetType && a.active).map(a => a.name));
 }
 
 /* Quick-add from the checklist "+" - adds straight to the shared master list */
@@ -1141,7 +1191,7 @@ function amsBackfillAssetMakeCodes() {
 
 function amsGetMakeOptions(assetType) {
     if (!assetType) return [];
-    return AMS_DUMMY_ASSET_MAKES.filter(m => m.assetType === assetType && m.active).map(m => m.name);
+    return amsSortedStrings(AMS_DUMMY_ASSET_MAKES.filter(m => m.assetType === assetType && m.active).map(m => m.name));
 }
 
 function amsFillMakeSelect(selectEl, assetType, selected) {
@@ -1184,16 +1234,16 @@ function amsCategoryMatchesPage(categoryName, pageKind) {
 }
 
 function amsGetCategoryOptions(pageKind) {
-    return AMS_DUMMY_ASSET_CATEGORIES.filter(c => c.active && amsCategoryMatchesPage(c.name, pageKind)).map(c => c.name);
+    return amsSortedStrings(AMS_DUMMY_ASSET_CATEGORIES.filter(c => c.active && amsCategoryMatchesPage(c.name, pageKind)).map(c => c.name));
 }
 
 function amsGetTypeOptions(pageKind, categoryName) {
-    return AMS_DUMMY_ASSET_TYPES.filter(t => {
+    return amsSortedStrings(AMS_DUMMY_ASSET_TYPES.filter(t => {
         if (!t.active || !t.category) return false;
         if (!amsCategoryMatchesPage(t.category, pageKind)) return false;
         if (categoryName && t.category !== categoryName) return false;
         return true;
-    }).map(t => t.name);
+    }).map(t => t.name));
 }
 
 function amsTypeBelongsToPage(typeName, pageKind) {
@@ -1205,7 +1255,7 @@ function amsTypeBelongsToPage(typeName, pageKind) {
 function amsFillNamedSelect(selectEl, names, selected) {
     if (!selectEl) return;
     const keep = (selected || "").trim();
-    const list = names.slice();
+    const list = amsSortedStrings(names);
     if (keep && !list.some(n => n === keep)) list.unshift(keep);
     selectEl.innerHTML = list.map(n => `<option value="${amsEsc(n)}">${amsEsc(n)}</option>`).join("");
     if (keep) selectEl.value = keep;
@@ -1378,27 +1428,46 @@ function amsInvalidateLookupCaches() {
 function amsNameShortMap(list) {
     const map = Object.create(null);
     (list || []).forEach(item => {
-        if (item && item.name) map[item.name] = item.shortform || "";
+        if (!item || !item.name) return;
+        const short = item.shortform || item.short || "";
+        map[item.name] = short;
+        map[String(item.name).trim().toLowerCase()] = short;
     });
     return map;
+}
+
+function amsLookupShort(map, name) {
+    if (!name) return "";
+    const raw = String(name).trim();
+    return map[raw] || map[raw.toLowerCase()] || "";
 }
 
 /* shortform segment for an Asset Type (e.g. "Laptop" -> "LT") */
 function amsTypeShort(typeName) {
     if (!AMS_TYPE_SHORT_MAP) AMS_TYPE_SHORT_MAP = amsNameShortMap(AMS_DUMMY_ASSET_TYPES);
-    return AMS_TYPE_SHORT_MAP[typeName] || "";
+    return amsLookupShort(AMS_TYPE_SHORT_MAP, typeName);
 }
 
 /* shortform segment for a Site (e.g. "Mumbai HO" -> "HO") */
 function amsSiteShort(siteName) {
     if (!AMS_SITE_SHORT_MAP) AMS_SITE_SHORT_MAP = amsNameShortMap(AMS_DUMMY_SITES);
-    return AMS_SITE_SHORT_MAP[siteName] || "";
+    return amsLookupShort(AMS_SITE_SHORT_MAP, siteName);
 }
 
 /* shortform segment for a Department (e.g. "IT" -> "IT") */
 function amsDeptShort(deptName) {
-    if (!AMS_DEPT_SHORT_MAP) AMS_DEPT_SHORT_MAP = amsNameShortMap(AMS_DUMMY_DEPARTMENTS);
-    return AMS_DEPT_SHORT_MAP[deptName] || "";
+    if (!AMS_DEPT_SHORT_MAP) {
+        AMS_DEPT_SHORT_MAP = amsNameShortMap(AMS_DUMMY_DEPARTMENTS);
+        (typeof DEPARTMENTS !== "undefined" ? DEPARTMENTS : []).forEach(d => {
+            if (!d || !d.name) return;
+            const short = d.shortform || d.short || "";
+            if (!short) return;
+            if (!AMS_DEPT_SHORT_MAP[d.name]) AMS_DEPT_SHORT_MAP[d.name] = short;
+            const lower = String(d.name).trim().toLowerCase();
+            if (!AMS_DEPT_SHORT_MAP[lower]) AMS_DEPT_SHORT_MAP[lower] = short;
+        });
+    }
+    return amsLookupShort(AMS_DEPT_SHORT_MAP, deptName);
 }
 
 /* Base Display ID - the permanent type+sequence part (e.g. "LT00007") that does
@@ -1439,19 +1508,28 @@ function amsGetEmployeesForPortal() {
 
 /* FULL Smart Asset ID = Base Display ID + CurrentSite + Assignee's Dept, only
    once the asset is Assigned. Unassigned assets stay on their base/short form.
-   LEGACY assets (manually-typed / imported display IDs, isLegacyId) keep their
-   original ID exactly - no site/department suffix is ever appended to them. */
+    LEGACY assets (manually-typed / imported display IDs, isLegacyId) keep their
+    original ID exactly - no site/department suffix is ever appended to them. */
+function amsDeptShortFromEmp(emp) {
+    if (!emp) return "";
+    const fromMaster = amsDeptShort(emp.dept || emp.department);
+    if (fromMaster) return fromMaster;
+    const m = String(emp.amsId || "").match(/^EMP-([A-Za-z0-9]+)-/i);
+    return m ? m[1].toUpperCase() : "";
+}
+
 function amsComputeFullId(asset) {
     const base = amsBaseDisplayId(asset);
     if (asset.isLegacyId) return base; /* legacy/custom IDs stay unchanged */
     if (!asset.assignedTo) return base; /* unassigned - base/short form only */
     const emp = amsGetEmployeeByAmsId(asset.assignedTo);
-    const siteShort = amsSiteShort(asset.currentSite || asset.site);
+    const siteShort = amsSiteShort(asset.currentSite || asset.site || (emp && emp.site));
     /* Assign to Department (optional) overrides the employee's own department for
        this suffix - e.g. a shared printer physically sitting in Sales, even if the
        Direct Employee responsible for it is from IT, should show as belonging to
        Sales, not IT. */
-    const deptShort = amsDeptShort(asset.assignedDepartment || (emp ? emp.dept : ""));
+    const deptShort = amsDeptShort(asset.assignedDepartment || asset.dept)
+        || amsDeptShortFromEmp(emp);
     return `${base}${siteShort}${deptShort}`;
 }
 
@@ -1473,10 +1551,17 @@ function amsPrintAssetId(oa) {
 
 function amsPrintRemarkId(oa) {
     if (!oa) return "";
-    if (oa.simId) return oa.simId;
-    if (typeof amsBaseDisplayId === "function") {
-        const base = amsBaseDisplayId(oa);
-        if (base) return base;
+    if (oa.simId && !oa.displayId && !oa.amsAssetId) return oa.simId;
+    if (oa.isLegacyId) {
+        return oa.displayId || (typeof amsBaseDisplayId === "function" ? amsBaseDisplayId(oa) : "") || oa.id || oa.assetId || "";
+    }
+    if (typeof amsPrintAssetId === "function") {
+        const full = amsPrintAssetId(oa);
+        if (full) return full;
+    }
+    if (typeof amsComputeFullId === "function") {
+        const computed = amsComputeFullId(oa);
+        if (computed) return computed;
     }
     return oa.displayId || oa.id || oa.assetId || "";
 }
@@ -1519,10 +1604,10 @@ const AMS_DUMMY_CONSUMABLE_UNITS = [
 ];
 
 function amsGetActiveConsumableCategoryNames() {
-    return AMS_DUMMY_CONSUMABLE_CATEGORIES.filter(c => c.active).map(c => c.name);
+    return amsSortedStrings(AMS_DUMMY_CONSUMABLE_CATEGORIES.filter(c => c.active).map(c => c.name));
 }
 function amsGetActiveConsumableUnitNames() {
-    return AMS_DUMMY_CONSUMABLE_UNITS.filter(u => u.active).map(u => u.name);
+    return amsSortedStrings(AMS_DUMMY_CONSUMABLE_UNITS.filter(u => u.active).map(u => u.name));
 }
 
 /* Quick-add helpers used by the Consumable Master "+" buttons. Return the new
@@ -1562,7 +1647,7 @@ const AMS_DUMMY_SPAREPART_CATEGORIES = [
 ];
 
 function amsGetActiveSparePartCategoryNames() {
-    return AMS_DUMMY_SPAREPART_CATEGORIES.filter(c => c.active).map(c => c.name);
+    return amsSortedStrings(AMS_DUMMY_SPAREPART_CATEGORIES.filter(c => c.active).map(c => c.name));
 }
 function amsQuickAddSparePartCategory(name, description) {
     const trimmed = (name || "").trim();
@@ -1616,10 +1701,10 @@ const AMS_DUMMY_SIM_CARDS = [];
 
 /* Active operator / plan names for the SIM Card form datalists */
 function amsGetActiveSimOperatorNames() {
-    return AMS_DUMMY_SIM_OPERATORS.filter(o => o.active).map(o => o.name);
+    return amsSortedStrings(AMS_DUMMY_SIM_OPERATORS.filter(o => o.active).map(o => o.name));
 }
 function amsGetActiveSimPlanNames() {
-    return AMS_DUMMY_SIM_PLANS.filter(p => p.active).map(p => p.name);
+    return amsSortedStrings(AMS_DUMMY_SIM_PLANS.filter(p => p.active).map(p => p.name));
 }
 
 /* Ensures an operator exists in the SIM Operator Master (+ persists to SQL).
@@ -1928,7 +2013,7 @@ const AMS_DUMMY_VENDOR_CATEGORIES = [
 ];
 
 function amsGetActiveVendorCategoryNames() {
-    return AMS_DUMMY_VENDOR_CATEGORIES.filter(c => c.active).map(c => c.name);
+    return amsSortedStrings(AMS_DUMMY_VENDOR_CATEGORIES.filter(c => c.active).map(c => c.name));
 }
 
 function amsSplitVendorCategories(value) {
@@ -2103,7 +2188,7 @@ const AMS_DUMMY_VENDORS = [];
 
 /* Live vendor names for the Asset / Consumable / Spare Parts vendor fields */
 function amsGetActiveVendorNames() {
-    return AMS_DUMMY_VENDORS.filter(v => v.active).map(v => v.name);
+    return amsSortedStrings(AMS_DUMMY_VENDORS.filter(v => v.active).map(v => v.name));
 }
 
 /* Refills every <select class="ams-vendor-select"> (the "pick a Vendor" fields
@@ -3419,6 +3504,7 @@ const AMS_PAGE_REGISTRY = [
     { key: "sparePartCategory", label: "Spare Part Category Master" },
     { key: "vendorCategory", label: "Vendor Category Master" },
     { key: "printTerms",    label: "Print Terms Master" },
+    { key: "labelPassPrint", label: "Label/Pass Print Master" },
     { key: "company",       label: "Company Master" },
     { key: "userMaster",    label: "User Master" },
     { key: "accessRights",  label: "Access Rights Control Master (Supreme Root only)" },
@@ -3475,6 +3561,7 @@ const AMS_ROLE_ACCESS_RECOMMENDED = {
     sparePartCategory:      { "Standard User": "none", "Viewer (Read-Only)": "none", "Admin": "full", "Super Root": "full", "Supreme Root": "full" },
     vendorCategory:         { "Standard User": "none", "Viewer (Read-Only)": "none", "Admin": "full", "Super Root": "full", "Supreme Root": "full" },
     printTerms:             { "Standard User": "none", "Viewer (Read-Only)": "none", "Admin": "full", "Super Root": "full", "Supreme Root": "full" },
+    labelPassPrint:         { "Standard User": "none", "Viewer (Read-Only)": "none", "Admin": "full", "Super Root": "full", "Supreme Root": "full" },
     accessRights:           { "Standard User": "none", "Viewer (Read-Only)": "none", "Admin": "none", "Super Root": "none", "Supreme Root": "full" },
     roleAccess:             { "Standard User": "none", "Viewer (Read-Only)": "none", "Admin": "none", "Super Root": "none", "Supreme Root": "full" },
     log:                    { "Standard User": "none", "Viewer (Read-Only)": "none", "Admin": "none", "Super Root": "full", "Supreme Root": "full" },
@@ -3635,6 +3722,7 @@ const AMS_NAV_TO_REGISTRY = {
     "master-spare-part-category": "sparePartCategory",
     "master-vendor-category": "vendorCategory",
     "master-print-terms": "printTerms",
+    "label-pass-print": "labelPassPrint",
 };
 
 function amsGetCurrentUserRecord() {

@@ -159,7 +159,7 @@
                     { key: "linkedEmployee", label: "Linked Employee",  type: "select",
                         optionsFrom: () => [
                             { value: "", label: "None (service/admin account)" },
-                            ...DUMMY_EMPLOYEES.filter(e => e.status === "Active")
+                            ...amsSortEmployeesByName(DUMMY_EMPLOYEES.filter(e => e.status === "Active"))
                                 .map(e => ({ value: e.empId, label: `${getEmployeeFullName(e)} (${e.empId})` })),
                         ],
                         format: (empId) => {
