@@ -361,7 +361,7 @@ function amsPopulateAssetDropdowns(selected) {
     const category = catEl.value;
     amsFillTypeSelect(typeEl, amsPageKind(), category, selected.type || typeEl.value);
     amsFillMakeSelect(document.getElementById("fMake"), typeEl.value, selected.make || document.getElementById("fMake").value);
-    const siteOptions = AMS_DUMMY_SITES.filter(s => s.active).map(s => `<option value="${amsEsc(s.name)}">${amsEsc(s.name)}</option>`).join("");
+    const siteOptions = amsActiveSiteNames().map(s => `<option value="${amsEsc(s)}">${amsEsc(s)}</option>`).join("");
     document.getElementById("fPurchaseSite").innerHTML = siteOptions;
     document.getElementById("fCurrentSite").innerHTML = siteOptions;
     document.getElementById("fStatus").innerHTML = AMS_ASSET_STATUS_OPTIONS.map(s => `<option value="${amsEsc(s)}">${amsEsc(s)}</option>`).join("");
@@ -548,10 +548,12 @@ function amsOpenAddEmployeeModal(targetSelectId) {
     AMS_DUMMY_DEPARTMENTS.forEach(d => {
         if (!deptUnion.some(x => x.name.toLowerCase() === d.name.toLowerCase())) deptUnion.push({ name: d.name, short: d.shortform });
     });
+    deptUnion.sort((a, b) => amsSortAlpha(a.name, b.name));
     const desigUnion = DESIGNATIONS.slice();
     AMS_DESIGNATION_OPTIONS.forEach(d => {
         if (!desigUnion.some(x => x.toLowerCase() === d.name.toLowerCase())) desigUnion.push(d.name);
     });
+    desigUnion.sort(amsSortAlpha);
     document.getElementById("qaEmpDept").innerHTML = deptUnion.map(d => `<option value="${amsEsc(d.name)}">${amsEsc(d.name)}</option>`).join("");
     document.getElementById("qaEmpDesigList").innerHTML = desigUnion.map(d => `<option value="${amsEsc(d)}"></option>`).join("");
     document.getElementById("qaEmpName").value = "";
@@ -616,7 +618,8 @@ function amsPopulateSimMobileSelect(selected) {
     const sel = document.getElementById("fSimMobileNo");
     if (!sel) return;
     const current = (selected === undefined || selected === null || selected === "") ? "0" : String(selected);
-    const sims = (typeof AMS_DUMMY_SIM_CARDS !== "undefined") ? AMS_DUMMY_SIM_CARDS : [];
+    const sims = ((typeof AMS_DUMMY_SIM_CARDS !== "undefined") ? AMS_DUMMY_SIM_CARDS : []).slice()
+        .sort((a, b) => amsSortAlpha(a.mobileNumber, b.mobileNumber));
     const exceptMobile = amsEditingMobile();
     const opts = [
         `<option value="__personal__">Personal SIM Card</option>`,
@@ -883,13 +886,13 @@ function amsDownloadAssetHistory() {
    14) ASSIGN / ASSET EDIT MODAL
    ===========================================================================*/
 function amsPopulateEmpDropdowns() {
-    const activeEmps = AMS_STATE_EMPLOYEES_REF().filter(e => e.status === "Active");
-    const opts = (includeBlank) => (includeBlank ? `<option value="">None</option>` : "")
-        + activeEmps.map(e => `<option value="${amsEsc(e.empId)}">${amsEsc(e.name)} (${amsEsc(e.dept)})</option>`).join("")
-        + `<option value="__other__">Other / Not in User Master...</option>`;
-    document.getElementById("assignDirectEmp").innerHTML = activeEmps
-        .map(e => `<option value="${amsEsc(e.empId)}">${amsEsc(e.name)} (${amsEsc(e.dept)})</option>`).join("");
-    document.getElementById("assignSubEmp").innerHTML = opts(true);
+    const activeEmps = amsSortEmployeesByName(AMS_STATE_EMPLOYEES_REF().filter(e => e.status === "Active"));
+    const empOpts = activeEmps.map(e => `<option value="${amsEsc(e.empId)}">${amsEsc(e.name)} (${amsEsc(e.dept)})</option>`).join("");
+    document.getElementById("assignDirectEmp").innerHTML = empOpts;
+    document.getElementById("assignSubEmp").innerHTML =
+        `<option value="">None</option>`
+        + `<option value="__other__">Other / Not in User Master...</option>`
+        + empOpts;
 }
 
 function amsLastAssignDate(a) {
@@ -907,7 +910,8 @@ function amsPopulateAssignSimSelect(mobile) {
     const sel = document.getElementById("assignSimMobileNo");
     if (!sel) return;
     const current = String((mobile && mobile.simMobileNo) || "0");
-    const sims = (typeof AMS_DUMMY_SIM_CARDS !== "undefined") ? AMS_DUMMY_SIM_CARDS : [];
+    const sims = ((typeof AMS_DUMMY_SIM_CARDS !== "undefined") ? AMS_DUMMY_SIM_CARDS : []).slice()
+        .sort((a, b) => amsSortAlpha(a.mobileNumber, b.mobileNumber));
     const opts = [
         `<option value="__personal__">Personal SIM Card</option>`,
         `<option value="0">None</option>`
@@ -1061,7 +1065,7 @@ function amsReturnAsset(key) {
    ===========================================================================*/
 function amsOpenTransferModal(key) {
     AST_STATE.editingId = key;
-    document.getElementById("transferSite").innerHTML = AMS_DUMMY_SITES.filter(s => s.active).map(s => `<option value="${amsEsc(s.name)}">${amsEsc(s.name)}</option>`).join("");
+    document.getElementById("transferSite").innerHTML = amsActiveSiteNames().map(s => `<option value="${amsEsc(s)}">${amsEsc(s)}</option>`).join("");
     document.getElementById("transferStatus").innerHTML = AMS_ASSET_STATUS_OPTIONS.map(s => `<option value="${amsEsc(s)}">${amsEsc(s)}</option>`).join("");
     document.getElementById("transferStatus").value = "Transfer"; /* suggested default - user can change it */
     document.getElementById("transferDate").value = new Date().toISOString().slice(0, 10); /* suggested default - user can pick any date */

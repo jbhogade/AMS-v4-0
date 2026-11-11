@@ -580,14 +580,14 @@ function amsSimApplyMobileLink(s, choice, empId, assignDate) {
 }
 
 function amsSimPopulateEmpDropdown() {
-    const activeEmps = simEmployeesRef().filter(e => e.status === "Active");
+    const activeEmps = amsSortEmployeesByName(simEmployeesRef().filter(e => e.status === "Active"));
     const empOpts = activeEmps.map(e => `<option value="${amsEsc(e.empId)}">${amsEsc(e.name)} (${amsEsc(e.dept)})</option>`).join("");
-    const subOpts = `<option value="">None</option>` + empOpts
-        + `<option value="__other__">Other / Not in User Master...</option>`;
     const empEl = document.getElementById("simAssignEmp");
     const subEl = document.getElementById("simAssignSubEmp");
     if (empEl) empEl.innerHTML = `<option value="">(Select employee)</option>` + empOpts;
-    if (subEl) subEl.innerHTML = subOpts;
+    if (subEl) subEl.innerHTML = `<option value="">None</option>`
+        + `<option value="__other__">Other / Not in User Master...</option>`
+        + empOpts;
 }
 
 function amsSimPopulateMobileDropdown(sim) {
@@ -596,7 +596,11 @@ function amsSimPopulateMobileDropdown(sim) {
     const exceptId = sim ? sim.simId : null;
     const currentMobile = sim && sim.linkedMobileId && !sim.personalMobile ? amsSimFindMobileById(sim.linkedMobileId) : null;
     const currentKey = currentMobile && typeof amsMobileStableId === "function" ? amsMobileStableId(currentMobile) : (sim && sim.linkedMobileId ? sim.linkedMobileId : "");
-    const mobiles = amsSimAvailableMobiles(exceptId);
+    const mobiles = amsSimAvailableMobiles(exceptId).slice().sort((a, b) => {
+        const idA = (typeof amsPrintAssetId === "function") ? amsPrintAssetId(a) : (a.displayId || a.id);
+        const idB = (typeof amsPrintAssetId === "function") ? amsPrintAssetId(b) : (b.displayId || b.id);
+        return amsSortAlpha(idA, idB);
+    });
     const opts = [`<option value="">None</option>`, `<option value="__personal__">Personal Mobile</option>`];
     const seen = new Set();
     const optionFor = (m) => {
@@ -675,10 +679,12 @@ function amsSimOpenAddEmployeeModal(targetSelectId) {
     (typeof AMS_DUMMY_DEPARTMENTS !== "undefined" ? AMS_DUMMY_DEPARTMENTS : []).forEach(d => {
         if (!deptUnion.some(x => x.name.toLowerCase() === d.name.toLowerCase())) deptUnion.push({ name: d.name, short: d.shortform });
     });
+    deptUnion.sort((a, b) => amsSortAlpha(a.name, b.name));
     const desigUnion = (typeof DESIGNATIONS !== "undefined" ? DESIGNATIONS.slice() : []);
     (typeof AMS_DESIGNATION_OPTIONS !== "undefined" ? AMS_DESIGNATION_OPTIONS : []).forEach(d => {
         if (!desigUnion.some(x => String(x).toLowerCase() === d.name.toLowerCase())) desigUnion.push(d.name);
     });
+    desigUnion.sort(amsSortAlpha);
     document.getElementById("qaEmpDept").innerHTML = deptUnion.map(d => `<option value="${amsEsc(d.name)}">${amsEsc(d.name)}</option>`).join("");
     document.getElementById("qaEmpDesigList").innerHTML = desigUnion.map(d => `<option value="${amsEsc(d)}"></option>`).join("");
     document.getElementById("qaEmpName").value = "";

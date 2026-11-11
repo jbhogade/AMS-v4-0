@@ -331,7 +331,7 @@ function amsMtBuildFormFields() {
     container.innerHTML = cfg.fields.map(f => {
         let control;
         if (f.type === "select" || f.type === "multiselect") {
-            const opts = f.optionsFrom ? f.optionsFrom() : (f.options || []);
+            const opts = amsSortSelectOptions(f.optionsFrom ? f.optionsFrom() : (f.options || []));
             const optHtml = o => typeof o === "object"
                 ? `<option value="${amsEsc(o.value)}">${amsEsc(o.label)}</option>`
                 : `<option value="${amsEsc(o)}">${amsEsc(o)}</option>`;
@@ -349,7 +349,7 @@ function amsMtBuildFormFields() {
                     <div class="quickadd-popover" id="mtQaPopover-${f.key}">
                         ${f.quickAdd.fields.map(qf => {
                             if (qf.type === "select") {
-                                const qopts = qf.optionsFrom ? qf.optionsFrom() : (qf.options || []);
+                                const qopts = amsSortSelectOptions(qf.optionsFrom ? qf.optionsFrom() : (qf.options || []));
                                 return `<label class="qa-label">${amsEsc(qf.label)}</label>
                             <select id="mtQa-${f.key}-${qf.key}">${qopts.map(o => `<option value="${amsEsc(o)}">${amsEsc(o)}</option>`).join("")}</select>`;
                             }
@@ -455,7 +455,7 @@ function amsMtRebuildMultiselect(id, opts, selectedValue) {
     const keep = selectedValue !== undefined ? selectedValue : amsMtGetMultiselect(id);
     const msOptValue = o => (typeof o === "object" ? o.value : o);
     const msOptLabel = o => (typeof o === "object" ? o.label : o);
-    el.innerHTML = (opts || []).map(o =>
+    el.innerHTML = amsSortSelectOptions(opts || []).map(o =>
         `<label class="form-checkbox mt-ms-item"><input type="checkbox" value="${amsEsc(msOptValue(o))}"> ${amsEsc(msOptLabel(o))}</label>`
     ).join("");
     amsMtSetMultiselect(id, keep);
@@ -690,7 +690,7 @@ document.addEventListener("click", (e) => {
         const newValue = field.quickAdd.onAdd(values);
         if (!newValue) return; // onAdd already alerted the validation problem
 
-        const opts = field.optionsFrom ? field.optionsFrom() : (field.options || []);
+        const opts = amsSortSelectOptions(field.optionsFrom ? field.optionsFrom() : (field.options || []));
         if (field.type === "multiselect") {
             const current = amsMtGetMultiselect(`mt-${key}`);
             amsMtRebuildMultiselect(`mt-${key}`, opts, amsMtJoinMulti([...amsMtSplitMulti(current), newValue]));

@@ -160,12 +160,12 @@ function amsOpenUsedModal(item) {
 
     const empSelect = document.getElementById("usedEmployee");
     empSelect.innerHTML = `<option value="">None</option>` +
-        DUMMY_EMPLOYEES.filter(e => e.status === "Active")
+        amsSortEmployeesByName(DUMMY_EMPLOYEES.filter(e => e.status === "Active"))
             .map(e => `<option value="${e.amsId}">${amsEsc(getEmployeeFullName(e))} (${amsEsc(e.department)})</option>`).join("");
 
     const deptSelect = document.getElementById("usedDepartment");
     deptSelect.innerHTML = `<option value="">None</option>` +
-        AMS_DUMMY_DEPARTMENTS.map(d => `<option value="${amsEsc(d.name)}">${amsEsc(d.name)}</option>`).join("");
+        amsActiveDepartmentNames().map(d => `<option value="${amsEsc(d)}">${amsEsc(d)}</option>`).join("");
 
     document.getElementById("usedQty").value = "";
     document.getElementById("usedDate").value = new Date().toISOString().slice(0, 10);

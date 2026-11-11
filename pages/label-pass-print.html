@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<!--
+#-------------- Start Code for : LABEL/PASS PRINT MASTER (label-pass-print.html) -
+#
+#  PURPOSE   : System Admin master for Display ID Number labels and Gate Pass.
+#              Display ID Number lists Asset Master items by type plus Mobiles.
+#              Gate Pass lists laptops only. Each section shows tiles with
+#              Display ID, Name, Model, Assigned to, a checkbox, and copies.
+#              Download exports Excel. Print opens the selection (copies
+#              included). Label size and Gate Pass extra text come later.
+#              Reached via the System Administrator Master hub tab, and
+#              embedded with ?embed=1 to hide this page's own sidebar/topbar.
+#
+#  FILES USED :
+#    - css/themes.css, css/main.css, css/ui-styles.css, css/reports.css,
+#      css/label-pass-print.css, css/embed-mode.css
+#    - js/dummy-data.js, js/theme.js, js/app.js, js/layout.js,
+#      js/embed-mode.js, js/xlsx-helpers.js, js/label-pass-print.js
+#------------------------------------------------------------------------------
+-->
+<html lang="en" data-theme="dark-grey" data-ui-style="apple">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Label/Pass Print Master | Asset Management System</title>
+
+    <link rel="stylesheet" href="../css/themes.css?v=v40u">
+    <link rel="stylesheet" href="../css/main.css">
+    <link rel="stylesheet" href="../css/ui-styles.css?v=v40u">
+    <link rel="stylesheet" href="../css/reports.css">
+    <link rel="stylesheet" href="../css/label-pass-print.css">
+    <link rel="stylesheet" href="../css/embed-mode.css">
+</head>
+<body>
+    <script src="../js/embed-mode.js"></script>
+
+    <div class="app">
+        <aside class="sidebar" id="sidebar">
+            <div id="sidebar-mount"></div>
+        </aside>
+
+        <main class="app-main">
+            <header class="topbar" id="topbar-mount"></header>
+
+            <div class="app-content">
+                <div class="page-heading flex items-center justify-between">
+                    <div>
+                        <h1>Label/Pass Print Master</h1>
+                        <p class="page-sub">Pick Display IDs by type, set copies per section, then print or download. Size and Gate Pass text come later.</p>
+                    </div>
+                </div>
+
+                <div class="report-tabs" id="lppTabs">
+                    <button type="button" class="report-tab active" data-lpp-tab="displayId">Display ID Number</button>
+                    <button type="button" class="report-tab" data-lpp-tab="gatePass">Gate Pass</button>
+                </div>
+
+                <div class="report-panel active" id="panel-displayId">
+                    <div class="lpp-toolbar">
+                        <div class="lpp-toolbar-left">
+                            <input type="search" id="lppDisplayIdSearch" class="search-input" placeholder="Search Display ID, name, model, employee...">
+                            <span class="lpp-count" id="lppDisplayIdCount">None selected</span>
+                        </div>
+                        <div class="lpp-toolbar-right">
+                            <button type="button" class="btn" id="btnLppDisplayPrint">Print</button>
+                            <button type="button" class="btn btn-primary" id="btnLppDisplayDownload">Download</button>
+                        </div>
+                    </div>
+                    <div id="lppDisplayIdMount"></div>
+                </div>
+
+                <div class="report-panel" id="panel-gatePass">
+                    <div class="lpp-toolbar">
+                        <div class="lpp-toolbar-left">
+                            <input type="search" id="lppGatePassSearch" class="search-input" placeholder="Search laptop Display ID, name, model, employee...">
+                            <span class="lpp-count" id="lppGatePassCount">None selected</span>
+                        </div>
+                        <div class="lpp-toolbar-right">
+                            <button type="button" class="btn" id="btnLppGatePassPrint">Print</button>
+                            <button type="button" class="btn btn-primary" id="btnLppGatePassDownload">Download</button>
+                        </div>
+                    </div>
+                    <div id="lppGatePassMount"></div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script defer src="../js/dummy-data.js"></script>
+    <script defer src="../js/theme.js?v=v40u"></script>
+    <script defer src="../js/app.js"></script>
+    <script defer src="../js/layout.js"></script>
+    <script defer src="../js/xlsx-helpers.js"></script>
+    <script defer src="../js/label-pass-print.js"></script>
+</body>
+</html>
+<!--
+#-------------- End of the code : LABEL/PASS PRINT MASTER -----------------------
+#------------------------------------------------------------------------------
+-->

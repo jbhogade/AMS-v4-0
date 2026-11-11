@@ -1,0 +1,179 @@
+/*==============================================================================
+#-------------- Start Code for : LABEL/PASS PRINT STYLES (label-pass-print.css) -
+#
+#  PURPOSE   : Section picker, copies field, and row hover for Label/Pass
+#              Print Master. Colours come from theme variables only.
+#------------------------------------------------------------------------------*/
+
+.lpp-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+.lpp-toolbar-left,
+.lpp-toolbar-right {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    gap: 12px;
+}
+
+.lpp-toolbar .search-input {
+    width: min(100%, 320px);
+    background: var(--bg-input);
+    border: 1px solid var(--border);
+    color: var(--text-primary);
+    border-radius: 8px;
+    padding: 8px 12px;
+    font-size: 13px;
+    font-family: inherit;
+    color-scheme: inherit;
+}
+
+.lpp-toolbar .search-input::placeholder {
+    color: var(--text-muted);
+}
+
+.lpp-toolbar .search-input:focus {
+    outline: 2px solid var(--accent);
+    outline-offset: 1px;
+    border-color: var(--accent);
+}
+
+.lpp-count {
+    font-size: 12.5px;
+    color: var(--text-secondary);
+    padding-bottom: 8px;
+}
+
+.lpp-section {
+    margin-bottom: 16px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: var(--bg-card);
+    overflow: hidden;
+}
+
+.lpp-section-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 10px 14px;
+    background: var(--bg-elevated);
+    border-bottom: 1px solid var(--border);
+}
+
+.lpp-section-title {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+.lpp-section-meta {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-secondary);
+}
+
+.lpp-copies {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12.5px;
+    color: var(--text-secondary);
+}
+
+.lpp-copies input {
+    width: 72px;
+    background: var(--bg-input);
+    border: 1px solid var(--border);
+    color: var(--text-primary);
+    border-radius: 8px;
+    padding: 6px 8px;
+    font-size: 13px;
+    font-family: inherit;
+}
+
+.lpp-copies input:focus {
+    outline: 2px solid var(--accent);
+    outline-offset: 1px;
+    border-color: var(--accent);
+}
+
+.lpp-tile-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(168px, 1fr));
+    gap: 10px;
+    padding: 12px;
+}
+
+.lpp-tile {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-height: 96px;
+    padding: 12px 28px 12px 12px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: var(--bg-elevated);
+    cursor: pointer;
+    transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.lpp-tile:hover {
+    border-color: var(--accent);
+}
+
+.lpp-tile.is-selected {
+    border-color: var(--accent);
+    background: var(--accent-soft);
+}
+
+.lpp-tile-check {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    margin: 0;
+    accent-color: var(--accent);
+}
+
+.lpp-tile-id {
+    font-family: "Consolas", "Menlo", "Courier New", monospace;
+    font-size: 13.5px;
+    font-weight: 700;
+    color: var(--text-primary);
+    word-break: break-all;
+}
+
+.lpp-tile-name,
+.lpp-tile-model,
+.lpp-tile-assigned {
+    font-size: 11.5px;
+    line-height: 1.35;
+    color: var(--text-secondary);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.lpp-empty {
+    padding: 18px 16px;
+    color: var(--text-muted);
+    font-size: 13px;
+    font-style: italic;
+}
+
+/*-------------- End of the code ----------------------------------------------*/
+/*==============================================================================
+#-------------- End of the code : LABEL/PASS PRINT STYLES -----------------------
+#------------------------------------------------------------------------------*/

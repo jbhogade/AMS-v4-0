@@ -55,7 +55,7 @@ function amsApplyReportTabAccess() {
 
 /*-------------- Start Code for POPULATE SHARED DROPDOWNS (Sites, Departments, Types) -----*/
 function amsPopulateSiteFilters() {
-    const opts = `<option value="">All</option>` + AMS_DUMMY_SITES.map(s => `<option value="${amsEsc(s.name)}">${amsEsc(s.name)}</option>`).join("");
+    const opts = `<option value="">All</option>` + amsActiveSiteNames().map(s => `<option value="${amsEsc(s)}">${amsEsc(s)}</option>`).join("");
     ["alSite", "crSite", "cuSite", "srSite", "suSite", "issueSite", "handoverSite"].forEach(id => {
         const el = document.getElementById(id);
         if (el) el.innerHTML = opts;
@@ -63,8 +63,8 @@ function amsPopulateSiteFilters() {
 }
 
 function amsPopulateIssueHandoverExtraFilters() {
-    const deptOpts = `<option value="">All</option>` + AMS_DUMMY_DEPARTMENTS.map(d => `<option value="${amsEsc(d.name)}">${amsEsc(d.name)}</option>`).join("");
-    const typeOpts = `<option value="">All</option>` + AMS_DUMMY_ASSET_TYPES.filter(t => t.active).map(t => `<option value="${amsEsc(t.name)}">${amsEsc(t.name)}</option>`).join("");
+    const deptOpts = `<option value="">All</option>` + amsActiveDepartmentNames().map(d => `<option value="${amsEsc(d)}">${amsEsc(d)}</option>`).join("");
+    const typeOpts = `<option value="">All</option>` + amsActiveAssetTypeNames().map(t => `<option value="${amsEsc(t)}">${amsEsc(t)}</option>`).join("");
     ["issueDept", "handoverDept"].forEach(id => { document.getElementById(id).innerHTML = deptOpts; });
     ["issueAssetType", "handoverAssetType"].forEach(id => { document.getElementById(id).innerHTML = typeOpts; });
 }
