@@ -32,7 +32,7 @@ namespace AMS.API.Data;
 /// </summary>
 public class AmsDb
 {
-    private readonly string _connectionString;
+    private string _connectionString;
     private readonly string _dbName;
 
     public AmsDb(IConfiguration config)
@@ -43,6 +43,13 @@ public class AmsDb
 
     /// <summary>Connection string targeted at the AMS-v4-0 database.</summary>
     public string ConnectionString => _connectionString;
+
+    /// <summary>Use the instance chosen by <see cref="SqlServerLocator"/> at startup.</summary>
+    public void ApplyConnectionString(string connectionString)
+    {
+        if (!string.IsNullOrWhiteSpace(connectionString))
+            _connectionString = connectionString;
+    }
 
     private string GetDbConnectionString()
     {

@@ -1,5 +1,12 @@
 # AMS-v4-0 change log
 
+## 2026-11-12 — SQL Server instance auto-detect
+
+On API startup, probe Server= from appsettings.json, then .\SQLEXPRESS,
+localhost\SQLEXPRESS, and localhost. Use the first instance that answers
+and rewrite only Server= in appsettings.json when it differs. If none
+answer, the file is left unchanged and login stays 503.
+
 ## 2026-11-11 — Dropdown A-Z sort with PIN-first
 
 Dropdowns sort alphabetically. Assign To (Subordinate) keeps None and
