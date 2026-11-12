@@ -74,10 +74,13 @@ app.UseExceptionHandler(errorApp =>
     });
 });
 
+var resolvedCs = await SqlServerLocator.ResolveAsync(app.Configuration, app.Environment.ContentRootPath, app.Logger);
+
 // Create the database, schema and seeded Supreme Root login (all idempotent).
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<AmsDb>();
+    db.ApplyConnectionString(resolvedCs);
     try
     {
         await db.InitializeAsync();

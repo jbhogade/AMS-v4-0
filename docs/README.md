@@ -9,7 +9,7 @@ A web portal for recording company **assets**, **consumables**, **spare parts** 
 The portal is gated by `login.html`. On a Windows machine with SQL Server:
 
 1. **Setup DB** (once): double-click `database\Setup-AMS-v4-0.bat` (or let the API auto-create the DB on first run).
-2. **Confirm connection**: `server\AMS.API\appsettings.json` -> `ConnectionStrings:Default` (default `Server=.\SQLEXPRESS;Database=AMS-v4-0;Trusted_Connection=True;TrustServerCertificate=True;`).
+2. **Connection**: `server\AMS.API\appsettings.json` -> `ConnectionStrings:Default`. On startup the API probes that `Server=`, then `.\SQLEXPRESS`, `localhost\SQLEXPRESS`, and `localhost`, and writes the working `Server=` back to the file.
 3. **Run the API**:
    ```
    cd server\AMS.API
