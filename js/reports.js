@@ -328,8 +328,7 @@ function amsRenderReportHeaderPreview() {
 
     const nameHtml = p.showName ? `<div class="rp-name">${amsEsc(c.companyName || "Your Company Name Pvt. Ltd.")}</div>` : "";
     const sloganHtml = (p.showSlogan && c.slogan) ? `<div class="rp-slogan">${amsEsc(c.slogan)}</div>` : "";
-    const subHtml = p.showAddress ? `<div class="rp-sub">${amsEsc(c.address || "Asset Management System")}</div>` : "";
-    const texts = nameHtml + sloganHtml + subHtml;
+    const texts = nameHtml + sloganHtml;
 
     let inner;
     if (p.style === "banner" && c.bannerDataUrl) {
@@ -357,7 +356,6 @@ function amsLoadReportAppearance() {
     setCheck("rpShowLogo", prefs.showLogo);
     setCheck("rpShowName", prefs.showName);
     setCheck("rpShowSlogan", prefs.showSlogan);
-    setCheck("rpShowAddress", prefs.showAddress);
     amsRenderReportHeaderPreview();
 }
 
@@ -385,7 +383,6 @@ function amsWireReportAppearance() {
         ["rpShowLogo", "showLogo"],
         ["rpShowName", "showName"],
         ["rpShowSlogan", "showSlogan"],
-        ["rpShowAddress", "showAddress"],
     ];
     prefsCheckboxes.forEach(([id, key]) => {
         const el = document.getElementById(id);

@@ -3957,11 +3957,13 @@ const AMS_REPORT_HEADER_DEFAULTS = {
     showLogo: true,
     showName: true,
     showSlogan: true,
-    showAddress: true,
+    showAddress: false,
 };
 
 function amsGetReportHeaderPrefs() {
-    return Object.assign({}, AMS_REPORT_HEADER_DEFAULTS, AMS_REPORT_HEADER_PREFS);
+    const prefs = Object.assign({}, AMS_REPORT_HEADER_DEFAULTS, AMS_REPORT_HEADER_PREFS);
+    prefs.showAddress = false;
+    return prefs;
 }
 
 function amsSaveReportHeaderPrefs(prefs) {

@@ -33,17 +33,15 @@
  *  (amsGetCompanyDetails).
  *  title            : report/form title (shown right-aligned)
  *  metaHtml         : the right-hand meta lines (Form No / Date / Generated)
- *  fallbackSubtitle : text used for the address line when no address is set
+ *  fallbackSubtitle : unused (kept for callers). Company address is Gate Pass only.
  * ----------------------------------------------------------------------------*/
 function amsBuildPrintHeader(title, metaHtml, fallbackSubtitle) {
     const c = amsGetCompanyDetails();
     const p = amsGetReportHeaderPrefs();
-    const fallback = fallbackSubtitle || "Asset Management System";
 
     const nameHtml = p.showName ? `<div class="pf-company">${amsEsc(c.companyName || "Your Company Name Pvt. Ltd.")}</div>` : "";
     const sloganHtml = (p.showSlogan && c.slogan) ? `<div class="pf-company-tag">${amsEsc(c.slogan)}</div>` : "";
-    const subHtml = p.showAddress ? `<div class="pf-company-sub">${amsEsc(c.address || fallback)}</div>` : "";
-    const texts = nameHtml + sloganHtml + subHtml;
+    const texts = nameHtml + sloganHtml;
     const formmetaHtml = metaHtml || `<div class="pf-form-title">${amsEsc(title).toUpperCase()}</div>`;
 
     if (p.style === "banner" && c.bannerDataUrl) {
