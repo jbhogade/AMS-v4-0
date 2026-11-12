@@ -277,63 +277,118 @@ function lppPrint(tab) {
     const title = isGate ? "Gate Pass" : "Display ID Labels";
     const items = lppPrintItems(rows);
     const address = lppCompanyAddress();
-    const cards = items.map(r => {
-        if (!isGate) {
-            return `<div class="lpp-print-label">
-                <div class="lpp-print-id">${lppEsc(r.displayId)}</div>
-            </div>`;
-        }
-        const serial = r.serial || "-";
-        const empName = r.assignedTo || "Unassigned";
-        const empCode = r.empCode || "-";
-        return `<div class="lpp-print-pass">
-            <div class="lpp-print-pass-title">Laptop Gate Pass</div>
-            <p class="lpp-print-pass-body">The Laptop Serial No. ${lppEsc(serial)}, Asset Code No. ${lppEsc(r.displayId)} is issued to</p>
-            <p class="lpp-print-pass-body"><strong>${lppEsc(empName)}</strong> (Employee ID ${lppEsc(empCode)})</p>
-            <p class="lpp-print-pass-body">${lppEsc(address || "-")}</p>
-            <div class="lpp-print-sign">Stamp &amp; Signature</div>
-        </div>`;
-    }).join("");
     const win = window.open("", "_blank");
     if (!win) {
         lppNotify("Popup blocked. Allow popups to print.", "warning");
         return;
     }
-    win.document.write(`<!DOCTYPE html><html><head><title>${lppEsc(title)}</title>
-        <style>
-            @page { margin: 8mm; }
-            body { font-family: "Segoe UI", Arial, sans-serif; color: #111; }
-            .lpp-print-sheet { display: flex; flex-wrap: wrap; gap: 10px; }
-            .lpp-print-label {
-                border: 1px solid #111;
-                padding: 10px 12px;
-                min-width: 140px;
-                text-align: center;
-            }
-            .lpp-print-pass {
-                border: 2px solid #111;
-                box-sizing: border-box;
-                padding: 10px 14px 12px;
-                width: 520px;
-                font-size: 13px;
-                line-height: 1.35;
-            }
-            .lpp-print-pass-title {
-                font-size: 16px;
-                font-weight: 800;
-                text-align: center;
-                margin: 0 0 6px;
-            }
-            .lpp-print-pass-body { margin: 0; }
-            .lpp-print-sign {
-                margin-top: 18px;
-                font-weight: 700;
-                text-align: right;
-            }
-            .lpp-print-id { font-family: Consolas, Menlo, monospace; font-size: 16px; font-weight: 700; }
-        </style></head><body>
-        <div class="lpp-print-sheet">${cards}</div>
-        </body></html>`);
+    if (isGate) {
+        const cards = items.map(r => {
+            const serial = r.serial || "-";
+            const empName = r.assignedTo || "Unassigned";
+            const empCode = r.empCode || "-";
+            return `<div class="lpp-print-pass">
+                <div class="lpp-print-pass-title">Laptop Gate Pass</div>
+                <p class="lpp-print-pass-body">The Laptop Serial No. ${lppEsc(serial)}, Asset Code No. ${lppEsc(r.displayId)} is issued to</p>
+                <p class="lpp-print-pass-body"><strong>${lppEsc(empName)}</strong> (Employee ID ${lppEsc(empCode)})</p>
+                <p class="lpp-print-pass-body">${lppEsc(address || "-")}</p>
+                <div class="lpp-print-sign">Stamp &amp; Signature</div>
+            </div>`;
+        }).join("");
+        win.document.write(`<!DOCTYPE html><html><head><title>${lppEsc(title)}</title>
+            <style>
+                @page { margin: 8mm; }
+                body { font-family: "Segoe UI", Arial, sans-serif; color: #111; }
+                .lpp-print-sheet { display: flex; flex-wrap: wrap; gap: 10px; }
+                .lpp-print-pass {
+                    border: 2px solid #111;
+                    box-sizing: border-box;
+                    padding: 10px 14px 12px;
+                    width: 520px;
+                    font-size: 13px;
+                    line-height: 1.35;
+                }
+                .lpp-print-pass-title {
+                    font-size: 16px;
+                    font-weight: 800;
+                    text-align: center;
+                    margin: 0 0 6px;
+                }
+                .lpp-print-pass-body { margin: 0; }
+                .lpp-print-sign {
+                    margin-top: 18px;
+                    font-weight: 700;
+                    text-align: right;
+                }
+            </style></head><body>
+            <div class="lpp-print-sheet">${cards}</div>
+            </body></html>`);
+    } else {
+        const perPage = 7 * 16;
+        const pages = [];
+        for (let i = 0; i < items.length; i += perPage) {
+            const slice = items.slice(i, i + perPage);
+            while (slice.length < perPage) slice.push(null);
+            const cells = slice.map(r => r
+                ? `<div class="lpp-print-label"><div class="lpp-print-id">${lppEsc(r.displayId)}</div></div>`
+                : `<div class="lpp-print-label lpp-print-label-empty"></div>`).join("");
+            pages.push(`<div class="lpp-print-sheet">${cells}</div>`);
+        }
+        win.document.write(`<!DOCTYPE html><html><head><title>${lppEsc(title)}</title>
+            <style>
+                @page { size: A4 portrait; margin: 0; }
+                html, body {
+                    margin: 0;
+                    padding: 0;
+                    width: 210mm;
+                    background: #fff;
+                    color: #111;
+                    font-family: "Segoe UI", Arial, sans-serif;
+                }
+                .lpp-print-sheet {
+                    box-sizing: border-box;
+                    width: 210mm;
+                    height: 297mm;
+                    padding: 7mm 4mm 7mm 6mm;
+                    display: grid;
+                    grid-template-columns: repeat(7, 26mm);
+                    grid-template-rows: repeat(16, 17.6875mm);
+                    column-gap: 3mm;
+                    row-gap: 0;
+                    page-break-after: always;
+                }
+                .lpp-print-sheet:last-child { page-break-after: auto; }
+                .lpp-print-label {
+                    box-sizing: border-box;
+                    width: 26mm;
+                    height: 17.6875mm;
+                    border: 0.3mm solid #111;
+                    border-radius: 2mm;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    overflow: hidden;
+                    padding: 0.7mm 0.8mm;
+                }
+                .lpp-print-label-empty {
+                    border-color: transparent;
+                }
+                .lpp-print-id {
+                    font-family: Consolas, Menlo, "Courier New", monospace;
+                    font-size: 4.8mm;
+                    font-weight: 700;
+                    line-height: 1.12;
+                    text-align: center;
+                    white-space: normal;
+                    overflow-wrap: anywhere;
+                    word-break: break-word;
+                    max-width: 100%;
+                    max-height: 100%;
+                }
+            </style></head><body>
+            ${pages.join("")}
+            </body></html>`);
+    }
     win.document.close();
     win.focus();
     win.print();

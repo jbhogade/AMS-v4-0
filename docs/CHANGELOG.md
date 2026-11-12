@@ -1,5 +1,19 @@
 # AMS-v4-0 change log
 
+## 2026-11-12 — A4 sticker grid for Display ID labels
+
+Display ID Number print uses a fixed A4 sheet: 7 columns x 16 rows.
+Margins 0.7cm top/bottom and 0.5cm left/right, 0.3cm gaps between
+the 7 columns (6 gaps), no row gaps, rounded sticker cells.
+Sticker size is 26mm x 17.6875mm so the grid fills A4 exactly
+(ruler 2.5cm x 1.7cm). Gate Pass print is unchanged.
+
+## 2026-11-12 — Company address on Gate Pass only
+
+Company address prints only on Laptop Gate Pass. It is not shown on
+Asset / Mobile / SIM Issue Forms, Asset Handover Form, Report Master
+prints, or Report Appearance.
+
 ## 2026-11-12 — SQL Server instance auto-detect
 
 On API startup, probe Server= from appsettings.json, then .\SQLEXPRESS,
