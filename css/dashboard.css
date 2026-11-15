@@ -91,9 +91,9 @@
     margin-bottom: 12px;
 }
 
-.kpi-card { padding: 12px 14px; gap: 10px; }
-.kpi-icon { width: 42px; height: 42px; font-size: 19px; border-radius: 10px; }
-.kpi-value { font-size: 22px; }
+.kpi-card { padding: 14px 16px; gap: 12px; }
+.kpi-icon { width: 40px; height: 40px; font-size: 17px; border-radius: 11px; }
+.kpi-value { font-size: 1.32rem; }
 .kpi-label { font-size: 12px; }
 .kpi-trend { font-size: 11px; margin-top: 1px; }
 
@@ -110,7 +110,7 @@
 /* Bar chart rows get a tighter gap so all 4 rows fit the card */
 .chart-bars { gap: 10px; }
 .chart-bar-row { grid-template-columns: 120px 1fr 44px; gap: 10px; }
-.chart-bar-track { height: 15px; }
+.chart-bar-track { height: 13px; }
 
 /* Alert strip at the very top of the dashboard */
 .alert { margin-bottom: 14px; }

@@ -1,244 +1,352 @@
 /*==============================================================================
 #-------------- Start Code for : THEME DEFINITIONS (themes.css) ----------------
 #
-#  PURPOSE   : Nine color themes for the Asset Management System.
-#              Every theme is controlled through CSS custom properties
-#              (variables). Changing one variable recolors the entire portal.
+#  PURPOSE   : Nine Graphite Teal palettes (AMS-Test-2 look) for the portal.
+#              Tokens use AMS-Test variable names so existing CSS keeps working.
 #
 #  HOW IT WORKS :
-#    - The <html> tag carries a data-theme attribute, e.g. <html data-theme="dark-grey">.
-#    - Each theme below sets the same set of variables to different values.
-#    - No other CSS file needs theme-specific colors; they all just read
-#      these variables. This keeps theme switching fast and error-free.
+#    - The <html> tag carries data-theme, e.g. <html data-theme="graphite">.
+#    - Each theme sets the same variables to different values.
 #
 #  THEME LIST :
-#      1.  dark-grey  -> DEFAULT
-#      2.  midnight   -> Very dark, high contrast
-#      3.  slate-blue -> Dark blue-grey corporate look
-#      4.  lite       -> Light / bright
-#      5.  forest     -> Dark green
-#      6.  purple     -> Dark purple
-#      7.  ice        -> Cool pale-blue
-#      8.  dark-gold  -> Dark + gold
+#      1.  graphite   -> DEFAULT (dark sidebar + light content, teal accent)
+#      2.  midnight   -> Very dark, indigo accent
+#      3.  slate-blue -> Dark blue-grey
+#      4.  forest     -> Dark green
+#      5.  plum       -> Dark violet
+#      6.  gold       -> Dark + gold
+#      7.  ice        -> Cool pale-blue (light)
+#      8.  paper      -> Warm light
 #      9.  contrast   -> Pure black high-contrast
 #
-#  Removed names map in js/theme.js to one of the nine above.
+#  Old names map in js/theme.js (dark-grey, lite, purple, dark-gold, ...).
 #------------------------------------------------------------------------------*/
 
+@font-face { font-family: "Inter"; font-weight: 400; font-style: normal; font-display: swap;
+  src: url("fonts/inter-400.woff2") format("woff2"); }
+@font-face { font-family: "Inter"; font-weight: 500; font-style: normal; font-display: swap;
+  src: url("fonts/inter-500.woff2") format("woff2"); }
+@font-face { font-family: "Inter"; font-weight: 600; font-style: normal; font-display: swap;
+  src: url("fonts/inter-600.woff2") format("woff2"); }
+@font-face { font-family: "Inter"; font-weight: 700; font-style: normal; font-display: swap;
+  src: url("fonts/inter-700.woff2") format("woff2"); }
+@font-face { font-family: "Inter"; font-weight: 800; font-style: normal; font-display: swap;
+  src: url("fonts/inter-800.woff2") format("woff2"); }
+
 /* =============================================================================
-   1) DARK GREY  (DEFAULT)
+   1) GRAPHITE TEAL  (DEFAULT)
    ===========================================================================*/
-[data-theme="dark-grey"] {
-    --bg-body:        #17181c;
-    --bg-sidebar:     #1e1f24;
-    --bg-card:        #212226;
-    --bg-elevated:    #2a2b30;
-    --bg-input:       #17181c;
-    --text-primary:   #e5e7eb;
-    --text-secondary: #9ca3af;
-    --text-muted:     #6b7280;
-    --border:         #33343a;
-    --accent:         #3b82f6;
-    --accent-hover:   #2563eb;
-    --accent-soft:    rgba(59, 130, 246, 0.12);
+:root,
+[data-theme="graphite"] {
+    --accent:         #0d9488;
+    --accent-2:       #14b8a6;
+    --accent-hover:   #14b8a6;
+    --accent-ink:     #ffffff;
     --accent-contrast:#ffffff;
-    --success:        #22c55e;
-    --warning:        #f59e0b;
-    --danger:         #ef4444;
-    --info:           #06b6d4;
-    --shadow:         0 1px 3px rgba(0,0,0,0.4), 0 4px 12px rgba(0,0,0,0.2);
+    --accent-soft:    rgba(13, 148, 136, 0.12);
+    --sidebar-bg:     linear-gradient(180deg, #0e1524 0%, #101a2e 100%);
+    --bg-sidebar:     #0e1524;
+    --sidebar-text:   #9fb0cc;
+    --sidebar-active: #ffffff;
+    --sidebar-sec:    #5e7396;
+    --bg-body:        #f3f5f9;
+    --bg-card:        #ffffff;
+    --bg-elevated:    #f7f9fc;
+    --bg-input:       #ffffff;
+    --text-primary:   #111c30;
+    --text-secondary: #5b6b83;
+    --text-muted:     #5b6b83;
+    --border:         #e3e8f0;
+    --border-strong:  #cdd6e4;
+    --shadow:         0 1px 2px rgba(16, 24, 40, 0.05), 0 10px 28px -12px rgba(16, 24, 40, 0.14);
+    --shadow-sm:      0 1px 2px rgba(16, 24, 40, 0.07);
+    --radius:         14px;
+    --radius-sm:      10px;
+    --success:        #16a34a;
+    --warning:        #d97706;
+    --danger:         #e11d48;
+    --info:           #2563eb;
+    --topbar-bg:      rgba(255, 255, 255, 0.86);
 }
 
 /* =============================================================================
    2) MIDNIGHT
    ===========================================================================*/
 [data-theme="midnight"] {
-    --bg-body:        #0b0b0f;
-    --bg-sidebar:     #101016;
-    --bg-card:        #15151d;
-    --bg-elevated:    #1e1e28;
-    --bg-input:       #0b0b0f;
-    --text-primary:   #f3f4f6;
-    --text-secondary: #a1a1aa;
-    --text-muted:     #71717a;
-    --border:         #26262f;
-    --accent:         #8b5cf6;
-    --accent-hover:   #7c3aed;
-    --accent-soft:    rgba(139, 92, 246, 0.14);
+    --accent:         #6366f1;
+    --accent-2:       #818cf8;
+    --accent-hover:   #818cf8;
+    --accent-ink:     #ffffff;
     --accent-contrast:#ffffff;
-    --success:        #10b981;
-    --warning:        #f59e0b;
-    --danger:         #f43f5e;
-    --info:           #22d3ee;
-    --shadow:         0 1px 3px rgba(0,0,0,0.5), 0 6px 16px rgba(0,0,0,0.35);
+    --accent-soft:    rgba(99, 102, 241, 0.16);
+    --sidebar-bg:     linear-gradient(180deg, #05060a, #0a0c12);
+    --bg-sidebar:     #05060a;
+    --sidebar-text:   #7c86a3;
+    --sidebar-active: #ffffff;
+    --sidebar-sec:    #5e7396;
+    --bg-body:        #0b0d12;
+    --bg-card:        #12151d;
+    --bg-elevated:    #171b25;
+    --bg-input:       #171b25;
+    --text-primary:   #e7eaf3;
+    --text-secondary: #8b94ad;
+    --text-muted:     #8b94ad;
+    --border:         #232836;
+    --border-strong:  #303649;
+    --shadow:         0 1px 2px rgba(16, 24, 40, 0.05), 0 10px 28px -12px rgba(16, 24, 40, 0.14);
+    --shadow-sm:      0 1px 2px rgba(16, 24, 40, 0.07);
+    --radius:         14px;
+    --radius-sm:      10px;
+    --success:        #16a34a;
+    --warning:        #d97706;
+    --danger:         #e11d48;
+    --info:           #2563eb;
+    --topbar-bg:      rgba(10, 12, 18, 0.86);
 }
 
 /* =============================================================================
    3) SLATE BLUE
    ===========================================================================*/
 [data-theme="slate-blue"] {
-    --bg-body:        #111827;
-    --bg-sidebar:     #0f172a;
-    --bg-card:        #1e293b;
-    --bg-elevated:    #273449;
-    --bg-input:       #111827;
-    --text-primary:   #e2e8f0;
-    --text-secondary: #94a3b8;
-    --text-muted:     #64748b;
-    --border:         #334155;
-    --accent:         #38bdf8;
-    --accent-hover:   #0ea5e9;
-    --accent-soft:    rgba(56, 189, 248, 0.14);
-    --accent-contrast:#0f172a;
-    --success:        #34d399;
-    --warning:        #fbbf24;
-    --danger:         #f87171;
-    --info:           #60a5fa;
-    --shadow:         0 1px 3px rgba(0,0,0,0.4), 0 4px 12px rgba(0,0,0,0.25);
-}
-
-/* =============================================================================
-   4) LITE
-   ===========================================================================*/
-[data-theme="lite"] {
-    --bg-body:        #f3f4f6;
-    --bg-sidebar:     #ffffff;
-    --bg-card:        #ffffff;
-    --bg-elevated:    #eef0f3;
-    --bg-input:       #ffffff;
-    --text-primary:   #111827;
-    --text-secondary: #4b5563;
-    --text-muted:     #9ca3af;
-    --border:         #e5e7eb;
-    --accent:         #4f46e5;
-    --accent-hover:   #4338ca;
-    --accent-soft:    rgba(79, 70, 229, 0.10);
+    --accent:         #3b82f6;
+    --accent-2:       #60a5fa;
+    --accent-hover:   #60a5fa;
+    --accent-ink:     #ffffff;
     --accent-contrast:#ffffff;
+    --accent-soft:    rgba(59, 130, 246, 0.15);
+    --sidebar-bg:     linear-gradient(180deg, #0a0f1a, #101827);
+    --bg-sidebar:     #0a0f1a;
+    --sidebar-text:   #9fb0cc;
+    --sidebar-active: #ffffff;
+    --sidebar-sec:    #5e7396;
+    --bg-body:        #0f1420;
+    --bg-card:        #151c2c;
+    --bg-elevated:    #1a2234;
+    --bg-input:       #1a2234;
+    --text-primary:   #e5eaf4;
+    --text-secondary: #8794ad;
+    --text-muted:     #8794ad;
+    --border:         #253048;
+    --border-strong:  #33415f;
+    --shadow:         0 1px 2px rgba(16, 24, 40, 0.05), 0 10px 28px -12px rgba(16, 24, 40, 0.14);
+    --shadow-sm:      0 1px 2px rgba(16, 24, 40, 0.07);
+    --radius:         14px;
+    --radius-sm:      10px;
     --success:        #16a34a;
     --warning:        #d97706;
-    --danger:         #dc2626;
-    --info:           #0284c7;
-    --shadow:         0 1px 3px rgba(0,0,0,0.08), 0 4px 12px rgba(0,0,0,0.05);
+    --danger:         #e11d48;
+    --info:           #2563eb;
+    --topbar-bg:      rgba(13, 18, 30, 0.86);
 }
 
 /* =============================================================================
-   5) FOREST
+   4) FOREST
    ===========================================================================*/
 [data-theme="forest"] {
-    --bg-body:        #10150f;
-    --bg-sidebar:     #151c13;
-    --bg-card:        #1b2418;
-    --bg-elevated:    #253022;
-    --bg-input:       #10150f;
-    --text-primary:   #e7efe3;
-    --text-secondary: #a3b39c;
-    --text-muted:     #6e7d68;
-    --border:         #2c3828;
-    --accent:         #4ade80;
-    --accent-hover:   #22c55e;
-    --accent-soft:    rgba(74, 222, 128, 0.12);
-    --accent-contrast:#10150f;
-    --success:        #4ade80;
-    --warning:        #fbbf24;
-    --danger:         #f87171;
-    --info:           #38bdf8;
-    --shadow:         0 1px 3px rgba(0,0,0,0.5), 0 4px 12px rgba(0,0,0,0.3);
+    --accent:         #10b981;
+    --accent-2:       #34d399;
+    --accent-hover:   #34d399;
+    --accent-ink:     #ffffff;
+    --accent-contrast:#ffffff;
+    --accent-soft:    rgba(16, 185, 129, 0.15);
+    --sidebar-bg:     linear-gradient(180deg, #070c09, #0c130e);
+    --bg-sidebar:     #070c09;
+    --sidebar-text:   #9fb0cc;
+    --sidebar-active: #ffffff;
+    --sidebar-sec:    #5e7396;
+    --bg-body:        #0e1411;
+    --bg-card:        #131b16;
+    --bg-elevated:    #182119;
+    --bg-input:       #182119;
+    --text-primary:   #e4efe7;
+    --text-secondary: #8aa392;
+    --text-muted:     #8aa392;
+    --border:         #223028;
+    --border-strong:  #2e4136;
+    --shadow:         0 1px 2px rgba(16, 24, 40, 0.05), 0 10px 28px -12px rgba(16, 24, 40, 0.14);
+    --shadow-sm:      0 1px 2px rgba(16, 24, 40, 0.07);
+    --radius:         14px;
+    --radius-sm:      10px;
+    --success:        #16a34a;
+    --warning:        #d97706;
+    --danger:         #e11d48;
+    --info:           #2563eb;
+    --topbar-bg:      rgba(11, 17, 13, 0.86);
 }
 
 /* =============================================================================
-   6) PURPLE
+   5) PLUM
    ===========================================================================*/
-[data-theme="purple"] {
-    --bg-body:        #160f1e;
-    --bg-sidebar:     #1c1326;
-    --bg-card:        #221830;
-    --bg-elevated:    #2d213e;
-    --bg-input:       #160f1e;
-    --text-primary:   #efeaf5;
-    --text-secondary: #b7a9c7;
-    --text-muted:     #7d6d8f;
-    --border:         #372a49;
-    --accent:         #c084fc;
-    --accent-hover:   #a855f7;
-    --accent-soft:    rgba(192, 132, 252, 0.14);
-    --accent-contrast:#160f1e;
-    --success:        #4ade80;
-    --warning:        #fbbf24;
-    --danger:         #fb7185;
-    --info:           #22d3ee;
-    --shadow:         0 1px 3px rgba(0,0,0,0.5), 0 4px 12px rgba(0,0,0,0.3);
+[data-theme="plum"] {
+    --accent:         #8b5cf6;
+    --accent-2:       #a78bfa;
+    --accent-hover:   #a78bfa;
+    --accent-ink:     #ffffff;
+    --accent-contrast:#ffffff;
+    --accent-soft:    rgba(139, 92, 246, 0.16);
+    --sidebar-bg:     linear-gradient(180deg, #0c0913, #130e1d);
+    --bg-sidebar:     #0c0913;
+    --sidebar-text:   #9fb0cc;
+    --sidebar-active: #ffffff;
+    --sidebar-sec:    #5e7396;
+    --bg-body:        #14101d;
+    --bg-card:        #1b1526;
+    --bg-elevated:    #211a30;
+    --bg-input:       #211a30;
+    --text-primary:   #ece7f6;
+    --text-secondary: #978fbe;
+    --text-muted:     #978fbe;
+    --border:         #2c2440;
+    --border-strong:  #3a2f54;
+    --shadow:         0 1px 2px rgba(16, 24, 40, 0.05), 0 10px 28px -12px rgba(16, 24, 40, 0.14);
+    --shadow-sm:      0 1px 2px rgba(16, 24, 40, 0.07);
+    --radius:         14px;
+    --radius-sm:      10px;
+    --success:        #16a34a;
+    --warning:        #d97706;
+    --danger:         #e11d48;
+    --info:           #2563eb;
+    --topbar-bg:      rgba(18, 13, 28, 0.86);
 }
 
 /* =============================================================================
-   7) ICE
+   6) GOLD
+   ===========================================================================*/
+[data-theme="gold"] {
+    --accent:         #d4a017;
+    --accent-2:       #eab308;
+    --accent-hover:   #eab308;
+    --accent-ink:     #1d1503;
+    --accent-contrast:#1d1503;
+    --accent-soft:    rgba(212, 160, 23, 0.16);
+    --sidebar-bg:     linear-gradient(180deg, #070604, #0e0b07);
+    --bg-sidebar:     #070604;
+    --sidebar-text:   #9fb0cc;
+    --sidebar-active: #ffffff;
+    --sidebar-sec:    #5e7396;
+    --bg-body:        #0d0b08;
+    --bg-card:        #15120c;
+    --bg-elevated:    #1b1710;
+    --bg-input:       #1b1710;
+    --text-primary:   #f1ead9;
+    --text-secondary: #a4977c;
+    --text-muted:     #a4977c;
+    --border:         #2c2618;
+    --border-strong:  #3c3524;
+    --shadow:         0 1px 2px rgba(16, 24, 40, 0.05), 0 10px 28px -12px rgba(16, 24, 40, 0.14);
+    --shadow-sm:      0 1px 2px rgba(16, 24, 40, 0.07);
+    --radius:         14px;
+    --radius-sm:      10px;
+    --success:        #16a34a;
+    --warning:        #d97706;
+    --danger:         #e11d48;
+    --info:           #2563eb;
+    --topbar-bg:      rgba(14, 11, 7, 0.86);
+}
+
+/* =============================================================================
+   7) ICE  (light)
    ===========================================================================*/
 [data-theme="ice"] {
-    --bg-body:        #0b1520;
-    --bg-sidebar:     #102030;
-    --bg-card:        #152838;
-    --bg-elevated:    #1c3348;
-    --bg-input:       #0b1520;
-    --text-primary:   #e8f4ff;
-    --text-secondary: #9fc3dd;
-    --text-muted:     #6e8aa3;
-    --border:         #2a4a63;
-    --accent:         #7dd3fc;
+    --accent:         #0284c7;
+    --accent-2:       #38bdf8;
     --accent-hover:   #38bdf8;
-    --accent-soft:    rgba(125, 211, 252, 0.14);
-    --accent-contrast:#0b1520;
-    --success:        #34d399;
-    --warning:        #fbbf24;
-    --danger:         #f87171;
-    --info:           #38bdf8;
-    --shadow:         0 1px 3px rgba(0,0,0,0.5), 0 8px 24px rgba(0,0,0,0.35);
+    --accent-ink:     #ffffff;
+    --accent-contrast:#ffffff;
+    --accent-soft:    rgba(2, 132, 199, 0.12);
+    --sidebar-bg:     linear-gradient(180deg, #0e2239, #14304a);
+    --bg-sidebar:     #0e2239;
+    --sidebar-text:   #9fb0cc;
+    --sidebar-active: #ffffff;
+    --sidebar-sec:    #5e7396;
+    --bg-body:        #eef4fb;
+    --bg-card:        #ffffff;
+    --bg-elevated:    #f3f8fd;
+    --bg-input:       #ffffff;
+    --text-primary:   #0d2136;
+    --text-secondary: #55708c;
+    --text-muted:     #55708c;
+    --border:         #d9e5f2;
+    --border-strong:  #c1d4e8;
+    --shadow:         0 1px 2px rgba(16, 24, 40, 0.05), 0 10px 28px -12px rgba(16, 24, 40, 0.14);
+    --shadow-sm:      0 1px 2px rgba(16, 24, 40, 0.07);
+    --radius:         14px;
+    --radius-sm:      10px;
+    --success:        #16a34a;
+    --warning:        #d97706;
+    --danger:         #e11d48;
+    --info:           #2563eb;
+    --topbar-bg:      rgba(255, 255, 255, 0.86);
 }
 
 /* =============================================================================
-   8) DARK GOLD
+   8) PAPER  (light)
    ===========================================================================*/
-[data-theme="dark-gold"] {
-    --bg-body:        #0a0907;
-    --bg-sidebar:     #12110c;
-    --bg-card:        #181510;
-    --bg-elevated:    #221c14;
-    --bg-input:       #0d0c09;
-    --text-primary:   #f8f4ea;
-    --text-secondary: #cbb98a;
-    --text-muted:     #8a7a55;
-    --border:         #3a3120;
-    --accent:         #d4af37;
-    --accent-hover:   #f0d78c;
-    --accent-soft:    rgba(212, 175, 55, 0.14);
-    --accent-contrast:#0a0907;
-    --success:        #34d399;
-    --warning:        #fbbf24;
-    --danger:         #f87171;
-    --info:           #38bdf8;
-    --shadow:         0 1px 3px rgba(0,0,0,0.55), 0 8px 24px rgba(0,0,0,0.4);
+[data-theme="paper"] {
+    --accent:         #b45309;
+    --accent-2:       #d97706;
+    --accent-hover:   #d97706;
+    --accent-ink:     #ffffff;
+    --accent-contrast:#ffffff;
+    --accent-soft:    rgba(180, 83, 9, 0.12);
+    --sidebar-bg:     linear-gradient(180deg, #241a10, #2e2215);
+    --bg-sidebar:     #241a10;
+    --sidebar-text:   #9fb0cc;
+    --sidebar-active: #ffffff;
+    --sidebar-sec:    #5e7396;
+    --bg-body:        #f7f3ec;
+    --bg-card:        #fffdf9;
+    --bg-elevated:    #faf6ee;
+    --bg-input:       #fffdf9;
+    --text-primary:   #291f14;
+    --text-secondary: #7a6a52;
+    --text-muted:     #7a6a52;
+    --border:         #e8dfcd;
+    --border-strong:  #d6c8ab;
+    --shadow:         0 1px 2px rgba(16, 24, 40, 0.05), 0 10px 28px -12px rgba(16, 24, 40, 0.14);
+    --shadow-sm:      0 1px 2px rgba(16, 24, 40, 0.07);
+    --radius:         14px;
+    --radius-sm:      10px;
+    --success:        #16a34a;
+    --warning:        #d97706;
+    --danger:         #e11d48;
+    --info:           #2563eb;
+    --topbar-bg:      rgba(255, 253, 249, 0.86);
 }
 
 /* =============================================================================
    9) CONTRAST
    ===========================================================================*/
 [data-theme="contrast"] {
-    --bg-body:        #000000;
-    --bg-sidebar:     #0a0a0a;
-    --bg-card:        #121212;
-    --bg-elevated:    #1c1c1c;
-    --bg-input:       #000000;
-    --text-primary:   #ffffff;
-    --text-secondary: #bbbbbb;
-    --text-muted:     #888888;
-    --border:         #444444;
-    --accent:         #ffeb3b;
-    --accent-hover:   #facc15;
-    --accent-soft:    rgba(255, 235, 59, 0.14);
+    --accent:         #facc15;
+    --accent-2:       #fde047;
+    --accent-hover:   #fde047;
+    --accent-ink:     #000000;
     --accent-contrast:#000000;
-    --success:        #69f0ae;
-    --warning:        #ffeb3b;
-    --danger:         #ff5252;
-    --info:           #00e5ff;
-    --shadow:         0 1px 3px rgba(0,0,0,0.6), 0 6px 16px rgba(0,0,0,0.5);
+    --accent-soft:    rgba(250, 204, 21, 0.14);
+    --sidebar-bg:     linear-gradient(180deg, #000, #050505);
+    --bg-sidebar:     #000000;
+    --sidebar-text:   #9fb0cc;
+    --sidebar-active: #ffffff;
+    --sidebar-sec:    #5e7396;
+    --bg-body:        #000000;
+    --bg-card:        #0a0a0a;
+    --bg-elevated:    #121212;
+    --bg-input:       #121212;
+    --text-primary:   #ffffff;
+    --text-secondary: #b3b3b3;
+    --text-muted:     #b3b3b3;
+    --border:         #2a2a2a;
+    --border-strong:  #3d3d3d;
+    --shadow:         0 1px 2px rgba(16, 24, 40, 0.05), 0 10px 28px -12px rgba(16, 24, 40, 0.14);
+    --shadow-sm:      0 1px 2px rgba(16, 24, 40, 0.07);
+    --radius:         14px;
+    --radius-sm:      10px;
+    --success:        #16a34a;
+    --warning:        #d97706;
+    --danger:         #e11d48;
+    --info:           #2563eb;
+    --topbar-bg:      rgba(0, 0, 0, 0.9);
 }
 
 /*------------------------------------------------------------------------------
