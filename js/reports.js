@@ -248,7 +248,7 @@ function amsRenderStockLogReport(logArray, type, siteId, fromId, toId, tableId) 
         date: l => l.date,
         item: l => l.name,
         site: l => l.site,
-        qty: l => l.qty,
+        qty: l => Number(l.qty) || 0,
         by: l => l.by || "",
         asset: l => l.assetIdSnapshot || "",
         remarks: l => l.remarks || "",

@@ -60,9 +60,18 @@ function badgeClassFor(status) {
 }
 
 /* ---- 4) NUMBER FORMATTING (Indian currency ₹ with lakh/crore counting) ----- */
+function amsParseMoney(value) {
+    if (value == null || value === "") return 0;
+    if (typeof value === "number") return Number.isFinite(value) ? value : 0;
+    const cleaned = String(value).replace(/[₹,\s]/g, "").trim();
+    if (!cleaned) return 0;
+    const n = Number(cleaned);
+    return Number.isFinite(n) ? n : 0;
+}
+
 function formatCurrency(amount) {
-    const n = Number(amount);
-    if (isNaN(n)) return "₹0";
+    const n = (typeof amsParseMoney === "function") ? amsParseMoney(amount) : Number(amount);
+    if (!Number.isFinite(n)) return "₹0";
     return "₹" + new Intl.NumberFormat("en-IN", {
         maximumFractionDigits: 2
     }).format(n);

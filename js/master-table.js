@@ -44,6 +44,19 @@ function amsEsc(str) {
  */
 const AMS_MT_STATE = { editingKey: null, booted: false };
 
+function amsMtComparableValue(f, item) {
+    if (f.type === "date") return amsFormatDate(item[f.key]);
+    if (f.type === "number") {
+        const key = f.key || "";
+        if (/cost|price|amount/i.test(key) && typeof amsParseMoney === "function") {
+            return amsParseMoney(item[f.key]);
+        }
+        const n = Number(item[f.key]);
+        return Number.isFinite(n) ? n : 0;
+    }
+    return item[f.key];
+}
+
 function amsMtMatchKeys() {
     const cfg = AMS_MASTER_CONFIG;
     return (cfg.importMatchKeys && cfg.importMatchKeys.length) ? cfg.importMatchKeys : null;
@@ -85,7 +98,7 @@ function amsExportMaster() {
     const getterMap = {};
     cfg.fields.forEach(f => {
         if (f.hideInTable) return;
-        getterMap[f.key] = item => f.type === "date" ? amsFormatDate(item[f.key]) : item[f.key];
+        getterMap[f.key] = item => amsMtComparableValue(f, item);
     });
     if (cfg.usageCount) getterMap["__usage"] = item => cfg.usageCount(item);
     getterMap["__active"] = item => item.active ? "Active" : "Inactive";
@@ -265,7 +278,7 @@ async function amsRenderMasterTable() {
     const getterMap = {};
     cfg.fields.forEach(f => {
         if (f.hideInTable) return;
-        getterMap[f.key] = item => f.type === "date" ? amsFormatDate(item[f.key]) : item[f.key];
+        getterMap[f.key] = item => amsMtComparableValue(f, item);
     });
     if (cfg.usageCount) getterMap["__usage"] = item => cfg.usageCount(item);
     getterMap["__active"] = item => item.active ? "Active" : "Inactive";

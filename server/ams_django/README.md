@@ -10,13 +10,30 @@ unchanged AMS-v4-0 frontend same-origin.
 
 ## Setup
 
+From this folder (`server/ams_django`):
+
 ```bash
+# Create a virtual environment
+python -m venv venv
+
+# Activate it (Windows)
+venv\Scripts\activate
+
+# Activate it (Linux / macOS)
+# source venv/bin/activate
+
 python -m pip install --upgrade pip
 pip install -r requirements.txt
-cp .env.example .env      # Windows: copy .env.example .env  (edit it)
-# System dependency (Debian/Ubuntu):
-#   Microsoft ODBC Driver 18 for SQL Server + unixodbc-dev
+
+# Windows
+copy .env.example .env
+
+# Linux / macOS
+# cp .env.example .env
 ```
+
+Edit `.env` (`AMS_DB_SERVER`, driver, optional SQL auth). System dependency
+on Debian/Ubuntu: Microsoft ODBC Driver 18 for SQL Server + `unixodbc-dev`.
 
 ## Run
 

@@ -126,34 +126,37 @@ SQL Server to load from):
    npx serve .
    ```
 
-**Django Server** - Steps to run in Django:
-
-Open a terminal / Command Prompt **inside** the project folder
-(`D:\Asset_Management_System_v4-0\server\ams_django\`) and run:
+**Django Server** - HTTP twin of `server/AMS.API` (same SQL Server `AMS-v4-0`
+database, same UI). Open a terminal **inside** `server/ams_django/`
+(or `server\ams_django\` on Windows).
 
 ```bash
-# 1. (Recommended) Create a virtual environment so packages stay isolated
+cd server/ams_django
+
+# Create a virtual environment
 python -m venv venv
 
-# 2. Activate it
-venv\Scripts\activate          # Windows
-# source venv/bin/activate     # Mac/Linux
+# Activate it (Windows)
+venv\Scripts\activate
 
-# 3. Install required packages
+# Activate it (Linux / macOS)
+# source venv/bin/activate
+
+python -m pip install --upgrade pip
 pip install -r requirements.txt
 
-# 4. Connect to SQL Server (ODBC Driver 18 needs TrustServerCertificate;
-#    that extra_params flag is already in ams_django/settings.py DATABASES)
+# Windows
+copy .env.example .env
+
+# Linux / macOS
+# cp .env.example .env
+
 python manage.py migrate
-
-# 5. Run the local development server (schema/users are created on first request)
 python manage.py runserver
-
-# 6. Stop virtual environment
-deactivate
 ```
 
-Then open your browser to: **http://127.0.0.1:8000/**
+Then open **http://127.0.0.1:8000/**. Stop the venv later with `deactivate`.
+On Windows you can instead use `run-django.bat` (see `server/ams_django/SETUP-WINDOWS.md`).
 
 Sign in, then use the Theme and Style dropdowns (top-right, also on the login
 page). Default Theme is **Dark Grey**. Default Style is **Apple**. Theme, Style,

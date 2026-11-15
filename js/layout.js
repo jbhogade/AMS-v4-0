@@ -128,7 +128,7 @@ function renderSidebar(currentPage) {
             <div class="sidebar-logo">AM</div>
             <div class="sidebar-brand-text">
                 <div class="sidebar-brand-name">${escapeHtml((typeof amsGetPortalName === "function") ? amsGetPortalName() : "Asset Manager")}</div>
-                <div class="sidebar-brand-sub">Management Portal v4.0</div>
+                <div class="sidebar-brand-sub">Management Portal AMS v4.0</div>
             </div>
         </div>
         <nav class="sidebar-nav">
