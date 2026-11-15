@@ -4045,34 +4045,38 @@ function getAssetSummary() {
     const operational = DUMMY_ASSETS.filter(a => a.status === "Assigned" || a.status === "In Store").length;
     const maintenance = DUMMY_ASSETS.filter(a => a.status === "In Repair" || a.status === "Not Working").length;
     const outOfService = DUMMY_ASSETS.filter(a => a.status === "Retired / Scrapped").length;
-    const totalValue = DUMMY_ASSETS.reduce((sum, a) => sum + (a.purchaseCost || 0), 0);
+    const money = (v) => (typeof amsParseMoney === "function") ? amsParseMoney(v) : (Number(String(v == null ? 0 : v).replace(/[₹,\s]/g, "")) || 0);
+    const totalValue = DUMMY_ASSETS.reduce((sum, a) => sum + money(a.purchaseCost), 0);
     return { total, operational, maintenance, outOfService, totalValue };
 }
 
 /* Items whose stock is at or below their reorder level need attention */
 function getLowStockItems() {
+    const qtyOf = (v) => Number(v) || 0;
     const lowConsumables = AMS_DUMMY_CONSUMABLES
-        .filter(c => c.qty <= c.reorderLevel)
-        .map(c => ({ id: c.consumableId, name: c.name, stock: c.qty, type: "Consumable" }));
+        .filter(c => qtyOf(c.qty) <= qtyOf(c.reorderLevel))
+        .map(c => ({ id: c.consumableId, name: c.name, stock: qtyOf(c.qty), type: "Consumable" }));
 
     const lowSpareParts = AMS_DUMMY_SPARE_PARTS
-        .filter(p => p.qty <= p.reorderLevel)
-        .map(p => ({ id: p.partId, name: p.name, stock: p.qty, type: "Spare Part" }));
+        .filter(p => qtyOf(p.qty) <= qtyOf(p.reorderLevel))
+        .map(p => ({ id: p.partId, name: p.name, stock: qtyOf(p.qty), type: "Spare Part" }));
 
     return [...lowConsumables, ...lowSpareParts];
 }
 
 function getConsumableSummary() {
+    const qtyOf = (v) => Number(v) || 0;
     const total = AMS_DUMMY_CONSUMABLES.length;
-    const totalUnits = AMS_DUMMY_CONSUMABLES.reduce((sum, c) => sum + c.qty, 0);
-    const lowStock = AMS_DUMMY_CONSUMABLES.filter(c => c.qty <= c.reorderLevel).length;
+    const totalUnits = AMS_DUMMY_CONSUMABLES.reduce((sum, c) => sum + qtyOf(c.qty), 0);
+    const lowStock = AMS_DUMMY_CONSUMABLES.filter(c => qtyOf(c.qty) <= qtyOf(c.reorderLevel)).length;
     return { total, totalUnits, lowStock };
 }
 
 function getSparePartSummary() {
+    const qtyOf = (v) => Number(v) || 0;
     const total = AMS_DUMMY_SPARE_PARTS.length;
-    const totalUnits = AMS_DUMMY_SPARE_PARTS.reduce((sum, p) => sum + p.qty, 0);
-    const lowStock = AMS_DUMMY_SPARE_PARTS.filter(p => p.qty <= p.reorderLevel).length;
+    const totalUnits = AMS_DUMMY_SPARE_PARTS.reduce((sum, p) => sum + qtyOf(p.qty), 0);
+    const lowStock = AMS_DUMMY_SPARE_PARTS.filter(p => qtyOf(p.qty) <= qtyOf(p.reorderLevel)).length;
     return { total, totalUnits, lowStock };
 }
 
