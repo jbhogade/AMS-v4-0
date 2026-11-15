@@ -126,14 +126,36 @@ SQL Server to load from):
    npx serve .
    ```
 
-**Django Server** - HTTP or HTTPS. Open a terminal **inside**
-`server\ams_django\` (activate `venv` first if you use one).
+**Django Server** - HTTP or HTTPS. This is the Django twin of `server/AMS.API`
+(same SQL Server `AMS-v4-0` database, same UI). Open a terminal **inside**
+`server/ams_django/` (or `server\ams_django\` on Windows).
+
+On Windows you can instead double-click `run-django.bat` after creating `.env`
+(see `server/ams_django/SETUP-WINDOWS.md`). Manual setup (any OS):
 
 ```bash
+cd server/ams_django
+
+# Create a virtual environment
+python -m venv venv
+
+# Activate it (Windows)
+venv\Scripts\activate
+
+# Activate it (Linux / macOS)
+# source venv/bin/activate
+
 python -m pip install --upgrade pip
 pip install -r requirements.txt
+
+# Copy env and edit AMS_DB_SERVER / driver if needed
+copy .env.example .env
+
 python manage.py migrate
+python manage.py runserver
 ```
+
+On Linux / macOS use `cp .env.example .env` instead of `copy`.
 
 HTTP (`runserver` is HTTP only; `runserver_plus` is not installed). From
 VS Code or any terminal this still works:
