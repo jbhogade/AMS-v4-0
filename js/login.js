@@ -28,7 +28,6 @@
 
     if (typeof initTheme === "function") initTheme();
     if (typeof buildThemeMenu === "function") buildThemeMenu("theme-select");
-    if (typeof buildStyleMenu === "function") buildStyleMenu("style-select");
     if (typeof amsApplyPortalPrefs === "function") amsApplyPortalPrefs();
 
     /* If a live session already exists, skip the login page entirely. */
@@ -102,14 +101,6 @@
                     applyTheme(map[userKey]);
                 } else {
                     applyTheme(document.documentElement.getAttribute("data-theme"));
-                }
-            }
-            if (typeof applyUiStyle === "function") {
-                var styleMap = (typeof amsReadStyleMap === "function") ? amsReadStyleMap() : {};
-                if (userKey && styleMap[userKey]) {
-                    applyUiStyle(styleMap[userKey]);
-                } else {
-                    applyUiStyle(document.documentElement.getAttribute("data-ui-style") || "apple");
                 }
             }
             window.location.replace("index.html");
