@@ -314,6 +314,9 @@ async function amsDbLoadAll() {
         if (typeof amsMigrateCompanyFromLocal === "function") await amsMigrateCompanyFromLocal();
         if (typeof amsMigrateReportPrefsFromLocal === "function") await amsMigrateReportPrefsFromLocal();
         await amsYieldToBrowser();
+        if (typeof amsNormalizeEmployeeExitStatus === "function") {
+            try { amsNormalizeEmployeeExitStatus(); } catch (e) { /* ignore */ }
+        }
         if (typeof amsRepairExitedEmployeeHoldings === "function") {
             const repair = () => { try { amsRepairExitedEmployeeHoldings(); } catch (e) { /* ignore */ } };
             if (typeof requestIdleCallback === "function") requestIdleCallback(repair, { timeout: 1500 });
@@ -2568,7 +2571,7 @@ function amsResolvePendingManagers() {
 function exitEmployee(amsId, exitDate, remarks, facilitiesDisabled, exitReason, teamInchargeAmsId, facilitiesNotApplicable) {
     const emp = findEmployee(amsId);
     if (!emp) return null;
-    emp.status = "Inactive";
+    emp.status = "Exited";
     emp.exitDate = exitDate || new Date().toISOString().slice(0, 10);
     emp.exitRemarks = remarks || "";
     emp.exitReason = exitReason || "";
@@ -2872,7 +2875,7 @@ function amsRepairExitedEmployeeHoldings() {
     if (!Array.isArray(DUMMY_EMPLOYEES)) return false;
     let changed = false;
     DUMMY_EMPLOYEES.forEach(emp => {
-        if (!emp || emp.status !== "Inactive") return;
+        if (!emp || (emp.status !== "Exited" && emp.status !== "Inactive")) return;
         const amsId = emp.amsId;
         const returnDate = emp.exitDate || new Date().toISOString().slice(0, 10);
         const rec = typeof getExitRecord === "function" ? getExitRecord(amsId) : null;
@@ -4114,9 +4117,29 @@ function getAssetsByStatus() {
 }
 
 /* Employee counts by status - used if a page needs a head-count summary */
+function amsEmployeeIsExited(emp) {
+    if (!emp) return false;
+    return emp.status === "Exited" || emp.status === "Inactive";
+}
+
+function amsNormalizeEmployeeExitStatus() {
+    if (!Array.isArray(DUMMY_EMPLOYEES)) return false;
+    let changed = false;
+    DUMMY_EMPLOYEES.forEach(emp => {
+        if (!emp || emp.status !== "Inactive") return;
+        const rec = typeof getExitRecord === "function" ? getExitRecord(emp.amsId) : null;
+        if (emp.exitDate || rec) {
+            emp.status = "Exited";
+            changed = true;
+        }
+    });
+    if (changed) amsDbSaveAsync("employees");
+    return changed;
+}
+
 function getEmployeeSummary() {
     const active = DUMMY_EMPLOYEES.filter(e => e.status === "Active").length;
-    const inactive = DUMMY_EMPLOYEES.length - active;
+    const inactive = DUMMY_EMPLOYEES.filter(e => amsEmployeeIsExited(e)).length;
     const assignedAssets = DUMMY_ASSETS.filter(a => a.assignedTo).length
         + DUMMY_MOBILES.filter(a => a.assignedTo).length
         + AMS_DUMMY_SIM_CARDS.filter(s => s.assignedTo).length;

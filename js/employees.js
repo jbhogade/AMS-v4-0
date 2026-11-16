@@ -61,7 +61,9 @@ function getFilteredEmployees() {
             emp.amsId.toLowerCase().includes(search) ||
             (emp.site || "").toLowerCase().includes(search);
         const matchesSite = site === "All" || site === "" || (emp.site || "") === site;
-        const matchesStatus = status === "All" || emp.status === status;
+        const matchesStatus = status === "All"
+            || emp.status === status
+            || (status === "Exited" && emp.status === "Inactive" && !!(emp.exitDate || (typeof getExitRecord === "function" && getExitRecord(emp.amsId))));
         return matchesSearch && matchesSite && matchesStatus;
     });
 }
@@ -164,7 +166,7 @@ function renderEmployeeTable() {
 function buildActionsMenu(emp) {
     const active = emp.status === "Active";
     const exitRecord = typeof getExitRecord === "function" ? getExitRecord(emp.amsId) : null;
-    const exited = emp.status === "Inactive" && !!exitRecord;
+    const exited = amsEmployeeIsExited(emp) && !!exitRecord;
     const holdsAssets = amsOwnedEmployeeHoldingsCount(emp.amsId) + amsTeamEmployeeHoldingsCount(emp.amsId) > 0;
     const exitReportLink = exitRecord
         ? `<a onclick="openHandoverForm('${emp.amsId}')">Exit Report (Handover Form)</a>`
@@ -366,7 +368,7 @@ function viewEmployee(amsId) {
     document.getElementById("view-status").innerHTML =
         `<span class="badge ${badgeClassFor(emp.status)}"><span class="badge-dot"></span>${escapeHtml(emp.status)}</span>`;
     const viewExit = document.getElementById("view-exit");
-    if (emp.status === "Inactive" && emp.exitDate) {
+    if (amsEmployeeIsExited(emp) && emp.exitDate) {
         viewExit.style.display = "";
         viewExit.textContent = "Exited on: " + emp.exitDate;
     } else if (emp.status === "Active" && emp.reactivatedDate) {
@@ -693,7 +695,7 @@ function openReactivateModal(amsId) {
     const emp = findEmployee(amsId);
     if (!emp) return;
     const rec = typeof getExitRecord === "function" ? getExitRecord(amsId) : null;
-    if (emp.status !== "Inactive" || !rec) {
+    if (!amsEmployeeIsExited(emp) || !rec) {
         alert("Reactivate is only available for employees currently marked as exited.");
         return;
     }
@@ -982,7 +984,7 @@ function amsDownloadEmployeeTemplate() {
         ["reportsTo = the manager's full name (or company Employee ID / AMS ID). managerId = the manager's company ID."],
         ["The reporting manager's name and ID are saved AS IS - the manager does not have to exist yet. The link is filled in automatically once that manager is in this file or added later."],
         ["site = a Site Master name (optional)."],
-        ["status = Active or Inactive (default Active)."],
+        ["status = Active or Exited (default Active). Inactive is treated as Exited."],
     ];
     const sample = ["EMP-000001", "Example Employee", "IT", "Engineer", "Mumbai HO", "", "", "+91 99999 99999", "example@company.com", "Active"];
     amsWriteWorkbook("Employee_Master_import_template.xlsx", [
@@ -1086,7 +1088,8 @@ function amsImportEmployeesFile(file) {
 
                 const managerRef = (obj.reportsTo && obj.reportsTo.trim()) || (obj.managerId && obj.managerId.trim()) || "";
                 const manager = managerRef ? findEmployeeAny(managerRef) : null;
-                const status = obj.status === "Inactive" ? "Inactive" : "Active";
+                const rawStatus = String(obj.status || "").trim();
+                const status = (rawStatus === "Exited" || rawStatus === "Inactive") ? "Exited" : "Active";
                 const payload = {
                     empId: obj.empId,
                     name: obj.name,
@@ -1124,7 +1127,7 @@ function amsImportEmployeesFile(file) {
                     results.push({ row: line, record, result: resultKind, reason: `${resultKind === "updated" ? "Updated" : "Added"} (manager "${managerRef}" saved as-is - will link automatically once that manager is added)` });
                 } else {
                     if (!managerRef) delete emp.pendingManagerRef;
-                    results.push({ row: line, record, result: resultKind, reason: status === "Inactive" ? `${resultKind === "updated" ? "Updated" : "Added"} (Inactive)` : (resultKind === "updated" ? "Existing employee updated" : "Added") });
+                    results.push({ row: line, record, result: resultKind, reason: status === "Exited" ? `${resultKind === "updated" ? "Updated" : "Added"} (Exited)` : (resultKind === "updated" ? "Existing employee updated" : "Added") });
                 }
             }
 
@@ -1140,7 +1143,7 @@ function amsImportEmployeesFile(file) {
                     emp.managerId = emp.managerId || mgr.empId;
                     delete emp.pendingManagerRef;
                     const row = results.find(r => r.record === empId || r.record === emp.empId);
-                    if (row) row.reason = `${row.result === "updated" ? "Updated" : "Added"} (manager "${ref}" linked)` + (emp.status === "Inactive" ? " - Inactive" : "");
+                    if (row) row.reason = `${row.result === "updated" ? "Updated" : "Added"} (manager "${ref}" linked)` + (emp.status === "Exited" ? " - Exited" : "");
                 }
             });
             amsResolvePendingManagers();

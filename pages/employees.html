@@ -52,7 +52,7 @@
                 <div class="emp-stats">
                     <span class="stat">Total: <strong id="stat-total">0</strong></span>
                     <span class="stat">Active: <strong id="stat-active">0</strong></span>
-                    <span class="stat">Inactive: <strong id="stat-inactive">0</strong></span>
+                    <span class="stat">Exited: <strong id="stat-inactive">0</strong></span>
                     <span class="stat">Assets assigned: <strong id="stat-assigned">0</strong></span>
                 </div>
 
@@ -68,7 +68,7 @@
                         <select class="select" id="emp-status-filter" style="width:auto;">
                             <option value="All">All Status</option>
                             <option value="Active">Active</option>
-                            <option value="Inactive">Inactive</option>
+                            <option value="Exited">Exited</option>
                         </select>
                         <button type="button" class="btn btn-secondary btn-clear-filters" id="emp-clear-filters" title="Clear column filters">Clear filters</button>
 
@@ -348,7 +348,7 @@
 
     <!-- ====================================================================
          MODAL : EMPLOYEE EXIT / OFF-BOARDING
-         (marks employee Inactive, returns assets, disables facilities)
+         (marks employee Exited, returns assets, disables facilities)
          ==================================================================== -->
     <div class="modal-overlay" id="modal-exit">
         <div class="modal modal-lg">
@@ -357,7 +357,7 @@
                 <button class="modal-close" data-close>&times;</button>
             </div>
             <div class="modal-body">
-                <div class="alert alert-danger">This will mark the employee as <strong>Inactive</strong> and release all held assets back to the store.</div>
+                <div class="alert alert-danger">This will mark the employee as <strong>Exited</strong> and release all held assets back to the store.</div>
 
                 <div class="detail-grid">
                     <div class="detail-item">
