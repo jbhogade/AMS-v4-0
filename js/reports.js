@@ -172,7 +172,7 @@ function amsRenderIssueHandoverTable(tableId, reportType, searchId, siteId, from
         .forEach(a => {
             const emp = amsGetEmployeeByAmsId(a.assignedTo);
             if (!emp) return;
-            const isExited = emp.status === "Exited";
+            const isExited = typeof amsEmployeeIsExited === "function" ? amsEmployeeIsExited(emp) : emp.status === "Exited";
             if (wantExited !== isExited) return;
             if (searchTerm && ![emp.name, amsGetEmployeeDisplayId(emp), emp.dept, amsPrintAssetId(a)].some(v => String(v).toLowerCase().includes(searchTerm))) return;
             const assetSite = a.currentSite || a.site;
