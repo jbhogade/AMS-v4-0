@@ -1,5 +1,15 @@
 # AMS-v4-0 change log
 
+## 2026-11-15 — Graphite Teal appearance and split login
+
+Default Theme is **Graphite Teal**. Nine palettes (graphite, midnight,
+slate-blue, forest, plum, gold, ice, paper, contrast). Inter font.
+Dark sidebar + light content. Split login (hero left, form right).
+Apple / macOS / iOS / iPadOS Style UI is unlinked (`css/ui-styles.css`
+kept on disk, not loaded). Old saved names map: dark-grey -> graphite,
+lite -> paper, purple -> plum, dark-gold -> gold. Cache-bust `?v=gt2`.
+Hard-refresh (Ctrl+F5).
+
 ## 2026-11-12 — A4 sticker grid for Display ID labels
 
 Display ID Number print uses a fixed A4 sheet: 7 columns x 16 rows.

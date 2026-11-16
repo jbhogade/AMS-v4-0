@@ -62,8 +62,8 @@ AMS-v4-0/                       <- live portal (SQL Server database AMS-v4-0)
 ├── database/AMS-v4-0.sql      <- SSMS setup script (idempotent)
 ├── database/Setup-AMS-v4-0.bat<- sqlcmd setup script (Windows)
 ├── css/
-│   ├── themes.css          <- color palettes (9 themes; Dark Grey default)
-│   ├── ui-styles.css       <- surface Styles (Apple default; Plain / macOS / iOS / iPadOS)
+│   ├── themes.css          <- 9 Graphite Teal palettes (Graphite Teal default)
+│   ├── ui-styles.css       <- unused leftover (not linked; Apple/macOS styles removed)
 │   ├── main.css            <- shared layout & components (incl. font-size attr)
 │   ├── dashboard.css       <- dashboard-only styles
 │   ├── master-table.css    <- generic master-table engine styles
@@ -75,11 +75,11 @@ AMS-v4-0/                       <- live portal (SQL Server database AMS-v4-0)
 │   ├── role-gate.css       <- shared role-gated page styles (viewing-as bar, access-denied, actor badges)
 │   ├── access-rights.css   <- access-rights checklist modal styles
 │   ├── role-access.css     <- role-access matrix styles
-│   └── settings.css        <- Settings page tab strip, theme/style galleries, stat rows
+│   └── settings.css        <- Settings page tab strip, theme gallery, stat rows
 ├── js/
 │   ├── dummy-data.js       <- DB/API layer + in-memory cache + helpers
-│   ├── theme.js            <- Theme + Style dropdowns (per-user maps; Dark Grey / Plain defaults)
-│   ├── login.js            <- login submit + session + first-login Theme/Style seed
+│   ├── theme.js            <- Theme dropdown (per-user map; Graphite Teal default)
+│   ├── login.js            <- login submit + session + first-login Theme seed
 │   ├── app.js              <- shared helpers (escape, badges, formatting)
 │   ├── layout.js           <- sidebar + header; per-user sidebar Show/Hide pin
 │   ├── dashboard.js        <- renders the dashboard page
@@ -98,7 +98,7 @@ AMS-v4-0/                       <- live portal (SQL Server database AMS-v4-0)
 │   ├── role-access.js      <- Role Access Master logic (Role x Page matrix)
 │   ├── log-report.js       <- Log Report logic (visibility split, filters, CSV, clear)
 │   ├── reports.js          <- Report Master logic (7 report tabs, print/CSV/Excel export)
-│   ├── settings.js         <- Settings hub logic (tabs, theme/style galleries, prefs)
+│   ├── settings.js         <- Settings hub logic (tabs, theme gallery, prefs)
 │   ├── print-docs.js       <- shared A4 print engine (open tab + .pf-* stylesheet)
 │   ├── print-forms.js      <- Asset Issue (AIF) / Handover (AHF) forms for print
 │   └── under-construction.js <- placeholder panel for future pages
@@ -158,37 +158,35 @@ python manage.py runserver
 Then open **http://127.0.0.1:8000/**. Stop the venv later with `deactivate`.
 On Windows you can instead use `run-django.bat` (see `server/ams_django/SETUP-WINDOWS.md`).
 
-Sign in, then use the Theme and Style dropdowns (top-right, also on the login
-page). Default Theme is **Dark Grey**. Default Style is **Apple**. Theme, Style,
-and desktop sidebar Show/Hide are stored per signed-in username.
+Sign in, then use the Theme dropdown (top-right, also on the login page).
+Default Theme is **Graphite Teal**. Theme and desktop sidebar Show/Hide are
+stored per signed-in username. Apple / macOS / iOS / iPadOS Style UI is removed.
 
 ## Themes
 
-Theme (color) and Style (surface look) are independent. Nine palettes. Mix any
-Theme with Apple (default), Plain, macOS, iOS, or iPadOS (`css/ui-styles.css`).
-Default Theme is **Dark Grey**. Removed names map in `js/theme.js` (`platinum` /
-`blue` -> dark-grey, `obsidian` -> midnight, `teal` -> ice, `emerald` -> forest,
-`violet` -> purple, `wine` / `rose-gold` / `amber` / `copper` -> dark-gold,
-`crimson` -> contrast). Signed-in users keep their own Theme, Style, and sidebar
-pin (`ams-theme-by-user`, `ams-ui-style-by-user`, `ams-sidebar-show-by-user`).
-Login uses the shared Theme and Style pickers until someone signs in.
+One Theme dropdown. Nine palettes. Default is **Graphite Teal**. Old saved
+names map in `js/theme.js` (`dark-grey` -> graphite, `lite` -> paper,
+`purple` -> plum, `dark-gold` -> gold, plus older aliases). Signed-in users
+keep their own Theme and sidebar pin (`ams-theme-by-user`,
+`ams-sidebar-show-by-user`). Login uses the shared Theme picker until
+someone signs in.
 
-| Theme      | Type  | Notes                         |
-| ---------- | ----- | ----------------------------- |
-| Dark Grey  | dark  | **Default**                   |
-| Midnight   | dark  | Very dark, high contrast      |
-| Slate Blue | dark  | Corporate blue-grey           |
-| Lite       | light | Bright / light                |
-| Forest     | dark  | Dark green                    |
-| Purple     | dark  | Dark purple                   |
-| Ice        | light | Cool pale-blue                |
-| Dark Gold  | dark  | Warm gold accent              |
-| Contrast   | dark  | Pure black high-contrast      |
+| Theme         | Type  | Notes                                      |
+| ------------- | ----- | ------------------------------------------ |
+| Graphite Teal | mixed | **Default** (dark sidebar, light content)  |
+| Midnight      | dark  | Very dark, high contrast                   |
+| Slate Blue    | dark  | Corporate blue-grey                        |
+| Forest        | dark  | Dark green                                 |
+| Plum          | dark  | Dark purple                                |
+| Dark Gold     | dark  | Warm gold accent                           |
+| Ice           | light | Cool pale-blue                             |
+| Paper         | light | Warm light                                 |
+| Contrast      | dark  | Pure black high-contrast                   |
 
 ## Build Roadmap (step by step)
 
 - [x] Project setup + folder structure
-- [x] Theme system (9 themes, Dark Grey default)
+- [x] Theme system (9 themes, Graphite Teal default)
 - [x] Shared layout (sidebar + header)
 - [x] Dashboard page (dummy data)
 - [x] Employee Master (AMS IDs, assets owned/team, Issue & Handover forms, Exit with facility check-off + immutable exit snapshot)
@@ -217,7 +215,7 @@ Login uses the shared Theme and Style pickers until someone signs in.
 - [x] SIM Card Master (`pages/sim-cards.html` + `js/sim-cards.js`) - a separate record type for mobile SIM cards issued to employees, mirroring the Asset Master: auto SIM ID (`SIM-000001`), ICCID/serial, mobile number, operator + plan pick-lists, status (In Store / Issued / Blocked / Retired), assign/reassign/return/block/retire with lifecycle history in the View modal, stock summary tiles, search + status filter, CSV Template/Export/Import, and a DB-backed `simCards` collection (server whitelist updated)
 - [x] Department / Designation Master sync fix - the Department & Designation Masters now reflect lookups created anywhere in the system (Employee form quick-add, bulk Employee import, Import Report quick-add) instead of dropping them on the next page load: departments/designations live in ONE unified view across the hardcoded seeds and the DB-backed masters, every mutation persists to SQL Server, the Employee import reference check accepts lookups from either source, and newly imported employees register their department/designation into both masters automatically
 - [x] Mobile Master (`pages/mobiles.html` + `js/mobiles.js`) - phones / handhelds with SIM link via `amsAssetId`
-- [x] Optional Appearance Style (Plain default; Apple / macOS / iOS / iPadOS; 9 themes, Dark Grey default)
+- [x] Graphite Teal appearance (9 palettes, Graphite Teal default; Apple/macOS Style UI removed; split login)
 - [x] Per-user Theme and desktop sidebar Show/Hide (keyed by signed-in username)
 - [x] Themed date picker (viewport-fixed glass calendar for every `input type="date"`)
 - [x] Actions menus under glass (card blur via `::before` so `position:fixed` stays on the viewport)
