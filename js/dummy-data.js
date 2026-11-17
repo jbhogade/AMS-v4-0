@@ -57,7 +57,9 @@ function amsClearSession() {
     try {
         const cur = amsGetSession();
         if (cur && cur.username) {
-            sessionStorage.removeItem("ams_collections_cache_v1:" + String(cur.username).toLowerCase());
+            const who = String(cur.username).toLowerCase();
+            sessionStorage.removeItem("ams_collections_cache_v1:" + who);
+            sessionStorage.removeItem("ams_collections_cache_v2:" + who);
         }
     } catch (e) { /* storage unavailable */ }
     try { localStorage.removeItem(AMS_SESSION_KEY); } catch (e) { /* storage unavailable */ }
@@ -181,8 +183,18 @@ const AMS_DOC_COLLECTIONS = {
 let AMS_DB_LOADING = null;   /* idempotent load promise */
 let AMS_DB_READY   = false;
 
-function amsDbApplyPayload(payload) {
+function amsCollectionsPayloadUsable(payload) {
     if (!payload || typeof payload !== "object") return false;
+    return Object.keys(AMS_COLLECTIONS).some(key => Array.isArray(payload[key]));
+}
+
+function amsCollectionsPayloadHasRows(payload) {
+    if (!amsCollectionsPayloadUsable(payload)) return false;
+    return Object.keys(AMS_COLLECTIONS).some(key => Array.isArray(payload[key]) && payload[key].length > 0);
+}
+
+function amsDbApplyPayload(payload) {
+    if (!amsCollectionsPayloadUsable(payload)) return false;
     Object.keys(AMS_COLLECTIONS).forEach(key => {
         const arr = AMS_COLLECTIONS[key]();
         arr.length = 0;
@@ -201,7 +213,7 @@ function amsDbApplyPayload(payload) {
 function amsCollectionsCacheKey() {
     const sess = amsGetSession();
     const who = sess && sess.username ? String(sess.username).toLowerCase() : "anon";
-    return "ams_collections_cache_v1:" + who;
+    return "ams_collections_cache_v2:" + who;
 }
 
 function amsReadCollectionsCache() {
@@ -209,7 +221,7 @@ function amsReadCollectionsCache() {
         const raw = sessionStorage.getItem(amsCollectionsCacheKey());
         if (!raw) return null;
         const parsed = JSON.parse(raw);
-        if (!parsed || !parsed.etag || !parsed.data || typeof parsed.data !== "object") return null;
+        if (!parsed || !parsed.etag || !amsCollectionsPayloadUsable(parsed.data)) return null;
         return parsed;
     } catch (e) {
         return null;
@@ -217,6 +229,7 @@ function amsReadCollectionsCache() {
 }
 
 function amsWriteCollectionsCache(etag, data) {
+    if (!etag || !amsCollectionsPayloadHasRows(data)) return;
     try {
         sessionStorage.setItem(amsCollectionsCacheKey(),
             JSON.stringify({ etag: etag, data: data, at: Date.now() }));
@@ -229,14 +242,18 @@ function amsInvalidateCollectionsCache() {
     try { sessionStorage.removeItem(amsCollectionsCacheKey()); } catch (e) { /* storage unavailable */ }
 }
 
+function amsCollectionsAuthHeaders(extra) {
+    const headers = Object.assign({}, extra || {});
+    const sess = amsGetSession();
+    if (sess && sess.token) headers["Authorization"] = "Bearer " + sess.token;
+    return headers;
+}
+
 /* Fetch /api/collections with a conditional request. Returns the parsed payload
    even when the API answers 304 (from the session cache). */
 async function amsFetchAllCollections() {
     const cache = amsReadCollectionsCache();
-    const headers = {};
-    if (cache) headers["If-None-Match"] = cache.etag;
-    const sess = amsGetSession();
-    if (sess && sess.token) headers["Authorization"] = "Bearer " + sess.token;
+    const headers = amsCollectionsAuthHeaders(cache ? { "If-None-Match": cache.etag } : {});
 
     let res;
     try {
@@ -244,7 +261,17 @@ async function amsFetchAllCollections() {
     } catch (e) {
         throw new Error("Cannot reach the AMS-v4-0 API. Start server\\AMS.API (dotnet run) and refresh.");
     }
-    if (res.status === 304 && cache) return cache.data;
+    if (res.status === 304) {
+        if (cache && amsCollectionsPayloadUsable(cache.data)) return cache.data;
+        try {
+            res = await fetch(AMS_API_BASE + "/api/collections", {
+                method: "GET",
+                headers: amsCollectionsAuthHeaders()
+            });
+        } catch (e) {
+            throw new Error("Cannot reach the AMS-v4-0 API. Start server\\AMS.API (dotnet run) and refresh.");
+        }
+    }
     if (!res.ok) {
         /* Let the shared client handle 401 redirects and error messages. */
         return await amsApiGet("/api/collections");
@@ -253,77 +280,116 @@ async function amsFetchAllCollections() {
     const text = await res.text();
     let data = null;
     try { data = text ? JSON.parse(text) : null; } catch (e) { data = null; }
-    if (etag) amsWriteCollectionsCache(etag, data);
+    if (!amsCollectionsPayloadUsable(data)) {
+        throw new Error("AMS collections response was empty or invalid.");
+    }
+    amsWriteCollectionsCache(etag, data);
     return data;
+}
+
+function amsDbShouldRetry(err) {
+    const msg = String(err && err.message ? err.message : err);
+    if (/session expired/i.test(msg)) return false;
+    if (/invalid user id or password/i.test(msg)) return false;
+    return true;
+}
+
+async function amsDbLoadCollectionsIndividually() {
+    let anyOk = false;
+    await Promise.all(Object.keys(AMS_COLLECTIONS).map(async key => {
+        try {
+            const items = await amsApiGet("/api/collection/" + key);
+            const arr = AMS_COLLECTIONS[key]();
+            arr.length = 0;
+            if (Array.isArray(items)) arr.push.apply(arr, items);
+            anyOk = true;
+        } catch (e) {
+            console.warn("[amsDb] load " + key + " failed: " + e.message);
+        }
+    }));
+    await Promise.all(Object.keys(AMS_DOC_COLLECTIONS).map(async key => {
+        try {
+            const doc = await amsApiGet("/api/collection/" + key);
+            const target = AMS_DOC_COLLECTIONS[key]();
+            if (doc && typeof doc === "object") Object.assign(target, doc);
+            anyOk = true;
+        } catch (e) {
+            console.warn("[amsDb] load " + key + " failed: " + e.message);
+        }
+    }));
+    if (anyOk) amsInvalidateLookupCaches();
+    return anyOk;
+}
+
+async function amsDbLoadAllAttempt() {
+    const loginUsersPromise = amsFetchLoginUsers();
+    let loaded = false;
+    try {
+        loaded = amsDbApplyPayload(await amsFetchAllCollections());
+    } catch (e) {
+        console.warn("[amsDb] bulk load failed, falling back: " + (e && e.message ? e.message : e));
+    }
+    if (!loaded) loaded = await amsDbLoadCollectionsIndividually();
+    if (!loaded) throw new Error("Could not load AMS data from the API.");
+    const accMax = AMS_DUMMY_ACCESSORIES.reduce((m, a) =>
+        Math.max(m, parseInt(String(a.accCode || "0").replace(/\D/g, ""), 10) || 0), 0);
+    if (accMax >= AMS_ACC_SEQ) AMS_ACC_SEQ = accMax + 1;
+    const venMax = AMS_DUMMY_VENDORS.reduce((m, v) =>
+        Math.max(m, parseInt(String(v.vendorId || "0").replace(/\D/g, ""), 10) || 0), 0);
+    if (venMax >= AMS_VENDOR_SEQ) AMS_VENDOR_SEQ = venMax + 1;
+    const makesBackfilled = amsBackfillAssetMakeCodes();
+    amsMigrateEmployeeNames();
+    amsEnsureSessionUserProfile();
+    const loginUsers = await loginUsersPromise;
+    if (loginUsers) amsMergeLoginUsers(loginUsers);
+    amsInvalidateLookupCaches();
+    if (typeof amsMigrateRoleAccessDocument === "function") amsMigrateRoleAccessDocument();
+    if (typeof amsMigrateActivityLogFromLocal === "function") amsMigrateActivityLogFromLocal();
+    if (typeof amsBackfillAssignmentEvents === "function" && amsBackfillAssignmentEvents()) {
+        amsDbSaveAsync("assignmentEvents");
+    }
+    if (typeof amsBackfillReplacementRemarks === "function") amsBackfillReplacementRemarks();
+    if (makesBackfilled) amsDbSaveAsync("assetMakes");
+    if (typeof amsBackfillPrintTermIds === "function" && amsBackfillPrintTermIds()) {
+        amsDbSaveAsync("printTerms");
+    }
+    if (typeof amsMigrateCompanyFromLocal === "function") await amsMigrateCompanyFromLocal();
+    if (typeof amsMigrateReportPrefsFromLocal === "function") await amsMigrateReportPrefsFromLocal();
+    await amsYieldToBrowser();
+    if (typeof amsNormalizeEmployeeExitStatus === "function") {
+        try { amsNormalizeEmployeeExitStatus(); } catch (e) { /* ignore */ }
+    }
+    if (typeof amsRepairExitedEmployeeHoldings === "function") {
+        const repair = () => { try { amsRepairExitedEmployeeHoldings(); } catch (e) { /* ignore */ } };
+        if (typeof requestIdleCallback === "function") requestIdleCallback(repair, { timeout: 1500 });
+        else setTimeout(repair, 0);
+    }
 }
 
 async function amsDbLoadAll() {
     if (AMS_DB_READY) return;
     if (AMS_DB_LOADING) return AMS_DB_LOADING;
     AMS_DB_LOADING = (async () => {
-        /* Fetch the account list at the same time as the data payload - the
-           two requests are independent, so running them in parallel saves one
-           full round-trip on every page load. */
-        const loginUsersPromise = amsFetchLoginUsers();
-        let loaded = false;
-        try {
-            loaded = amsDbApplyPayload(await amsFetchAllCollections());
-        } catch (e) {
-            console.warn("[amsDb] bulk load failed, falling back: " + (e && e.message ? e.message : e));
+        let lastErr = null;
+        for (let attempt = 1; attempt <= 3; attempt++) {
+            try {
+                await amsDbLoadAllAttempt();
+                AMS_DB_READY = true;
+                return;
+            } catch (e) {
+                lastErr = e;
+                console.warn("[amsDb] load attempt " + attempt + " failed: " + (e && e.message ? e.message : e));
+                if (!amsDbShouldRetry(e) || attempt >= 3) break;
+                await amsSleep(400 * attempt);
+            }
         }
-        if (!loaded) {
-            await Promise.all(Object.keys(AMS_COLLECTIONS).map(async key => {
-                let items = [];
-                try { items = await amsApiGet("/api/collection/" + key); }
-                catch (e) { console.warn("[amsDb] load " + key + " failed: " + e.message); }
-                const arr = AMS_COLLECTIONS[key]();
-                arr.length = 0;
-                if (Array.isArray(items)) arr.push.apply(arr, items);
-            }));
-            await Promise.all(Object.keys(AMS_DOC_COLLECTIONS).map(async key => {
-                let doc = null;
-                try { doc = await amsApiGet("/api/collection/" + key); }
-                catch (e) { console.warn("[amsDb] load " + key + " failed: " + e.message); }
-                const target = AMS_DOC_COLLECTIONS[key]();
-                if (doc && typeof doc === "object") Object.assign(target, doc);
-            }));
-        }
-        const accMax = AMS_DUMMY_ACCESSORIES.reduce((m, a) =>
-            Math.max(m, parseInt(String(a.accCode || "0").replace(/\D/g, ""), 10) || 0), 0);
-        if (accMax >= AMS_ACC_SEQ) AMS_ACC_SEQ = accMax + 1;
-        const venMax = AMS_DUMMY_VENDORS.reduce((m, v) =>
-            Math.max(m, parseInt(String(v.vendorId || "0").replace(/\D/g, ""), 10) || 0), 0);
-        if (venMax >= AMS_VENDOR_SEQ) AMS_VENDOR_SEQ = venMax + 1;
-        const makesBackfilled = amsBackfillAssetMakeCodes();
-        amsMigrateEmployeeNames();
-        amsEnsureSessionUserProfile();
-        const loginUsers = await loginUsersPromise;
-        if (loginUsers) amsMergeLoginUsers(loginUsers);
-        amsInvalidateLookupCaches();
-        AMS_DB_READY = true;
-        if (typeof amsMigrateRoleAccessDocument === "function") amsMigrateRoleAccessDocument();
-        if (typeof amsMigrateActivityLogFromLocal === "function") amsMigrateActivityLogFromLocal();
-        if (typeof amsBackfillAssignmentEvents === "function" && amsBackfillAssignmentEvents()) {
-            amsDbSaveAsync("assignmentEvents");
-        }
-        if (typeof amsBackfillReplacementRemarks === "function") amsBackfillReplacementRemarks();
-        if (makesBackfilled) amsDbSaveAsync("assetMakes");
-        if (typeof amsBackfillPrintTermIds === "function" && amsBackfillPrintTermIds()) {
-            amsDbSaveAsync("printTerms");
-        }
-        if (typeof amsMigrateCompanyFromLocal === "function") await amsMigrateCompanyFromLocal();
-        if (typeof amsMigrateReportPrefsFromLocal === "function") await amsMigrateReportPrefsFromLocal();
-        await amsYieldToBrowser();
-        if (typeof amsNormalizeEmployeeExitStatus === "function") {
-            try { amsNormalizeEmployeeExitStatus(); } catch (e) { /* ignore */ }
-        }
-        if (typeof amsRepairExitedEmployeeHoldings === "function") {
-            const repair = () => { try { amsRepairExitedEmployeeHoldings(); } catch (e) { /* ignore */ } };
-            if (typeof requestIdleCallback === "function") requestIdleCallback(repair, { timeout: 1500 });
-            else setTimeout(repair, 0);
-        }
+        throw lastErr || new Error("Could not load AMS data from the API.");
     })();
+    AMS_DB_LOADING.catch(() => { AMS_DB_LOADING = null; });
     return AMS_DB_LOADING;
+}
+function amsSleep(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
 }
 function amsYieldToBrowser() {
     return new Promise(resolve => {
