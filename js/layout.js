@@ -327,6 +327,37 @@ function amsLayoutRedirectIfDenied(currentPage) {
     if (fallback) window.location.replace((typeof amsHref === "function") ? amsHref(fallback.href) : fallback.href);
 }
 
+function amsLayoutDataBanner() {
+    let el = document.getElementById("ams-data-banner");
+    if (el) return el;
+    const host = document.querySelector(".app-content");
+    if (!host) return null;
+    el = document.createElement("div");
+    el.id = "ams-data-banner";
+    el.className = "alert alert-info";
+    el.style.display = "none";
+    host.insertBefore(el, host.firstChild);
+    return el;
+}
+
+function amsLayoutSetDataBanner(kind, message) {
+    const el = amsLayoutDataBanner();
+    if (!el) return;
+    if (!kind) {
+        el.style.display = "none";
+        el.textContent = "";
+        return;
+    }
+    el.className = "alert " + (kind === "danger" ? "alert-danger" : "alert-info");
+    el.textContent = message;
+    el.style.display = "";
+}
+
+function amsLayoutShowLoading() {
+    if (typeof amsDbIsReady === "function" && amsDbIsReady()) return;
+    amsLayoutSetDataBanner("info", "Loading...");
+}
+
 function initLayout(currentPage) {
     if (!amsRequireSession()) return;
     initTheme();
@@ -345,6 +376,7 @@ function initLayout(currentPage) {
     initApp();               /* binds sidebar toggle / overlay / year   */
     amsInitDesktopSidebar();
     setActiveNav(currentPage);
+    amsLayoutShowLoading();
 
     /* Notification bell (needs the topbar to already be rendered) */
     if (typeof amsInitBell === "function") amsInitBell();
@@ -354,12 +386,26 @@ function initLayout(currentPage) {
        user profile loaded from SQL. Re-apply the sidebar once that lands. */
     if (typeof amsDbEnsureLoaded === "function") {
         amsDbEnsureLoaded().then(async () => {
+            amsLayoutSetDataBanner(null);
             if (typeof amsYieldToBrowser === "function") await amsYieldToBrowser();
             if (typeof amsEnsureSessionUserProfile === "function") amsEnsureSessionUserProfile();
             amsLayoutRedirectIfDenied(currentPage);
             renderSidebar(currentPage);
             setActiveNav(currentPage);
             if (typeof amsApplyViewOnlyChrome === "function") amsApplyViewOnlyChrome();
+        }).catch(err => {
+            const msg = (err && err.message) ? err.message : "Could not load AMS data.";
+            amsLayoutSetDataBanner("danger", msg + " Retrying...");
+            setTimeout(() => {
+                if (typeof amsDbEnsureLoaded === "function") {
+                    amsDbEnsureLoaded().then(() => {
+                        amsLayoutSetDataBanner(null);
+                        window.location.reload();
+                    }).catch(e => {
+                        amsLayoutSetDataBanner("danger", (e && e.message) ? e.message : msg);
+                    });
+                }
+            }, 1200);
         });
     }
 }

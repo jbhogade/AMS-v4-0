@@ -116,6 +116,17 @@ function renderEmployeeTable() {
     const amsHint = document.getElementById("ams-hint");
     if (amsHint) amsHint.style.display = "none";
 
+    if (typeof amsDbIsReady === "function" && !amsDbIsReady()) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="${amsVisible ? 11 : 10}" class="empty-note" style="text-align:center;padding:28px;">
+                    Loading...
+                </td>
+            </tr>`;
+        if (typeof amsFilterRestoreFocus === "function") amsFilterRestoreFocus("employeeTable");
+        return;
+    }
+
     if (sorted.length === 0) {
         tbody.innerHTML = `
             <tr>
@@ -816,6 +827,13 @@ function hideFormError(id) {
    13) STATS STRIP + INIT
    ===========================================================================*/
 function renderEmpStats() {
+    if (typeof amsDbIsReady === "function" && !amsDbIsReady()) {
+        document.getElementById("stat-total").textContent = "...";
+        document.getElementById("stat-active").textContent = "...";
+        document.getElementById("stat-inactive").textContent = "...";
+        document.getElementById("stat-assigned").textContent = "...";
+        return;
+    }
     const s = getEmployeeSummary();
     document.getElementById("stat-total").textContent = s.total;
     document.getElementById("stat-active").textContent = s.active;

@@ -50,10 +50,10 @@
 
                 <!-- ==================== STATS STRIP ==================== -->
                 <div class="emp-stats">
-                    <span class="stat">Total: <strong id="stat-total">0</strong></span>
-                    <span class="stat">Active: <strong id="stat-active">0</strong></span>
-                    <span class="stat">Exited: <strong id="stat-inactive">0</strong></span>
-                    <span class="stat">Assets assigned: <strong id="stat-assigned">0</strong></span>
+                    <span class="stat">Total: <strong id="stat-total">...</strong></span>
+                    <span class="stat">Active: <strong id="stat-active">...</strong></span>
+                    <span class="stat">Exited: <strong id="stat-inactive">...</strong></span>
+                    <span class="stat">Assets assigned: <strong id="stat-assigned">...</strong></span>
                 </div>
 
                 <!-- ==================== TOOLBAR ==================== -->
@@ -102,7 +102,11 @@
                                     <th>Actions</th>
                                 </tr>
                             </thead>
-                            <tbody id="employee-table-body"></tbody>
+                            <tbody id="employee-table-body">
+                                <tr>
+                                    <td colspan="11" class="empty-note" style="text-align:center;padding:28px;">Loading...</td>
+                                </tr>
+                            </tbody>
                         </table>
                     </div>
                 </div>
@@ -504,14 +508,14 @@
     </div>
 
     <!-- Scripts -->
-    <script defer src="../js/dummy-data.js?v=gp1"></script>
+    <script defer src="../js/dummy-data.js?v=ld1"></script>
     <script defer src="../js/theme.js?v=gt2"></script>
     <script defer src="../js/app.js"></script>
-    <script defer src="../js/layout.js?v=gt2"></script>
+    <script defer src="../js/layout.js?v=ld1"></script>
     <script defer src="../js/sortable.js"></script>
     <script defer src="../js/xlsx-helpers.js"></script>
     <script defer src="../js/print-docs.js?v=gp1"></script>
-    <script defer src="../js/employees.js?v=gp1"></script>
+    <script defer src="../js/employees.js?v=ld1"></script>
     <script defer src="../js/print-forms.js?v=gp1"></script>
 
     <script>

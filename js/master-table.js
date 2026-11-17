@@ -258,7 +258,21 @@ function amsMtEnsureFilters() {
 
 /* ---- RENDER: the master table ---------------------------------------------- */
 async function amsRenderMasterTable() {
-    if (typeof amsDbEnsureLoaded === "function") await amsDbEnsureLoaded();
+    const table = document.getElementById("masterTable");
+    if (typeof amsDbIsReady === "function" && !amsDbIsReady()) {
+        if (table && !table.querySelector("tbody")) {
+            table.innerHTML = `<tbody><tr><td class="empty-note" style="text-align:center;padding:28px;">Loading...</td></tr></tbody>`;
+        }
+        if (typeof amsDbEnsureLoaded === "function") {
+            try { await amsDbEnsureLoaded(); }
+            catch (e) {
+                if (table) table.innerHTML = `<tbody><tr><td class="empty-note" style="text-align:center;padding:28px;">Could not load records. Retrying...</td></tr></tbody>`;
+                throw e;
+            }
+        }
+    } else if (typeof amsDbEnsureLoaded === "function") {
+        await amsDbEnsureLoaded();
+    }
     if (typeof amsYieldToBrowser === "function") await amsYieldToBrowser();
     const cfg = AMS_MASTER_CONFIG;
     const searchTerm = (document.getElementById("searchBox").value || "").toLowerCase();
@@ -733,6 +747,10 @@ function amsInitMasterTable() {
     document.getElementById("pageSub").textContent = cfg.pageSub;
     document.getElementById("btnAddMaster").textContent = `+ Add ${cfg.pageTitle.replace(" Master", "")}`;
 
+    const table = document.getElementById("masterTable");
+    if (table && !table.innerHTML.trim()) {
+        table.innerHTML = `<tbody><tr><td class="empty-note" style="text-align:center;padding:28px;">Loading...</td></tr></tbody>`;
+    }
     amsSortRegisterRenderer("masterTable", amsRenderMasterTable);
     amsRenderMasterTable();
     document.getElementById("searchBox").addEventListener("input", amsRenderMasterTable);
