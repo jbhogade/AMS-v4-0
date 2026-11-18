@@ -283,7 +283,8 @@ function lppPrint(tab) {
         return;
     }
     if (isGate) {
-        const cards = items.map(r => {
+        const passHtml = (r) => {
+            if (!r) return `<div class="lpp-print-pass lpp-print-pass-empty"></div>`;
             const serial = r.serial || "-";
             const empName = r.assignedTo || "Unassigned";
             const empCode = r.empCode || "-";
@@ -294,34 +295,65 @@ function lppPrint(tab) {
                 <p class="lpp-print-pass-body">${lppEsc(address || "-")}</p>
                 <div class="lpp-print-sign">Stamp &amp; Signature</div>
             </div>`;
-        }).join("");
+        };
+        const perPage = 6;
+        const pages = [];
+        for (let i = 0; i < items.length; i += perPage) {
+            const slice = items.slice(i, i + perPage);
+            while (slice.length < perPage) slice.push(null);
+            pages.push(`<div class="lpp-print-sheet">${slice.map(passHtml).join("")}</div>`);
+        }
         win.document.write(`<!DOCTYPE html><html><head><title>${lppEsc(title)}</title>
             <style>
-                @page { margin: 8mm; }
-                body { font-family: "Segoe UI", Arial, sans-serif; color: #111; }
-                .lpp-print-sheet { display: flex; flex-wrap: wrap; gap: 10px; }
-                .lpp-print-pass {
-                    border: 2px solid #111;
-                    box-sizing: border-box;
-                    padding: 10px 14px 12px;
-                    width: 520px;
-                    font-size: 13px;
-                    line-height: 1.35;
+                @page { size: A4 landscape; margin: 0; }
+                html, body {
+                    margin: 0;
+                    padding: 0;
+                    width: 297mm;
+                    background: #fff;
+                    color: #111;
+                    font-family: "Segoe UI", Arial, sans-serif;
                 }
+                .lpp-print-sheet {
+                    box-sizing: border-box;
+                    width: 297mm;
+                    height: 210mm;
+                    padding: 8mm 8mm;
+                    display: grid;
+                    grid-template-columns: 1fr 1fr;
+                    grid-template-rows: 1fr 1fr 1fr;
+                    column-gap: 10mm;
+                    row-gap: 8mm;
+                    page-break-after: always;
+                }
+                .lpp-print-sheet:last-child { page-break-after: auto; }
+                .lpp-print-pass {
+                    border: 1.2pt solid #111;
+                    box-sizing: border-box;
+                    padding: 4mm 5mm 4mm;
+                    font-size: 11pt;
+                    line-height: 1.3;
+                    display: flex;
+                    flex-direction: column;
+                    min-height: 0;
+                    overflow: hidden;
+                }
+                .lpp-print-pass-empty { border-color: transparent; }
                 .lpp-print-pass-title {
-                    font-size: 16px;
+                    font-size: 13pt;
                     font-weight: 800;
                     text-align: center;
-                    margin: 0 0 6px;
+                    margin: 0 0 3mm;
                 }
-                .lpp-print-pass-body { margin: 0; }
+                .lpp-print-pass-body { margin: 0 0 1.5mm; }
                 .lpp-print-sign {
-                    margin-top: 18px;
+                    margin-top: auto;
+                    padding-top: 4mm;
                     font-weight: 700;
                     text-align: right;
                 }
             </style></head><body>
-            <div class="lpp-print-sheet">${cards}</div>
+            ${pages.join("")}
             </body></html>`);
     } else {
         const perPage = 7 * 16;
