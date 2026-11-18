@@ -405,7 +405,7 @@ function initLayout(currentPage) {
                         amsLayoutSetDataBanner("danger", (e && e.message) ? e.message : msg);
                     });
                 }
-            }, 1200);
+            }, 400);
         });
     }
 }
