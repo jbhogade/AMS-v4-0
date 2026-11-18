@@ -103,7 +103,7 @@
         </div>
     </div>
 
-    <script defer src="../js/dummy-data.js?v=ld2"></script>
+    <script defer src="../js/dummy-data.js?v=ld3"></script>
     <script defer src="../js/theme.js?v=gt2"></script>
     <script defer src="../js/app.js"></script>
     <script defer src="../js/layout.js?v=ld2"></script>
@@ -149,7 +149,7 @@
 
             window.AMS_MASTER_CONFIG = {
                 pageTitle: "User Master",
-                pageSub: "Manage system login accounts and roles. A password is required for new accounts so they can log in.",
+                                 pageSub: "Manage system login accounts and roles. Site and a password are required for new accounts so they can log in.",
                 dataArray: AMS_DUMMY_USERS,
                 idKey: "username",
                 rowFilter: amsIsUserMasterRowVisible,
@@ -173,6 +173,8 @@
                                 : role === "Admin" ? "badge-amber" : "badge-grey";
                             return `<span class="badge ${cls}">${amsEsc(role)}</span>`;
                         } },
+                    { key: "site",           label: "Site",             required: true, type: "select",
+                        optionsFrom: () => AMS_DUMMY_SITES.filter(s => s.active).map(s => s.name) },
                     { key: "password",       label: "Password",         type: "password", required: true, editOnly: true, hideInTable: true },
                     { key: "email",          label: "Email",            type: "text" },
                     { key: "remarks",        label: "Remarks",          multiline: true },
@@ -212,12 +214,16 @@
                     }
                     const sess = amsGetSession();
                     if (!sess || !sess.token) return; // not logged in / no API
+                    if (!(values.site || "").trim()) {
+                        throw new Error("Site is required.");
+                    }
                     const payload = {
                         role: values.role,
                         linkedEmployee: values.linkedEmployee || null,
                         email: values.email || null,
                         remarks: values.remarks || null,
                         active: values.active !== false,
+                        site: values.site.trim(),
                     };
                     if (editingKey) {
                         if (values.password) payload.password = values.password;

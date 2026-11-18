@@ -52,6 +52,7 @@ public class AuthController : ControllerBase
             address = user.Address,
             dob = user.Dob,
             gender = user.Gender,
+            site = user.Site,
         });
     }
 
@@ -99,7 +100,7 @@ public class AuthController : ControllerBase
     /* ---- User management (User Master syncs login accounts to ams_users) ------ */
 
     public record CreateUserRequest(string Username, string Password, string Role,
-        string? LinkedEmployee, string? Email, string? Remarks, bool Active);
+        string? LinkedEmployee, string? Email, string? Remarks, bool Active, string? Site);
 
     [HttpPost("users")]
     [Authorize]
@@ -121,19 +122,21 @@ public class AuthController : ControllerBase
 
         if (username.Length == 0 || string.IsNullOrWhiteSpace(req.Password))
             return BadRequest(new { error = "Username and password are required." });
+        if (string.IsNullOrWhiteSpace(req.Site))
+            return BadRequest(new { error = "Site is required." });
 
         var existing = await _db.FindUserAsync(username);
         if (existing is not null)
             return Conflict(new { error = $"Username '{username}' already exists." });
 
         await _db.CreateUserAsync(username, req.Password, req.Role, req.LinkedEmployee,
-            req.Email, req.Remarks, req.Active);
+            req.Email, req.Remarks, req.Active, string.IsNullOrWhiteSpace(req.Site) ? null : req.Site.Trim());
         return Ok(new { ok = true, username, role = req.Role });
     }
 
     public record UpdateUserRequest(string? Password, string? Role, string? LinkedEmployee,
         string? Email, string? Remarks, bool? Active, string? DisplayName, string? ContactNo,
-        string? Address, string? Dob, string? Gender);
+        string? Address, string? Dob, string? Gender, string? Site);
 
     [HttpPut("users/{username}")]
     [Authorize]
@@ -155,7 +158,7 @@ public class AuthController : ControllerBase
 
         await _db.UpdateUserAsync(username, req.Password, req.Role, req.LinkedEmployee,
             req.Email, req.Remarks, req.Active, req.DisplayName, req.ContactNo,
-            req.Address, req.Dob, req.Gender);
+            req.Address, req.Dob, req.Gender, req.Site);
         return Ok(new { ok = true, username });
     }
 
@@ -193,6 +196,7 @@ public class AuthController : ControllerBase
             displayName = u.DisplayName,
             linkedEmployee = u.LinkedEmployee,
             email = u.Email,
+            site = u.Site,
             remarks = u.Remarks,
             active = u.Active,
         }));
@@ -212,6 +216,7 @@ public class AuthController : ControllerBase
         address = user.Address,
         dob = user.Dob,
         gender = user.Gender,
+        site = user.Site,
         remarks = user.Remarks,
     };
 

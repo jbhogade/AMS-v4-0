@@ -3832,6 +3832,7 @@ function amsEnsureSessionUserProfile() {
         displayName: sess.displayName || sess.name || sess.username,
         linkedEmployee: sess.linkedEmployee || "",
         email: sess.email || "",
+        site: sess.site || "",
         remarks: "",
         active: true,
         allowedPages: null,
@@ -3858,6 +3859,7 @@ function amsMergeLoginUsers(list) {
             if (u.displayName && !existing.displayName) existing.displayName = u.displayName;
             if (u.email && !existing.email) existing.email = u.email;
             if (u.linkedEmployee && !existing.linkedEmployee) existing.linkedEmployee = u.linkedEmployee;
+            if (u.site !== undefined && u.site !== null) existing.site = u.site;
             if (existing.active === undefined) existing.active = u.active !== false;
         } else {
             AMS_DUMMY_USERS.push({
@@ -3866,6 +3868,7 @@ function amsMergeLoginUsers(list) {
                 displayName: u.displayName || u.username,
                 linkedEmployee: u.linkedEmployee || "",
                 email: u.email || "",
+                site: u.site || "",
                 remarks: u.remarks || "",
                 active: u.active !== false,
                 allowedPages: null,

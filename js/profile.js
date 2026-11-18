@@ -51,6 +51,7 @@
                 displayName: sess.displayName, linkedEmployee: sess.linkedEmployee,
                 email: sess.email, contactNo: sess.contactNo,
                 address: sess.address, dob: sess.dob, gender: sess.gender,
+                site: sess.site,
             };
         }
         if (!profile) profile = { username: "", role: "", displayName: "" };

@@ -778,6 +778,8 @@ public class AmsDb
                 ALTER TABLE dbo.ams_users ADD dob NVARCHAR(20) NULL;
             IF COL_LENGTH(N'dbo.ams_users', N'gender') IS NULL
                 ALTER TABLE dbo.ams_users ADD gender NVARCHAR(20) NULL;
+            IF COL_LENGTH(N'dbo.ams_users', N'site') IS NULL
+                ALTER TABLE dbo.ams_users ADD site NVARCHAR(200) NULL;
             IF OBJECT_ID(N'dbo.ams_user_profiles', N'U') IS NOT NULL
                 AND COL_LENGTH(N'dbo.ams_user_profiles', N'email') IS NULL
                 ALTER TABLE dbo.ams_user_profiles ADD email NVARCHAR(200) NULL;
@@ -793,6 +795,9 @@ public class AmsDb
             IF OBJECT_ID(N'dbo.ams_user_profiles', N'U') IS NOT NULL
                 AND COL_LENGTH(N'dbo.ams_user_profiles', N'gender') IS NULL
                 ALTER TABLE dbo.ams_user_profiles ADD gender NVARCHAR(20) NULL;
+            IF OBJECT_ID(N'dbo.ams_user_profiles', N'U') IS NOT NULL
+                AND COL_LENGTH(N'dbo.ams_user_profiles', N'site') IS NULL
+                ALTER TABLE dbo.ams_user_profiles ADD site NVARCHAR(200) NULL;
             IF OBJECT_ID(N'dbo.ams_assets', N'U') IS NOT NULL
                 AND COL_LENGTH(N'dbo.ams_assets', N'status') IS NULL
                 ALTER TABLE dbo.ams_assets ADD status NVARCHAR(100) NULL;
@@ -1937,7 +1942,7 @@ public class AmsDb
         await conn.OpenAsync();
         var cmd = new SqlCommand(@"
             SELECT username, password_hash, password_salt, role, linked_employee, email, remarks, active,
-                   display_name, contact_no, address, dob, gender
+                   display_name, contact_no, address, dob, gender, site
             FROM dbo.ams_users WHERE username = @u;", conn);
         cmd.Parameters.AddWithValue("@u", username);
         await using var reader = await cmd.ExecuteReaderAsync();
@@ -1957,6 +1962,7 @@ public class AmsDb
             Address = reader.IsDBNull(10) ? null : reader.GetString(10),
             Dob = reader.IsDBNull(11) ? null : reader.GetString(11),
             Gender = reader.IsDBNull(12) ? null : reader.GetString(12),
+            Site = reader.IsDBNull(13) ? null : reader.GetString(13),
         };
     }
 
@@ -1978,7 +1984,7 @@ public class AmsDb
         await conn.OpenAsync();
         var cmd = new SqlCommand(@"
             SELECT username, password_hash, password_salt, role, linked_employee, email, remarks, active,
-                   display_name, contact_no, address, dob, gender
+                   display_name, contact_no, address, dob, gender, site
             FROM dbo.ams_users ORDER BY username;", conn);
         await using var reader = await cmd.ExecuteReaderAsync();
         while (await reader.ReadAsync())
@@ -1998,21 +2004,22 @@ public class AmsDb
                 Address = reader.IsDBNull(10) ? null : reader.GetString(10),
                 Dob = reader.IsDBNull(11) ? null : reader.GetString(11),
                 Gender = reader.IsDBNull(12) ? null : reader.GetString(12),
+                Site = reader.IsDBNull(13) ? null : reader.GetString(13),
             });
         }
         return users;
     }
 
     public async Task CreateUserAsync(string username, string password, string role,
-        string? linkedEmployee, string? email, string? remarks, bool active)
+        string? linkedEmployee, string? email, string? remarks, bool active, string? site)
     {
         await using var conn = new SqlConnection(GetDbConnectionString());
         await conn.OpenAsync();
         var salt = HashUtils.NewSalt();
         var hash = HashUtils.HashPassword(password, salt);
         var cmd = new SqlCommand(@"
-            INSERT INTO dbo.ams_users (username, password_hash, password_salt, role, linked_employee, email, remarks, active, display_name)
-            VALUES (@u, @h, @s, @r, @le, @e, @m, @a, @le);", conn);
+            INSERT INTO dbo.ams_users (username, password_hash, password_salt, role, linked_employee, email, remarks, active, display_name, site)
+            VALUES (@u, @h, @s, @r, @le, @e, @m, @a, @le, @site);", conn);
         cmd.Parameters.AddWithValue("@u", username);
         cmd.Parameters.AddWithValue("@h", hash);
         cmd.Parameters.AddWithValue("@s", salt);
@@ -2021,12 +2028,14 @@ public class AmsDb
         cmd.Parameters.AddWithValue("@e", (object?)email ?? DBNull.Value);
         cmd.Parameters.AddWithValue("@m", (object?)remarks ?? DBNull.Value);
         cmd.Parameters.AddWithValue("@a", active);
+        cmd.Parameters.AddWithValue("@site", (object?)site ?? DBNull.Value);
         await cmd.ExecuteNonQueryAsync();
     }
 
     public async Task UpdateUserAsync(string username, string? newPassword, string? role,
         string? linkedEmployee, string? email, string? remarks, bool? active,
-        string? displayName, string? contactNo, string? address, string? dob, string? gender)
+        string? displayName, string? contactNo, string? address, string? dob, string? gender,
+        string? site = null)
     {
         await using var conn = new SqlConnection(GetDbConnectionString());
         await conn.OpenAsync();
@@ -2067,6 +2076,11 @@ public class AmsDb
         cmd.Parameters.Add("@d", SqlDbType.NVarChar, 20).Value = (object?)dob ?? DBNull.Value;
         sql.Add("gender = @g");
         cmd.Parameters.Add("@g", SqlDbType.NVarChar, 20).Value = (object?)gender ?? DBNull.Value;
+        if (site is not null)
+        {
+            sql.Add("site = @site");
+            cmd.Parameters.Add("@site", SqlDbType.NVarChar, 200).Value = (object)site;
+        }
 
         if (!string.IsNullOrWhiteSpace(newPassword))
         {
@@ -2241,6 +2255,7 @@ public class AmsUser
     public string? Address { get; set; }
     public string? Dob { get; set; }
     public string? Gender { get; set; }
+    public string? Site { get; set; }
 }
 
 /// <summary>PBKDF2 password hashing (SHA-256, 100k iterations).</summary>
