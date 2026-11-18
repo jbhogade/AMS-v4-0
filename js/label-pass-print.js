@@ -293,10 +293,13 @@ function lppPrint(tab) {
                 <p class="lpp-print-pass-body">The Laptop Serial No. ${lppEsc(serial)}, Asset Code No. ${lppEsc(r.displayId)} is issued to</p>
                 <p class="lpp-print-pass-body"><strong>${lppEsc(empName)}</strong> (Employee ID ${lppEsc(empCode)})</p>
                 <p class="lpp-print-pass-body">${lppEsc(address || "-")}</p>
-                <div class="lpp-print-sign">Stamp &amp; Signature</div>
+                <div class="lpp-print-sign">
+                    <div class="lpp-print-sign-space"></div>
+                    <div class="lpp-print-sign-label">Stamp &amp; Signature</div>
+                </div>
             </div>`;
         };
-        const perPage = 6;
+        const perPage = 10;
         const pages = [];
         for (let i = 0; i < items.length; i += perPage) {
             const slice = items.slice(i, i + perPage);
@@ -318,21 +321,21 @@ function lppPrint(tab) {
                     box-sizing: border-box;
                     width: 297mm;
                     height: 210mm;
-                    padding: 8mm 8mm;
+                    padding: 6mm 8mm;
                     display: grid;
                     grid-template-columns: 1fr 1fr;
-                    grid-template-rows: 1fr 1fr 1fr;
+                    grid-template-rows: repeat(5, 1fr);
                     column-gap: 10mm;
-                    row-gap: 8mm;
+                    row-gap: 5mm;
                     page-break-after: always;
                 }
                 .lpp-print-sheet:last-child { page-break-after: auto; }
                 .lpp-print-pass {
                     border: 1.2pt solid #111;
                     box-sizing: border-box;
-                    padding: 4mm 5mm 4mm;
-                    font-size: 11pt;
-                    line-height: 1.3;
+                    padding: 2.5mm 4mm 2.5mm;
+                    font-size: 10pt;
+                    line-height: 1.25;
                     display: flex;
                     flex-direction: column;
                     min-height: 0;
@@ -340,17 +343,27 @@ function lppPrint(tab) {
                 }
                 .lpp-print-pass-empty { border-color: transparent; }
                 .lpp-print-pass-title {
-                    font-size: 13pt;
+                    font-size: 11.5pt;
                     font-weight: 800;
                     text-align: center;
-                    margin: 0 0 3mm;
+                    margin: 0 0 1.5mm;
                 }
-                .lpp-print-pass-body { margin: 0 0 1.5mm; }
+                .lpp-print-pass-body { margin: 0 0 1mm; }
                 .lpp-print-sign {
                     margin-top: auto;
-                    padding-top: 4mm;
+                    display: flex;
+                    flex-direction: column;
+                    align-items: flex-end;
+                    flex: 0 0 auto;
+                }
+                .lpp-print-sign-space {
+                    height: 12mm;
+                    min-height: 12mm;
+                }
+                .lpp-print-sign-label {
                     font-weight: 700;
                     text-align: right;
+                    font-size: 9pt;
                 }
             </style></head><body>
             ${pages.join("")}
