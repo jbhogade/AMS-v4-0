@@ -366,26 +366,48 @@ async function amsDbLoadAllAttempt() {
     }
 }
 
+function amsDbApplyCachedPayload(payload) {
+    if (!amsDbApplyPayload(payload)) return false;
+    const accMax = AMS_DUMMY_ACCESSORIES.reduce((m, a) =>
+        Math.max(m, parseInt(String(a.accCode || "0").replace(/\D/g, ""), 10) || 0), 0);
+    if (accMax >= AMS_ACC_SEQ) AMS_ACC_SEQ = accMax + 1;
+    const venMax = AMS_DUMMY_VENDORS.reduce((m, v) =>
+        Math.max(m, parseInt(String(v.vendorId || "0").replace(/\D/g, ""), 10) || 0), 0);
+    if (venMax >= AMS_VENDOR_SEQ) AMS_VENDOR_SEQ = venMax + 1;
+    amsMigrateEmployeeNames();
+    amsEnsureSessionUserProfile();
+    return true;
+}
+
+async function amsDbLoadAllFromNetwork() {
+    let lastErr = null;
+    for (let attempt = 1; attempt <= 3; attempt++) {
+        try {
+            await amsDbLoadAllAttempt();
+            AMS_DB_READY = true;
+            return;
+        } catch (e) {
+            lastErr = e;
+            console.warn("[amsDb] load attempt " + attempt + " failed: " + (e && e.message ? e.message : e));
+            if (AMS_DB_READY) return;
+            if (!amsDbShouldRetry(e) || attempt >= 3) break;
+            await amsSleep(150 * attempt);
+        }
+    }
+    if (AMS_DB_READY) return;
+    throw lastErr || new Error("Could not load AMS data from the API.");
+}
+
 async function amsDbLoadAll() {
     if (AMS_DB_READY) return;
     if (AMS_DB_LOADING) return AMS_DB_LOADING;
-    AMS_DB_LOADING = (async () => {
-        let lastErr = null;
-        for (let attempt = 1; attempt <= 3; attempt++) {
-            try {
-                await amsDbLoadAllAttempt();
-                AMS_DB_READY = true;
-                return;
-            } catch (e) {
-                lastErr = e;
-                console.warn("[amsDb] load attempt " + attempt + " failed: " + (e && e.message ? e.message : e));
-                if (!amsDbShouldRetry(e) || attempt >= 3) break;
-                await amsSleep(400 * attempt);
-            }
-        }
-        throw lastErr || new Error("Could not load AMS data from the API.");
-    })();
+    const cache = amsReadCollectionsCache();
+    if (cache && amsCollectionsPayloadUsable(cache.data) && amsDbApplyCachedPayload(cache.data)) {
+        AMS_DB_READY = true;
+    }
+    AMS_DB_LOADING = amsDbLoadAllFromNetwork();
     AMS_DB_LOADING.catch(() => { AMS_DB_LOADING = null; });
+    if (AMS_DB_READY) return;
     return AMS_DB_LOADING;
 }
 function amsSleep(ms) {
