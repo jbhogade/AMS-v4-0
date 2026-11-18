@@ -293,13 +293,10 @@ function lppPrint(tab) {
                 <p class="lpp-print-pass-body">The Laptop Serial No. ${lppEsc(serial)}, Asset Code No. ${lppEsc(r.displayId)} is issued to</p>
                 <p class="lpp-print-pass-body"><strong>${lppEsc(empName)}</strong> (Employee ID ${lppEsc(empCode)})</p>
                 <p class="lpp-print-pass-body">${lppEsc(address || "-")}</p>
-                <div class="lpp-print-sign">
-                    <div class="lpp-print-sign-space"></div>
-                    <div class="lpp-print-sign-label">Stamp &amp; Signature</div>
-                </div>
+                <div class="lpp-print-sign">Stamp &amp; Signature</div>
             </div>`;
         };
-        const perPage = 10;
+        const perPage = 8;
         const pages = [];
         for (let i = 0; i < items.length; i += perPage) {
             const slice = items.slice(i, i + perPage);
@@ -308,62 +305,61 @@ function lppPrint(tab) {
         }
         win.document.write(`<!DOCTYPE html><html><head><title>${lppEsc(title)}</title>
             <style>
-                @page { size: A4 landscape; margin: 0; }
+                @page { size: A4 landscape; margin: 0.75in; }
                 html, body {
                     margin: 0;
                     padding: 0;
-                    width: 297mm;
                     background: #fff;
                     color: #111;
                     font-family: "Segoe UI", Arial, sans-serif;
                 }
                 .lpp-print-sheet {
                     box-sizing: border-box;
-                    width: 297mm;
-                    height: 210mm;
-                    padding: 6mm 8mm;
+                    width: 100%;
+                    height: calc(210mm - 1.5in);
                     display: grid;
                     grid-template-columns: 1fr 1fr;
-                    grid-template-rows: repeat(5, 1fr);
-                    column-gap: 10mm;
-                    row-gap: 5mm;
+                    grid-template-rows: repeat(4, 1fr);
+                    column-gap: 0.35in;
+                    row-gap: 0.28in;
                     page-break-after: always;
+                    break-after: page;
                 }
-                .lpp-print-sheet:last-child { page-break-after: auto; }
+                .lpp-print-sheet:last-child {
+                    page-break-after: auto;
+                    break-after: auto;
+                }
                 .lpp-print-pass {
                     border: 1.2pt solid #111;
                     box-sizing: border-box;
-                    padding: 2.5mm 4mm 2.5mm;
+                    padding: 0.12in 0.16in 0.1in 0.14in;
                     font-size: 10pt;
                     line-height: 1.25;
                     display: flex;
                     flex-direction: column;
                     min-height: 0;
                     overflow: hidden;
+                    page-break-inside: avoid;
+                    break-inside: avoid;
                 }
                 .lpp-print-pass-empty { border-color: transparent; }
                 .lpp-print-pass-title {
-                    font-size: 11.5pt;
+                    font-size: 12pt;
                     font-weight: 800;
                     text-align: center;
-                    margin: 0 0 1.5mm;
+                    margin: 0 0 0.06in;
                 }
-                .lpp-print-pass-body { margin: 0 0 1mm; }
+                .lpp-print-pass-body {
+                    margin: 0 0 0.04in;
+                }
                 .lpp-print-sign {
                     margin-top: auto;
-                    display: flex;
-                    flex-direction: column;
-                    align-items: flex-end;
-                    flex: 0 0 auto;
-                }
-                .lpp-print-sign-space {
-                    height: 12mm;
-                    min-height: 12mm;
-                }
-                .lpp-print-sign-label {
+                    margin-left: auto;
+                    padding-top: 0.08in;
                     font-weight: 700;
-                    text-align: right;
                     font-size: 9pt;
+                    text-align: right;
+                    white-space: nowrap;
                 }
             </style></head><body>
             ${pages.join("")}
