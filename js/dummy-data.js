@@ -2720,11 +2720,12 @@ function amsResolvePendingManagers() {
 function amsExitDispositionOf(dispositions, kind, key, exitingAmsId) {
     const list = Array.isArray(dispositions) ? dispositions : [];
     const found = list.find(d => d && d.kind === kind && String(d.key) === String(key));
+    const accessories = found && Array.isArray(found.accessories) ? found.accessories.slice() : null;
     if (found && found.action === "give" && found.toAmsId && found.toAmsId !== exitingAmsId) {
         const toEmp = findEmployee(found.toAmsId);
-        if (toEmp && toEmp.status === "Active") return { action: "give", toEmp };
+        if (toEmp && toEmp.status === "Active") return { action: "give", toEmp, accessories };
     }
-    return { action: "return", toEmp: null };
+    return { action: "return", toEmp: null, accessories };
 }
 
 function amsExitGiveRemark(emp, exitDate, exitReason, toEmp) {
@@ -2739,6 +2740,11 @@ function amsExitGiveRemark(emp, exitDate, exitReason, toEmp) {
 function amsAnnotateExitSnapDisposition(snap, disp) {
     if (!snap) return snap;
     snap.exitDisposition = disp && disp.action === "give" ? "give" : "return";
+    if (disp && Array.isArray(disp.accessories)) {
+        snap.accessories = disp.accessories.slice();
+    } else if (!Array.isArray(snap.accessories)) {
+        snap.accessories = [];
+    }
     if (disp && disp.action === "give" && disp.toEmp) {
         snap.givenToAmsId = disp.toEmp.amsId;
         snap.givenToName = getEmployeeFullName(disp.toEmp);

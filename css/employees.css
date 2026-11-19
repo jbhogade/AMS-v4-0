@@ -279,6 +279,45 @@
     margin-left: auto;
 }
 
+.exit-holding-acc {
+    flex: 1 1 100%;
+    margin-top: 2px;
+    padding-top: 8px;
+    border-top: 1px dashed var(--border);
+}
+
+.exit-holding-acc-title {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--text-secondary);
+    margin-bottom: 6px;
+}
+
+.exit-holding-acc-list {
+    list-style: none;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 14px;
+    margin: 0;
+    padding: 0;
+}
+
+.exit-holding-acc-list li {
+    display: flex;
+    align-items: center;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    background: transparent;
+}
+
+.exit-holding-acc-empty {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text-muted);
+    font-style: italic;
+}
+
 .fac-na {
     display: inline-flex;
     align-items: center;

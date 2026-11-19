@@ -547,20 +547,24 @@ function openExitModal(amsId) {
     const mobiles = typeof getEmployeeMobiles === "function" ? getEmployeeMobiles(amsId) : [];
     const sims = typeof getEmployeeSimCards === "function" ? getEmployeeSimCards(amsId) : [];
     const holdingRows = [];
+    const holdingAccessories = (item) =>
+        (Array.isArray(item && item.accessories) ? item.accessories : [])
+            .map(name => String(name || "").trim())
+            .filter(Boolean);
     assets.forEach(a => {
         const id = (typeof amsPrintRemarkId === "function" ? amsPrintRemarkId(a) : a.id) || a.id;
         const mm = (typeof amsAssetMakeModel === "function" ? amsAssetMakeModel(a) : a.makeModel) || a.type || "";
-        holdingRows.push({ key: a.id, kind: "asset", label: mm ? `${id} - ${mm}` : id });
+        holdingRows.push({ key: a.id, kind: "asset", label: mm ? `${id} - ${mm}` : id, accessories: holdingAccessories(a) });
     });
     mobiles.forEach(a => {
         const id = (typeof amsPrintRemarkId === "function" ? amsPrintRemarkId(a) : a.id) || a.id;
         const mm = (typeof amsAssetMakeModel === "function" ? amsAssetMakeModel(a) : a.makeModel) || a.type || "Mobile";
-        holdingRows.push({ key: a.id, kind: "mobile", label: `Mobile ${id}${mm ? " - " + mm : ""}` });
+        holdingRows.push({ key: a.id, kind: "mobile", label: `Mobile ${id}${mm ? " - " + mm : ""}`, accessories: holdingAccessories(a) });
     });
     sims.forEach(s => {
         const id = s.simId || "";
         const bits = [s.mobileNumber, s.operator, s.plan].filter(Boolean);
-        holdingRows.push({ key: id, kind: "sim", label: `SIM ${id}${bits.length ? " - " + bits.join(" · ") : ""}` });
+        holdingRows.push({ key: id, kind: "sim", label: `SIM ${id}${bits.length ? " - " + bits.join(" · ") : ""}`, accessories: holdingAccessories(s) });
     });
     const empOptions = amsSortEmployeesByName(DUMMY_EMPLOYEES
         .filter(e => e.status === "Active" && e.amsId !== amsId))
@@ -570,6 +574,20 @@ function openExitModal(amsId) {
     assetList.innerHTML = holdingRows.length
         ? holdingRows.map((row, idx) => {
             const group = `exit-disp-${idx}`;
+            const accHtml = (row.accessories && row.accessories.length)
+                ? `<div class="exit-holding-acc">
+                        <div class="exit-holding-acc-title">Accessories issued (take with the item)</div>
+                        <ul class="exit-holding-acc-list">
+                            ${row.accessories.map(name => `
+                                <li>
+                                    <label class="exit-holding-choice">
+                                        <input type="checkbox" data-exit-acc value="${escapeHtml(name)}" checked>
+                                        ${escapeHtml(name)}
+                                    </label>
+                                </li>`).join("")}
+                        </ul>
+                    </div>`
+                : `<div class="exit-holding-acc exit-holding-acc-empty">No accessories issued with this item.</div>`;
             return `
             <li class="exit-holding-row" data-hold-key="${escapeHtml(row.key)}" data-hold-kind="${row.kind}">
                 <span class="fac-label">${escapeHtml(row.label)}</span>
@@ -592,6 +610,7 @@ function openExitModal(amsId) {
                     <span class="fac-state on" data-exit-chip-store>In Store</span>
                     <span class="fac-state on" data-exit-chip-give style="display:none;">Give</span>
                 </div>
+                ${accHtml}
             </li>`;
         }).join("")
         : `<li><span class="fac-label">No assets, mobiles, or SIM cards held by this employee.</span></li>`;
@@ -716,7 +735,12 @@ function confirmExit() {
         const targetEl = li.querySelector("[data-exit-target]");
         const toAmsId = action === "give" ? ((targetEl && targetEl.value) || "") : "";
         if (action === "give" && !toAmsId) giveMissing = true;
-        holdingDispositions.push({ key, kind, action, toAmsId });
+        const accessories = [];
+        li.querySelectorAll("input[data-exit-acc]:checked").forEach(cb => {
+            const name = String(cb.value || "").trim();
+            if (name) accessories.push(name);
+        });
+        holdingDispositions.push({ key, kind, action, toAmsId, accessories });
     });
     if (giveMissing) {
         alert("Select the employee who will receive each holding marked Give to other employee. Return (In Store) does not need another employee.");
