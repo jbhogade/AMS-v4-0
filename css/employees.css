@@ -245,11 +245,30 @@
     gap: 8px;
 }
 
+.exit-holding-choice {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 12.5px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    white-space: nowrap;
+    cursor: pointer;
+}
+
+.exit-holding-choice input {
+    margin: 0;
+}
+
 .exit-holding-disp .select {
     font-size: 12.5px;
     padding: 4px 8px;
     min-width: 168px;
     width: auto;
+}
+
+.exit-holding-disp .select[disabled] {
+    display: none;
 }
 
 .exit-holding-chips {

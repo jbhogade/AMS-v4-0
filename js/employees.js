@@ -568,15 +568,21 @@ function openExitModal(amsId) {
         .join("");
     const assetList = document.getElementById("exit-asset-list");
     assetList.innerHTML = holdingRows.length
-        ? holdingRows.map(row => `
+        ? holdingRows.map((row, idx) => {
+            const group = `exit-disp-${idx}`;
+            return `
             <li class="exit-holding-row" data-hold-key="${escapeHtml(row.key)}" data-hold-kind="${row.kind}">
                 <span class="fac-label">${escapeHtml(row.label)}</span>
                 <div class="exit-holding-disp">
-                    <select class="select" data-exit-disp>
-                        <option value="return" selected>Return (In Store)</option>
-                        <option value="give">Give to other employee</option>
-                    </select>
-                    <select class="select" data-exit-target style="display:none;">
+                    <label class="exit-holding-choice">
+                        <input type="radio" name="${group}" data-exit-disp value="return" checked>
+                        Return (In Store)
+                    </label>
+                    <label class="exit-holding-choice">
+                        <input type="radio" name="${group}" data-exit-disp value="give">
+                        Give to other employee
+                    </label>
+                    <select class="select" data-exit-target disabled>
                         <option value="">Select employee...</option>
                         ${empOptions}
                     </select>
@@ -586,22 +592,34 @@ function openExitModal(amsId) {
                     <span class="fac-state on" data-exit-chip-store>In Store</span>
                     <span class="fac-state on" data-exit-chip-give style="display:none;">Give</span>
                 </div>
-            </li>`).join("")
+            </li>`;
+        }).join("")
         : `<li><span class="fac-label">No assets, mobiles, or SIM cards held by this employee.</span></li>`;
-    assetList.onchange = function (e) {
-        const li = e.target.closest("li.exit-holding-row");
+    const syncExitHoldingRow = function (li) {
         if (!li) return;
-        const disp = li.querySelector("[data-exit-disp]");
+        const action = amsExitHoldingAction(li);
+        const giving = action === "give";
         const target = li.querySelector("[data-exit-target]");
         const chipReturn = li.querySelector("[data-exit-chip-return]");
         const chipStore = li.querySelector("[data-exit-chip-store]");
         const chipGive = li.querySelector("[data-exit-chip-give]");
-        const giving = disp && disp.value === "give";
-        if (target) target.style.display = giving ? "" : "none";
+        if (target) {
+            target.disabled = !giving;
+            target.style.display = giving ? "" : "none";
+            if (!giving) target.value = "";
+        }
         if (chipReturn) chipReturn.style.display = giving ? "none" : "";
         if (chipStore) chipStore.style.display = giving ? "none" : "";
         if (chipGive) chipGive.style.display = giving ? "" : "none";
     };
+    assetList.onchange = function (e) {
+        syncExitHoldingRow(e.target.closest("li.exit-holding-row"));
+    };
+    assetList.querySelectorAll("li.exit-holding-row").forEach(li => {
+        const ret = li.querySelector('input[data-exit-disp][value="return"]');
+        if (ret) ret.checked = true;
+        syncExitHoldingRow(li);
+    });
 
     /* Facilities start unchecked so the user marks revoke or N/A themselves. */
     const facList = document.getElementById("exit-facility-list");
@@ -676,6 +694,15 @@ function openExitModal(amsId) {
     showModal("modal-exit");
 }
 
+function amsExitHoldingAction(li) {
+    if (!li) return "return";
+    const checked = li.querySelector("input[data-exit-disp]:checked");
+    if (checked && checked.value === "give") return "give";
+    const dispEl = li.querySelector("[data-exit-disp]");
+    if (dispEl && dispEl.tagName === "SELECT" && dispEl.value === "give") return "give";
+    return "return";
+}
+
 function confirmExit() {
     const emp = findEmployee(currentEmployeeAmsId);
     if (!emp) return;
@@ -700,15 +727,14 @@ function confirmExit() {
     document.querySelectorAll("#exit-asset-list li.exit-holding-row").forEach(li => {
         const key = li.getAttribute("data-hold-key") || "";
         const kind = li.getAttribute("data-hold-kind") || "asset";
-        const dispEl = li.querySelector("[data-exit-disp]");
+        const action = amsExitHoldingAction(li);
         const targetEl = li.querySelector("[data-exit-target]");
-        const action = dispEl && dispEl.value === "give" ? "give" : "return";
         const toAmsId = action === "give" ? ((targetEl && targetEl.value) || "") : "";
         if (action === "give" && !toAmsId) giveMissing = true;
         holdingDispositions.push({ key, kind, action, toAmsId });
     });
     if (giveMissing) {
-        alert("Select the employee who will receive each holding marked Give to other employee.");
+        alert("Select the employee who will receive each holding marked Give to other employee. Return (In Store) does not need another employee.");
         return;
     }
 
