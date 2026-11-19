@@ -652,8 +652,8 @@ function openExitModal(amsId) {
         }
     };
 
-    /* Subordinate / team holdings - list who reports to this person and force a
-       choice of the new Incharge / HOD so the team's records continue */
+    /* Subordinate / team holdings - list who reports to this person. New
+       Incharge / HOD is optional; skip it to leave reporting lines unchanged. */
     const empHoldingCount = (subAmsId) =>
         getEmployeeAssets(subAmsId).length
         + (typeof getEmployeeMobiles === "function" ? getEmployeeMobiles(subAmsId).length : 0)
@@ -680,11 +680,8 @@ function openExitModal(amsId) {
             .filter(e => e.status === "Active" && e.amsId !== amsId))
             .map(e => `<option value="${e.amsId}">${escapeHtml(getEmployeeFullName(e))} - ${escapeHtml(e.designation)} (${escapeHtml(e.department)})</option>`)
             .join("");
-        /* Default to this person's own manager, if they are still active */
-        const currentManager = emp.managerAmsId ? findEmployee(emp.managerAmsId) : null;
-        const defaultVal = (currentManager && currentManager.status === "Active" && currentManager.amsId !== amsId) ? currentManager.amsId : "";
-        inchargeSel.innerHTML = `<option value="">Select new Incharge / HOD...</option>` + options;
-        inchargeSel.value = defaultVal;
+        inchargeSel.innerHTML = `<option value="">(Optional) Select new Incharge / HOD...</option>` + options;
+        inchargeSel.value = "";
     }
 
     document.getElementById("exit-reason").value = "";
@@ -708,19 +705,7 @@ function confirmExit() {
     if (!emp) return;
 
     const exitReason = document.getElementById("exit-reason").value;
-    /* If this person has direct subordinates holding assets/mobiles/SIMs, the
-       new Incharge / HOD must be chosen so the team's records continue */
-    const empHoldingCount = (subAmsId) =>
-        getEmployeeAssets(subAmsId).length
-        + (typeof getEmployeeMobiles === "function" ? getEmployeeMobiles(subAmsId).length : 0)
-        + (typeof getEmployeeSimCards === "function" ? getEmployeeSimCards(subAmsId).length : 0);
-    const subWithAssets = getSubordinates(currentEmployeeAmsId)
-        .filter(s => empHoldingCount(s.amsId) > 0);
-    const teamIncharge = subWithAssets.length ? document.getElementById("exit-incharge").value : "";
-    if (subWithAssets.length && !teamIncharge) {
-        alert("This employee has " + subWithAssets.length + " direct subordinate(s) holding assets, mobiles, or SIM cards. Please select the New Incharge / HOD to take over the team's holdings.");
-        return;
-    }
+    const teamIncharge = (document.getElementById("exit-incharge") || {}).value || "";
 
     const holdingDispositions = [];
     let giveMissing = false;
