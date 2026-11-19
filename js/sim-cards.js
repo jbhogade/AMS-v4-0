@@ -820,7 +820,7 @@ function amsPrintSimIssueForm(key) {
 
     const remarksLines = [];
     (simPrint.direct || []).forEach(row => {
-        const text = typeof amsItemPrintRemarksText === "function" ? amsItemPrintRemarksText(row) : (row.remarks || "");
+        const text = typeof amsItemPrintRemarksText === "function" ? amsItemPrintRemarksText(row) : (typeof amsLiveRemarksOnly === "function" ? amsLiveRemarksOnly(row.remarks) : (row.remarks || ""));
         if (text) remarksLines.push(`<div><strong>${amsEsc(row.simId)} - Remarks (on record):</strong> ${typeof amsFormatRemarksHtml === "function" ? amsFormatRemarksHtml(text) : amsEsc(text)}</div>`);
     });
     if (!remarksLines.length) remarksLines.push(`<div class="pf-notes-empty">No remarks recorded against the SIM card(s) in the system.</div>`);

@@ -521,6 +521,67 @@ function amsAppendItemRemark(item, note) {
     item.remarks = existing ? `${existing} | ${note}` : note;
 }
 
+function amsIsLifecycleRemarkPart(part) {
+    const t = String(part || "").trim();
+    if (!t) return false;
+    if (t.indexOf("User has exited") !== -1) return true;
+    if (t.indexOf("Replacement for ") !== -1) return true;
+    if (t.indexOf("Returned with linked mobile") !== -1) return true;
+    if (t.indexOf("Returned with mobile swap") !== -1) return true;
+    if (t.indexOf("Given to ") !== -1 && t.indexOf("User has exited") !== -1) return true;
+    return false;
+}
+
+function amsSplitRemarkParts(text) {
+    const live = [];
+    const lifecycle = [];
+    String(text || "").split(" | ").forEach(part => {
+        const t = String(part || "").trim();
+        if (!t) return;
+        if (amsIsLifecycleRemarkPart(t)) lifecycle.push(t);
+        else live.push(t);
+    });
+    return { live: live.join(" | "), lifecycle };
+}
+
+function amsLiveRemarksOnly(text) {
+    return amsSplitRemarkParts(text).live;
+}
+
+function amsAppendLifecycleNote(item, note, kind) {
+    if (!item || !note) return;
+    const text = String(note).trim();
+    if (!text) return;
+    if (!Array.isArray(item.lifecycleNotes)) item.lifecycleNotes = [];
+    const already = item.lifecycleNotes.some(n => n && String(n.text || "") === text);
+    if (!already) {
+        item.lifecycleNotes.push({
+            date: new Date().toISOString().slice(0, 10),
+            kind: kind || "note",
+            text,
+        });
+    }
+}
+
+function amsItemLifecycleText(item) {
+    if (!item) return "";
+    const parts = [];
+    (Array.isArray(item.lifecycleNotes) ? item.lifecycleNotes : []).forEach(n => {
+        const t = n && (n.text || n.note);
+        if (t && parts.indexOf(t) === -1) parts.push(t);
+    });
+    if (item.exitNote && parts.indexOf(item.exitNote) === -1) parts.push(item.exitNote);
+    amsSplitRemarkParts(item.remarks).lifecycle.forEach(t => {
+        if (parts.indexOf(t) === -1) parts.push(t);
+    });
+    const replacement = amsItemReplacementRemarkText(item);
+    if (replacement && parts.indexOf(replacement) === -1
+        && !parts.some(p => p.indexOf("Replacement for ") !== -1)) {
+        parts.push(replacement);
+    }
+    return parts.join(" | ");
+}
+
 function amsReplacementRemark(oldItem, date, reason, extraNote) {
     const oldId = typeof amsBaseDisplayId === "function"
         ? (amsBaseDisplayId(oldItem) || "")
@@ -557,11 +618,12 @@ function amsItemReplacementRemarkText(item) {
 
 function amsItemPrintRemarksText(item) {
     if (!item) return "";
-    const existing = String(item.remarks || "").trim();
-    const replacement = amsItemReplacementRemarkText(item);
-    if (!replacement) return existing;
-    if (existing && existing.indexOf("Replacement for ") !== -1) return existing;
-    return existing ? `${existing} | ${replacement}` : replacement;
+    return amsLiveRemarksOnly(item.remarks);
+}
+
+function amsItemPrintLifecycleText(item) {
+    if (!item) return "";
+    return amsItemLifecycleText(item);
 }
 
 function amsFormatRemarksHtml(text) {
@@ -569,28 +631,39 @@ function amsFormatRemarksHtml(text) {
     return String(text).split(" | ").map(part => amsEsc(part)).join(" <strong>|</strong> ");
 }
 
+function amsStripLifecycleFromLiveRemarks(item) {
+    if (!item) return false;
+    const split = amsSplitRemarkParts(item.remarks);
+    let changed = false;
+    if (split.lifecycle.length) {
+        split.lifecycle.forEach(t => amsAppendLifecycleNote(item, t, t.indexOf("Replacement for ") !== -1 ? "replace" : (t.indexOf("User has exited") !== -1 ? "exit" : "return")));
+        const next = split.live;
+        if (String(item.remarks || "").trim() !== next) {
+            item.remarks = next;
+            changed = true;
+        }
+    }
+    if (item.replacesAssetId || item.replacesReason) {
+        const note = amsItemReplacementRemarkText(item);
+        if (note) amsAppendLifecycleNote(item, note, "replace");
+    }
+    return changed;
+}
+
 function amsBackfillReplacementRemarks() {
     const packs = [
-        typeof DUMMY_ASSETS !== "undefined" ? DUMMY_ASSETS : [],
-        typeof DUMMY_MOBILES !== "undefined" ? DUMMY_MOBILES : [],
+        { arr: typeof DUMMY_ASSETS !== "undefined" ? DUMMY_ASSETS : [], key: "assets" },
+        { arr: typeof DUMMY_MOBILES !== "undefined" ? DUMMY_MOBILES : [], key: "mobiles" },
+        { arr: typeof AMS_DUMMY_SIM_CARDS !== "undefined" ? AMS_DUMMY_SIM_CARDS : [], key: "simCards" },
     ];
-    let changedAssets = false;
-    let changedMobiles = false;
-    packs.forEach((arr, idx) => {
-        arr.forEach(item => {
-            if (!item || (!item.replacesAssetId && !item.replacesReason)) return;
-            const note = amsItemReplacementRemarkText(item);
-            if (!note) return;
-            const existing = String(item.remarks || "");
-            if (existing.indexOf("Replacement for ") !== -1) return;
-            amsAppendItemRemark(item, note);
-            if (idx === 0) changedAssets = true;
-            else changedMobiles = true;
+    packs.forEach(pack => {
+        let changed = false;
+        pack.arr.forEach(item => {
+            if (amsStripLifecycleFromLiveRemarks(item)) changed = true;
         });
+        if (changed) amsDbSaveAsync(pack.key);
     });
-    if (changedAssets) amsDbSaveAsync("assets");
-    if (changedMobiles) amsDbSaveAsync("mobiles");
-    return changedAssets || changedMobiles;
+    return false;
 }
 
 /* Normalises any imported / stored date to ISO yyyy-mm-dd for <input type="date">.
@@ -2644,19 +2717,55 @@ function amsResolvePendingManagers() {
     return changed;
 }
 
-/* Marks an employee as exited: returns their assigned assets / mobiles / SIMs
-   to In Store (exit date = return date, Asset ID remark names the exit reason),
-   and snapshots holdings + assignment accessories + facilities into
-   AMS_DUMMY_EXIT_RECORDS so the printed Handover Form stays accurate even after
-   the assets have been released back to the store / the org chart has changed.
+function amsExitDispositionOf(dispositions, kind, key, exitingAmsId) {
+    const list = Array.isArray(dispositions) ? dispositions : [];
+    const found = list.find(d => d && d.kind === kind && String(d.key) === String(key));
+    if (found && found.action === "give" && found.toAmsId && found.toAmsId !== exitingAmsId) {
+        const toEmp = findEmployee(found.toAmsId);
+        if (toEmp && toEmp.status === "Active") return { action: "give", toEmp };
+    }
+    return { action: "return", toEmp: null };
+}
 
-   exitReason         : selected Reason of Exit (Resignation, Retirement, etc.)
-   teamInchargeAmsId  : optional - the new Incharge/HOD who takes over the
-                        exiting employee's direct subordinates. Their managerAmsId
-                        is re-pointed to this person so the team's asset records
-                        continue under the new incharge, and the transfer is
-                        snapshotted for the printed Handover Form. */
-function exitEmployee(amsId, exitDate, remarks, facilitiesDisabled, exitReason, teamInchargeAmsId, facilitiesNotApplicable) {
+function amsExitGiveRemark(emp, exitDate, exitReason, toEmp) {
+    const name = emp ? getEmployeeFullName(emp) : "employee";
+    const toName = toEmp ? getEmployeeFullName(toEmp) : "another employee";
+    const reason = (exitReason || "").trim();
+    return reason
+        ? `User has exited (${name}, ${exitDate || ""}). Given to ${toName}. Reason: ${reason}`
+        : `User has exited (${name}, ${exitDate || ""}). Given to ${toName}.`;
+}
+
+function amsAnnotateExitSnapDisposition(snap, disp) {
+    if (!snap) return snap;
+    snap.exitDisposition = disp && disp.action === "give" ? "give" : "return";
+    if (disp && disp.action === "give" && disp.toEmp) {
+        snap.givenToAmsId = disp.toEmp.amsId;
+        snap.givenToName = getEmployeeFullName(disp.toEmp);
+        snap.givenToEmpId = disp.toEmp.empId || "";
+        snap.status = snap.simId ? "Issued" : "Assigned";
+    } else {
+        snap.givenToAmsId = "";
+        snap.givenToName = "";
+        snap.givenToEmpId = "";
+        snap.status = "In Store";
+    }
+    return snap;
+}
+
+/* Marks an employee as exited. Each direct holding defaults to Return (In Store);
+    Exit can instead give a holding to another active employee. Snapshots holdings
+    + assignment accessories + facilities into AMS_DUMMY_EXIT_RECORDS so the
+    printed Handover Form stays accurate after assets leave the exiting person.
+
+    exitReason         : selected Reason of Exit (Resignation, Retirement, etc.)
+    teamInchargeAmsId  : optional - the new Incharge/HOD who takes over the
+                         exiting employee's direct subordinates. Their managerAmsId
+                         is re-pointed to this person so the team's asset records
+                         continue under the new incharge, and the transfer is
+                         snapshotted for the printed Handover Form.
+    holdingDispositions: optional [{ key, kind, action: "return"|"give", toAmsId }] */
+function exitEmployee(amsId, exitDate, remarks, facilitiesDisabled, exitReason, teamInchargeAmsId, facilitiesNotApplicable, holdingDispositions) {
     const emp = findEmployee(amsId);
     if (!emp) return null;
     emp.status = "Exited";
@@ -2666,48 +2775,59 @@ function exitEmployee(amsId, exitDate, remarks, facilitiesDisabled, exitReason, 
 
     const returnDate = emp.exitDate;
     const returnNote = amsExitReturnRemark(emp, returnDate, emp.exitReason);
-    const withExitRemark = (existing) => {
-        const cur = (existing || "").trim();
-        return cur ? `${cur} | ${returnNote}` : returnNote;
-    };
 
-    /* Snapshot the direct assets / mobiles / SIMs held at exit (before returning them),
-       including accessories issued with each assignment so the Handover Form can
-       list them after the holdings have been released. */
+    /* Snapshot the direct assets / mobiles / SIMs held at exit (before returning
+       or giving them), including accessories so the Handover Form can list them. */
     const directAssetsHeld = DUMMY_ASSETS
         .filter(a => a.assignedTo === amsId)
-        .map(a => ({
-            id: a.id, assetId: a.id, type: a.type, makeModel: amsAssetMakeModel(a),
-            site: a.currentSite || a.site, currentSite: a.currentSite || a.site,
-            assignedDepartment: a.assignedDepartment,
-            remarks: withExitRemark(a.remarks), usageNote: a.usageNote,
-            assignedTo: a.assignedTo, displayId: a.displayId, isLegacyId: !!a.isLegacyId,
-            accessories: Array.isArray(a.accessories) ? a.accessories.slice() : [],
-            returnDate,
-        }));
+        .map(a => {
+            const disp = amsExitDispositionOf(holdingDispositions, "asset", a.id, amsId);
+            const note = disp.action === "give" ? amsExitGiveRemark(emp, returnDate, emp.exitReason, disp.toEmp) : returnNote;
+            return amsAnnotateExitSnapDisposition({
+                id: a.id, assetId: a.id, type: a.type, makeModel: amsAssetMakeModel(a),
+                site: a.currentSite || a.site, currentSite: a.currentSite || a.site,
+                assignedDepartment: a.assignedDepartment,
+                remarks: amsLiveRemarksOnly(a.remarks), usageNote: a.usageNote,
+                exitNote: note, lifecycleNotes: (Array.isArray(a.lifecycleNotes) ? a.lifecycleNotes.slice() : []),
+                assignedTo: a.assignedTo, displayId: a.displayId, isLegacyId: !!a.isLegacyId,
+                accessories: Array.isArray(a.accessories) ? a.accessories.slice() : [],
+                returnDate,
+            }, disp);
+        });
     const directMobilesHeld = DUMMY_MOBILES
         .filter(a => a.assignedTo === amsId)
-        .map(a => ({
-            id: a.id, displayId: a.displayId, isLegacyId: !!a.isLegacyId, type: a.type, make: a.make, model: a.model,
-            makeModel: amsAssetMakeModel(a),
-            imei1: a.imei1, imei2: a.imei2, batteryNo: a.batteryNo, chargerNo: a.chargerNo,
-            simMobileNo: a.simMobileNo || "0",
-            site: a.currentSite || a.site, currentSite: a.currentSite || a.site,
-            remarks: withExitRemark(a.remarks), status: a.status, assignedTo: a.assignedTo,
-            assignedToSubordinate: a.assignedToSubordinate, assignedSubText: a.assignedSubText,
-            accessories: Array.isArray(a.accessories) ? a.accessories.slice() : [],
-            returnDate,
-        }));
+        .map(a => {
+            const disp = amsExitDispositionOf(holdingDispositions, "mobile", a.id, amsId);
+            const note = disp.action === "give" ? amsExitGiveRemark(emp, returnDate, emp.exitReason, disp.toEmp) : returnNote;
+            return amsAnnotateExitSnapDisposition({
+                id: a.id, displayId: a.displayId, isLegacyId: !!a.isLegacyId, type: a.type, make: a.make, model: a.model,
+                makeModel: amsAssetMakeModel(a),
+                imei1: a.imei1, imei2: a.imei2, batteryNo: a.batteryNo, chargerNo: a.chargerNo,
+                simMobileNo: a.simMobileNo || "0",
+                site: a.currentSite || a.site, currentSite: a.currentSite || a.site,
+                remarks: amsLiveRemarksOnly(a.remarks), status: a.status, assignedTo: a.assignedTo,
+                exitNote: note, lifecycleNotes: (Array.isArray(a.lifecycleNotes) ? a.lifecycleNotes.slice() : []),
+                assignedToSubordinate: a.assignedToSubordinate, assignedSubText: a.assignedSubText,
+                accessories: Array.isArray(a.accessories) ? a.accessories.slice() : [],
+                returnDate,
+            }, disp);
+        });
     const directSimCardsHeld = AMS_DUMMY_SIM_CARDS
         .filter(s => s.assignedTo === amsId)
-        .map(s => ({
-            simId: s.simId, mobileNumber: s.mobileNumber, operator: s.operator,
-            plan: s.plan, status: s.status, assignedTo: s.assignedTo,
-            assignedToSubordinate: s.assignedToSubordinate, assignedSubText: s.assignedSubText,
-            linkedMobileId: s.linkedMobileId || null, personalMobile: !!s.personalMobile,
-            accessories: Array.isArray(s.accessories) ? s.accessories.slice() : [],
-            remarks: withExitRemark(s.remarks), returnDate,
-        }));
+        .map(s => {
+            const disp = amsExitDispositionOf(holdingDispositions, "sim", s.simId, amsId);
+            const note = disp.action === "give" ? amsExitGiveRemark(emp, returnDate, emp.exitReason, disp.toEmp) : returnNote;
+            return amsAnnotateExitSnapDisposition({
+                simId: s.simId, mobileNumber: s.mobileNumber, operator: s.operator,
+                plan: s.plan, status: s.status, assignedTo: s.assignedTo,
+                assignedToSubordinate: s.assignedToSubordinate, assignedSubText: s.assignedSubText,
+                linkedMobileId: s.linkedMobileId || null, personalMobile: !!s.personalMobile,
+                accessories: Array.isArray(s.accessories) ? s.accessories.slice() : [],
+                remarks: amsLiveRemarksOnly(s.remarks),
+                exitNote: note, lifecycleNotes: (Array.isArray(s.lifecycleNotes) ? s.lifecycleNotes.slice() : []),
+                returnDate,
+            }, disp);
+        });
 
     const disabled = Array.isArray(facilitiesDisabled) ? facilitiesDisabled.map(String) : [];
     const notApplicable = Array.isArray(facilitiesNotApplicable) ? facilitiesNotApplicable.map(String) : [];
@@ -2797,21 +2917,30 @@ function exitEmployee(amsId, exitDate, remarks, facilitiesDisabled, exitReason, 
         subordinateAssetsTransferred,
     });
 
-    /* Return every holding assigned to the exiting employee: In Store, history
-       dated with the exit date, and an Asset ID remark naming the exit reason.
-       Team / subordinate holdings are not returned here - they stay with the
-       new incharge after the transfer above. */
+    /* Return (In Store) or give each holding. Team / subordinate holdings stay
+       with the new incharge after the transfer above. */
     DUMMY_ASSETS.forEach(a => {
-        if (a.assignedTo === amsId) amsMarkHoldingReturnedOnExit(a, emp, returnDate, returnNote, "asset");
+        if (a.assignedTo !== amsId) return;
+        const disp = amsExitDispositionOf(holdingDispositions, "asset", a.id, amsId);
+        if (disp.action === "give") amsMarkHoldingGivenOnExit(a, emp, returnDate, disp.toEmp, emp.exitReason, "asset");
+        else amsMarkHoldingReturnedOnExit(a, emp, returnDate, returnNote, "asset");
     });
     DUMMY_MOBILES.forEach(a => {
-        if (a.assignedTo === amsId) {
+        if (a.assignedTo !== amsId) return;
+        const disp = amsExitDispositionOf(holdingDispositions, "mobile", a.id, amsId);
+        if (disp.action === "give") {
+            amsMarkHoldingGivenOnExit(a, emp, returnDate, disp.toEmp, emp.exitReason, "mobile");
+        } else {
             if (typeof amsUnlinkMobileSim === "function") amsUnlinkMobileSim(a, false);
             amsMarkHoldingReturnedOnExit(a, emp, returnDate, returnNote, "mobile");
         }
     });
     AMS_DUMMY_SIM_CARDS.forEach(s => {
-        if (s.assignedTo === amsId) {
+        if (s.assignedTo !== amsId) return;
+        const disp = amsExitDispositionOf(holdingDispositions, "sim", s.simId, amsId);
+        if (disp.action === "give") {
+            amsMarkHoldingGivenOnExit(s, emp, returnDate, disp.toEmp, emp.exitReason, "sim");
+        } else {
             if (s.linkedMobileId && !s.personalMobile) {
                 const m = amsFindMobileByRef(s.linkedMobileId);
                 if (m && String(m.simMobileNo || "0") === String(s.mobileNumber || "")) m.simMobileNo = "0";
@@ -2872,6 +3001,9 @@ function amsExitReturnRemark(emp, exitDate, exitReason) {
 
 function amsHoldingHasExitReturnNote(item) {
     if (!item) return false;
+    if (item.exitNote && String(item.exitNote).indexOf("User has exited") !== -1) return true;
+    if ((Array.isArray(item.lifecycleNotes) ? item.lifecycleNotes : []).some(n =>
+        n && String(n.text || n.note || "").indexOf("User has exited") !== -1)) return true;
     if (String(item.remarks || "").indexOf("User has exited") !== -1) return true;
     return (Array.isArray(item.history) ? item.history : []).some(h =>
         h && String(h.remarks || h.note || "").indexOf("User has exited") !== -1);
@@ -2895,8 +3027,8 @@ function amsMarkHoldingReturnedOnExit(item, emp, returnDate, note, kind) {
             remarks: note,
             note: note,
         });
-        const existing = (item.remarks || "").trim();
-        item.remarks = existing ? `${existing} | ${note}` : note;
+        amsAppendLifecycleNote(item, note, "exit-return");
+        item.exitNote = note;
         item.returnDate = returnDate;
     } else if (!item.returnDate) {
         item.returnDate = returnDate;
@@ -2920,6 +3052,43 @@ function amsMarkHoldingReturnedOnExit(item, emp, returnDate, note, kind) {
     return true;
 }
 
+function amsMarkHoldingGivenOnExit(item, emp, exitDate, toEmp, exitReason, kind) {
+    if (!item || !emp || !toEmp || item.assignedTo !== emp.amsId) return false;
+    const note = amsExitGiveRemark(emp, exitDate, exitReason, toEmp);
+    const displayId = kind === "sim"
+        ? (item.simId || "")
+        : (typeof amsBaseDisplayId === "function" ? amsBaseDisplayId(item) : (item.id || ""));
+    const histKind = kind === "sim" ? "sim" : (kind === "mobile" ? "mobile" : "asset");
+    amsPushItemHistory(item, histKind, {
+        date: exitDate,
+        action: "Reassigned",
+        empId: toEmp.empId || "",
+        empName: getEmployeeFullName(toEmp),
+        empDept: toEmp.department || toEmp.dept || "",
+        assetIdFull: displayId,
+        statusLabel: kind === "sim" ? "Issued" : "Assigned",
+        remarks: note,
+        note: note,
+    });
+    amsAppendLifecycleNote(item, note, "exit-give");
+    item.exitNote = note;
+    item.assignedTo = toEmp.amsId;
+    item.assignedDate = exitDate;
+    item.assignedToSubordinate = null;
+    item.assignedSubText = null;
+    if (kind === "sim") {
+        item.status = "Issued";
+    } else {
+        item.assignedDepartment = null;
+        item.assignedDeptText = null;
+        item.usageNote = null;
+        item.dept = toEmp.department || toEmp.dept || "";
+        item.status = "Assigned";
+        if (typeof amsComputeFullId === "function") item.id = amsComputeFullId(item);
+    }
+    return true;
+}
+
 function amsFindLiveHoldingForExitSnap(snap, kind) {
     if (!snap) return null;
     if (kind === "sim") {
@@ -2933,7 +3102,7 @@ function amsFindLiveHoldingForExitSnap(snap, kind) {
     ) || null;
 }
 
-function amsEnrichExitSnapshotItem(snap, live, returnDate, withExitRemark) {
+function amsEnrichExitSnapshotItem(snap, live, returnDate, exitNote) {
     if (!snap) return false;
     let changed = false;
     if ((!Array.isArray(snap.accessories) || !snap.accessories.length)
@@ -2944,9 +3113,17 @@ function amsEnrichExitSnapshotItem(snap, live, returnDate, withExitRemark) {
         snap.accessories = [];
         changed = true;
     }
-    const nextRemarks = withExitRemark(snap.remarks);
-    if (snap.remarks !== nextRemarks) {
-        snap.remarks = nextRemarks;
+    const liveRemarks = amsLiveRemarksOnly(snap.remarks);
+    if (String(snap.remarks || "").trim() !== liveRemarks) {
+        snap.remarks = liveRemarks;
+        changed = true;
+    }
+    if (exitNote && !snap.exitNote) {
+        snap.exitNote = exitNote;
+        changed = true;
+    }
+    if (!Array.isArray(snap.lifecycleNotes)) {
+        snap.lifecycleNotes = live && Array.isArray(live.lifecycleNotes) ? live.lifecycleNotes.slice() : [];
         changed = true;
     }
     if (!snap.returnDate) {
@@ -2968,11 +3145,6 @@ function amsRepairExitedEmployeeHoldings() {
         const returnDate = emp.exitDate || new Date().toISOString().slice(0, 10);
         const rec = typeof getExitRecord === "function" ? getExitRecord(amsId) : null;
         const returnNote = amsExitReturnRemark(emp, returnDate, (emp.exitReason || (rec && rec.exitReason) || ""));
-        const withExitRemark = (existing) => {
-            const cur = (existing || "").trim();
-            if (cur.indexOf("User has exited") !== -1) return cur;
-            return cur ? `${cur} | ${returnNote}` : returnNote;
-        };
 
         const process = (list, kind) => {
             (list || []).forEach(item => {
@@ -3002,13 +3174,13 @@ function amsRepairExitedEmployeeHoldings() {
                 return live;
             };
             (rec.directAssetsHeld || []).forEach(snap => {
-                if (amsEnrichExitSnapshotItem(snap, liveIfStillTheirs(snap, "asset"), returnDate, withExitRemark)) changed = true;
+                if (amsEnrichExitSnapshotItem(snap, liveIfStillTheirs(snap, "asset"), returnDate, returnNote)) changed = true;
             });
             (rec.directMobilesHeld || []).forEach(snap => {
-                if (amsEnrichExitSnapshotItem(snap, liveIfStillTheirs(snap, "mobile"), returnDate, withExitRemark)) changed = true;
+                if (amsEnrichExitSnapshotItem(snap, liveIfStillTheirs(snap, "mobile"), returnDate, returnNote)) changed = true;
             });
             (rec.directSimCardsHeld || []).forEach(snap => {
-                if (amsEnrichExitSnapshotItem(snap, liveIfStillTheirs(snap, "sim"), returnDate, withExitRemark)) changed = true;
+                if (amsEnrichExitSnapshotItem(snap, liveIfStillTheirs(snap, "sim"), returnDate, returnNote)) changed = true;
             });
         }
     });
@@ -3538,6 +3710,33 @@ function amsBuildPrintSimCardsSectionHtml(directList, subList, opts) {
     return html;
 }
 
+function amsBuildPrintGivenHoldingsHtml(list, kind) {
+    const rows = (list || []).filter(x => x && x.exitDisposition === "give");
+    if (!rows.length) return "";
+    const title = kind === "sim" ? "SIM Cards Given to Other Employee" : "Mobiles Given to Other Employee";
+    const idOf = x => kind === "sim" ? (x.simId || "-") : (typeof amsPrintAssetId === "function" ? amsPrintAssetId(x) : (x.id || "-"));
+    const typeOf = x => kind === "sim"
+        ? [x.operator, x.plan].filter(Boolean).join(" / ") || "SIM Card"
+        : ((x.type || "Mobile") + (x.makeModel ? " (" + x.makeModel + ")" : ""));
+    return `
+        <div class="pf-section-bar pf-bar-accent">${title}</div>
+        <table class="pf-asset-table">
+            <thead>
+                <tr><th style="width:30px;">#</th><th>${kind === "sim" ? "SIM ID" : "Mobile ID"}</th><th>Type</th><th>Given To</th><th>Status</th></tr>
+            </thead>
+            <tbody>
+                ${rows.map((x, i) => `
+                    <tr>
+                        <td>${i + 1}</td>
+                        <td class="mono">${amsEsc(idOf(x))}</td>
+                        <td>${amsEsc(typeOf(x))}</td>
+                        <td>${amsEsc(x.givenToName || "-")}${x.givenToEmpId ? " (" + amsEsc(x.givenToEmpId) + ")" : ""}</td>
+                        <td>${amsEsc(x.status || (kind === "sim" ? "Issued" : "Assigned"))}</td>
+                    </tr>`).join("")}
+            </tbody>
+        </table>`;
+}
+
 function amsBuildPrintMobileSimHtml(amsId, opts) {
     const exitRecord = opts && opts.exitRecord;
     const includeDirect = !(opts && opts.includeDirect === false);
@@ -3548,13 +3747,17 @@ function amsBuildPrintMobileSimHtml(amsId, opts) {
     const sims = exitRecord
         ? { direct: exitRecord.directSimCardsHeld || [], subordinate: exitRecord.subordinateSimCardsHeld || [] }
         : amsCollectPrintSimsForEmp(amsId);
-    const mobileDirect = includeDirect ? mobiles.direct : [];
+    const mobileGiven = includeDirect ? mobiles.direct.filter(m => m && m.exitDisposition === "give") : [];
+    const simGiven = includeDirect ? sims.direct.filter(s => s && s.exitDisposition === "give") : [];
+    const mobileDirect = includeDirect ? mobiles.direct.filter(m => !m || m.exitDisposition !== "give") : [];
     const mobileTeam = includeTeam ? mobiles.subordinate : [];
-    const simDirect = includeDirect ? sims.direct : [];
+    const simDirect = includeDirect ? sims.direct.filter(s => !s || s.exitDisposition !== "give") : [];
     const simTeam = includeTeam ? sims.subordinate : [];
     return {
         html: amsBuildPrintMobilesSectionHtml(mobileDirect, mobileTeam, opts)
-            + amsBuildPrintSimCardsSectionHtml(simDirect, simTeam, opts),
+            + amsBuildPrintGivenHoldingsHtml(mobileGiven, "mobile")
+            + amsBuildPrintSimCardsSectionHtml(simDirect, simTeam, opts)
+            + amsBuildPrintGivenHoldingsHtml(simGiven, "sim"),
         mobileDirect: mobileDirect.length,
         mobileTeam: mobileTeam.length,
         simDirect: simDirect.length,

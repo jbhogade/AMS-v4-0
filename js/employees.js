@@ -12,7 +12,7 @@
 #     2. Edit           - update employee fields
 #     3. Assign Asset   - give an unassigned asset to this employee
 #     4. Reassign Asset - move one of his assets to another employee
-#     5. Exit           - off-boarding with facility check-off + asset return
+#     5. Exit           - off-boarding: Return (In Store) or give to other employee
 #     6. Reactivate     - restore an exited employee to Active (keeps Exit Report + log)
 #     7. Assign Report  - prints / opens the professional Asset Issue Form
 #     8. Exit Report    - prints / opens the Asset Handover / Return Form
@@ -542,7 +542,7 @@ function openExitModal(amsId) {
     document.getElementById("exit-meta").textContent = emp.designation + " - " + emp.department;
     document.getElementById("exit-date").value = new Date().toISOString().slice(0, 10);
 
-    /* Assets / mobiles / SIM cards owned must be returned - one checkbox each */
+    /* Each holding defaults to Return (In Store). Give to other employee is always offered. */
     const assets = getEmployeeAssets(amsId);
     const mobiles = typeof getEmployeeMobiles === "function" ? getEmployeeMobiles(amsId) : [];
     const sims = typeof getEmployeeSimCards === "function" ? getEmployeeSimCards(amsId) : [];
@@ -550,27 +550,58 @@ function openExitModal(amsId) {
     assets.forEach(a => {
         const id = (typeof amsPrintRemarkId === "function" ? amsPrintRemarkId(a) : a.id) || a.id;
         const mm = (typeof amsAssetMakeModel === "function" ? amsAssetMakeModel(a) : a.makeModel) || a.type || "";
-        holdingRows.push({ id, label: mm ? `${id} - ${mm}` : id });
+        holdingRows.push({ key: a.id, kind: "asset", label: mm ? `${id} - ${mm}` : id });
     });
     mobiles.forEach(a => {
         const id = (typeof amsPrintRemarkId === "function" ? amsPrintRemarkId(a) : a.id) || a.id;
         const mm = (typeof amsAssetMakeModel === "function" ? amsAssetMakeModel(a) : a.makeModel) || a.type || "Mobile";
-        holdingRows.push({ id, label: `Mobile ${id}${mm ? " - " + mm : ""}` });
+        holdingRows.push({ key: a.id, kind: "mobile", label: `Mobile ${id}${mm ? " - " + mm : ""}` });
     });
     sims.forEach(s => {
         const id = s.simId || "";
         const bits = [s.mobileNumber, s.operator, s.plan].filter(Boolean);
-        holdingRows.push({ id, label: `SIM ${id}${bits.length ? " - " + bits.join(" · ") : ""}` });
+        holdingRows.push({ key: id, kind: "sim", label: `SIM ${id}${bits.length ? " - " + bits.join(" · ") : ""}` });
     });
+    const empOptions = amsSortEmployeesByName(DUMMY_EMPLOYEES
+        .filter(e => e.status === "Active" && e.amsId !== amsId))
+        .map(e => `<option value="${escapeHtml(e.amsId)}">${escapeHtml(getEmployeeFullName(e))} (${escapeHtml(e.department)})</option>`)
+        .join("");
     const assetList = document.getElementById("exit-asset-list");
     assetList.innerHTML = holdingRows.length
         ? holdingRows.map(row => `
-            <li>
-                <input type="checkbox" checked>
+            <li class="exit-holding-row" data-hold-key="${escapeHtml(row.key)}" data-hold-kind="${row.kind}">
                 <span class="fac-label">${escapeHtml(row.label)}</span>
-                <span class="fac-state on">To Return</span>
+                <div class="exit-holding-disp">
+                    <select class="select" data-exit-disp>
+                        <option value="return" selected>Return (In Store)</option>
+                        <option value="give">Give to other employee</option>
+                    </select>
+                    <select class="select" data-exit-target style="display:none;">
+                        <option value="">Select employee...</option>
+                        ${empOptions}
+                    </select>
+                </div>
+                <div class="exit-holding-chips">
+                    <span class="fac-state na" data-exit-chip-return>Return</span>
+                    <span class="fac-state on" data-exit-chip-store>In Store</span>
+                    <span class="fac-state on" data-exit-chip-give style="display:none;">Give</span>
+                </div>
             </li>`).join("")
         : `<li><span class="fac-label">No assets, mobiles, or SIM cards held by this employee.</span></li>`;
+    assetList.onchange = function (e) {
+        const li = e.target.closest("li.exit-holding-row");
+        if (!li) return;
+        const disp = li.querySelector("[data-exit-disp]");
+        const target = li.querySelector("[data-exit-target]");
+        const chipReturn = li.querySelector("[data-exit-chip-return]");
+        const chipStore = li.querySelector("[data-exit-chip-store]");
+        const chipGive = li.querySelector("[data-exit-chip-give]");
+        const giving = disp && disp.value === "give";
+        if (target) target.style.display = giving ? "" : "none";
+        if (chipReturn) chipReturn.style.display = giving ? "none" : "";
+        if (chipStore) chipStore.style.display = giving ? "none" : "";
+        if (chipGive) chipGive.style.display = giving ? "" : "none";
+    };
 
     /* Facilities start unchecked so the user marks revoke or N/A themselves. */
     const facList = document.getElementById("exit-facility-list");
@@ -664,6 +695,23 @@ function confirmExit() {
         return;
     }
 
+    const holdingDispositions = [];
+    let giveMissing = false;
+    document.querySelectorAll("#exit-asset-list li.exit-holding-row").forEach(li => {
+        const key = li.getAttribute("data-hold-key") || "";
+        const kind = li.getAttribute("data-hold-kind") || "asset";
+        const dispEl = li.querySelector("[data-exit-disp]");
+        const targetEl = li.querySelector("[data-exit-target]");
+        const action = dispEl && dispEl.value === "give" ? "give" : "return";
+        const toAmsId = action === "give" ? ((targetEl && targetEl.value) || "") : "";
+        if (action === "give" && !toAmsId) giveMissing = true;
+        holdingDispositions.push({ key, kind, action, toAmsId });
+    });
+    if (giveMissing) {
+        alert("Select the employee who will receive each holding marked Give to other employee.");
+        return;
+    }
+
     const disabledFacilities = [];
     const naFacilities = [];
     document.querySelectorAll("#exit-facility-list input[data-fac]:checked").forEach(cb => {
@@ -682,12 +730,19 @@ function confirmExit() {
         disabledFacilities,
         exitReason,
         teamIncharge,
-        naFacilities
+        naFacilities,
+        holdingDispositions
     );
 
+    const givenCount = holdingDispositions.filter(d => d.action === "give").length;
+    const returnedCount = holdingDispositions.filter(d => d.action !== "give").length;
     const logPieces = ["Facilities disabled: " + (disabledFacilities.join(", ") || "none")];
     if (naFacilities.length) logPieces.push("N/A: " + naFacilities.join(", "));
     if (exitReason) logPieces.push("Reason: " + exitReason);
+    if (holdingDispositions.length) {
+        logPieces.push("Returned: " + returnedCount);
+        if (givenCount) logPieces.push("Given to other employee: " + givenCount);
+    }
     if (teamIncharge) {
         const ic = findEmployee(teamIncharge);
         if (ic) logPieces.push("Team transferred to: " + getEmployeeFullName(ic));

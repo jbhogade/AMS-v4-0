@@ -27,13 +27,18 @@ function amsGenerateFormNo(prefix) {
     return `${prefix}-${String(AMS_PRINT_COUNTERS[prefix]).padStart(6, "0")}`;
 }
 
-/* ---- "Remarks / Notes" body: stored remarks plus replacement reason/date/old ID. */
-function amsBuildReportRemarks(assetsList) {
+/* ---- "Remarks / Notes" body: live remarks only. Exit / return / give /
+       replacement stay on lifecycleNotes and print on Handover / Asset ID Record. */
+function amsBuildReportRemarks(assetsList, includeLifecycle) {
     const lines = [];
     assetsList.forEach(oa => {
         const assetLabel = typeof amsPrintRemarkId === "function" ? amsPrintRemarkId(oa) : amsPrintAssetId(oa);
-        const text = typeof amsItemPrintRemarksText === "function" ? amsItemPrintRemarksText(oa) : (oa.remarks || "");
-        if (text) lines.push(`<div><strong>${amsEsc(assetLabel)} - Remarks (on record):</strong> ${typeof amsFormatRemarksHtml === "function" ? amsFormatRemarksHtml(text) : amsEsc(text)}</div>`);
+        const live = typeof amsItemPrintRemarksText === "function" ? amsItemPrintRemarksText(oa) : (typeof amsLiveRemarksOnly === "function" ? amsLiveRemarksOnly(oa.remarks) : (oa.remarks || ""));
+        if (live) lines.push(`<div><strong>${amsEsc(assetLabel)} - Remarks (on record):</strong> ${typeof amsFormatRemarksHtml === "function" ? amsFormatRemarksHtml(live) : amsEsc(live)}</div>`);
+        if (includeLifecycle) {
+            const life = typeof amsItemPrintLifecycleText === "function" ? amsItemPrintLifecycleText(oa) : "";
+            if (life) lines.push(`<div><strong>${amsEsc(assetLabel)} - Exit / Return / Give:</strong> ${typeof amsFormatRemarksHtml === "function" ? amsFormatRemarksHtml(life) : amsEsc(life)}</div>`);
+        }
     });
     if (!lines.length) lines.push(`<div class="pf-notes-empty">No remarks recorded against the asset(s) in the system.</div>`);
     return lines.join("");
@@ -91,9 +96,11 @@ function amsGenerateReport(amsId, type, extraRemarks, printScope) {
     /* Exit Report reads the permanent snapshot so it reflects the exact state
        at the moment of exit; Issue Report uses live/current data. */
     const exitRecord = isIssue ? null : getExitRecord(amsId);
-    const owned = exitRecord
-        ? exitRecord.directAssetsHeld
+    const ownedAll = exitRecord
+        ? (exitRecord.directAssetsHeld || [])
         : getEmployeeAssets(amsId);
+    const owned = isIssue ? ownedAll : ownedAll.filter(a => a.exitDisposition !== "give");
+    const givenAssets = isIssue ? [] : ownedAll.filter(a => a.exitDisposition === "give");
 
     /* Split the employee's assets into directly-held vs subordinate/team-held,
        and derive the printed "Assignment Type" from that mix. */
@@ -159,6 +166,7 @@ function amsGenerateReport(amsId, type, extraRemarks, printScope) {
             ${infoBox("Date of Exit", exitDate)}
             ${infoBox("Form Generated", today)}
             ${infoBox("Assets Returned", String(owned.length))}
+            ${givenAssets.length ? infoBox("Given to Other Employee", String(givenAssets.length)) : ""}
         </div>`;
 
     const conditionRow = () => ["Good", "Needs Repair / Service", "Damaged"].map(o => `
@@ -225,6 +233,22 @@ function amsGenerateReport(amsId, type, extraRemarks, printScope) {
             </tbody>
         </table>` : "";
 
+    const givenAssetTableHtml = givenAssets.length ? `
+        <div class="pf-section-bar pf-bar-accent">Assets Given to Other Employee</div>
+        <table class="pf-asset-table">
+            <thead>
+                <tr><th style="width:30px;">#</th><th>Asset ID</th><th>Asset Name / Type</th><th>Site</th><th>Given To</th><th>Status</th></tr>
+            </thead>
+            <tbody>
+                ${givenAssets.map((oa, i) => `
+                    <tr>
+                        <td>${i + 1}</td><td class="mono">${amsEsc(amsPrintAssetId(oa))}</td><td>${amsEsc(oa.type)}${oa.makeModel ? ` (${amsEsc(oa.makeModel)})` : ""}</td><td>${amsEsc(oa.currentSite || oa.site || "-")}</td>
+                        <td>${amsEsc(oa.givenToName || "-")}${oa.givenToEmpId ? " (" + amsEsc(oa.givenToEmpId) + ")" : ""}</td>
+                        <td>${amsEsc(oa.status || "Assigned")}</td>
+                    </tr>`).join("")}
+            </tbody>
+        </table>` : "";
+
     const transferHtml = !isIssue && exitRecord && exitRecord.subordinateAssetsTransferred && exitRecord.subordinateAssetsTransferred.length ? `
         <div class="pf-section-bar pf-bar-accent">Subordinate / Team Assets Transferred</div>
         <div class="pf-notes-box">
@@ -259,6 +283,7 @@ function amsGenerateReport(amsId, type, extraRemarks, printScope) {
 
             ${isIssue && !includeDirect ? "" : `<div class="pf-section-bar ${isIssue ? "" : "pf-bar-accent"}">${isIssue ? "Assets Issued" : "Assets Returned (Direct Assignment Only)"}</div>
             ${assetTableHtml}`}
+            ${givenAssetTableHtml}
 
             ${accessoriesHtml}
             ${subordinateHtml}
@@ -272,7 +297,7 @@ function amsGenerateReport(amsId, type, extraRemarks, printScope) {
                     ? (includeDirect && typeof amsPrintDirectHoldingsForRemarks === "function"
                         ? amsPrintDirectHoldingsForRemarks(amsId, directOwned)
                         : directOwned)
-                    : accessoryItems)}
+                    : accessoryItems, !isIssue)}
             </div>
 
             <div class="pf-section-bar pf-bar-accent">Additional Remarks/Notes (IT/HR/Admin)</div>

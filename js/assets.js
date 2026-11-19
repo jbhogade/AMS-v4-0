@@ -1170,7 +1170,7 @@ function amsSubmitReplaceForm(e) {
     newAsset.replacesReason = replacesReason;
     newAsset.replacesNote = replacesNote;
     newAsset.replacesPurchaseDate = old.purchaseDate || "";
-    amsAppendItemRemark(newAsset, amsReplacementRemark(old, issueDate, replacesReason, replacesNote));
+    amsAppendLifecycleNote(newAsset, amsReplacementRemark(old, issueDate, replacesReason, replacesNote), "replace");
     newAsset.id = amsComputeFullId(newAsset);
 
     newAsset.assignedDate = issueDate;
@@ -1277,12 +1277,11 @@ function amsGenerateAssetFormNo() {
     return `AIF-${String(seq).padStart(6, "0")}`;
 }
 
-/* Builds the "Remarks / Notes" section body: each item's stored Remarks plus
-   replacement reason/date/old ID when this item replaced another. */
+/* Builds the "Remarks / Notes" section body: live remarks only. */
 function amsBuildRemarksLinesHtml(assetsList) {
     const lines = [];
     assetsList.forEach(oa => {
-        const text = typeof amsItemPrintRemarksText === "function" ? amsItemPrintRemarksText(oa) : (oa.remarks || "");
+        const text = typeof amsItemPrintRemarksText === "function" ? amsItemPrintRemarksText(oa) : (typeof amsLiveRemarksOnly === "function" ? amsLiveRemarksOnly(oa.remarks) : (oa.remarks || ""));
         if (text) lines.push(`<div><strong>${amsEsc(typeof amsPrintRemarkId === "function" ? amsPrintRemarkId(oa) : amsPrintAssetId(oa))} - Remarks (on record):</strong> ${typeof amsFormatRemarksHtml === "function" ? amsFormatRemarksHtml(text) : amsEsc(text)}</div>`);
     });
     if (!lines.length) lines.push(`<div class="pf-notes-empty">No remarks recorded against the asset(s) in the system.</div>`);
