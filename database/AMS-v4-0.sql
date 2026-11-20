@@ -1443,6 +1443,88 @@ IF NOT EXISTS (SELECT 1 FROM dbo.ams_vendor_categories WHERE record_key = N'All'
     VALUES (N'All', N'All', N'General supplier - multiple categories', 1, N'{"name":"All","description":"General supplier - multiple categories","active":true}');
 GO
 
+/* ---- Departments (Employee Master + AMS Employee ID shortforms) ------------- */
+IF NOT EXISTS (SELECT 1 FROM dbo.ams_departments WHERE record_key = N'Production')
+    INSERT INTO dbo.ams_departments (record_key, name, shortform, active, data_json)
+    VALUES (N'Production', N'Production', N'PRD', 1, N'{"name":"Production","shortform":"PRD","active":true}');
+GO
+IF NOT EXISTS (SELECT 1 FROM dbo.ams_departments WHERE record_key = N'IT')
+    INSERT INTO dbo.ams_departments (record_key, name, shortform, active, data_json)
+    VALUES (N'IT', N'IT', N'IT', 1, N'{"name":"IT","shortform":"IT","active":true}');
+GO
+IF NOT EXISTS (SELECT 1 FROM dbo.ams_departments WHERE record_key = N'Facilities')
+    INSERT INTO dbo.ams_departments (record_key, name, shortform, active, data_json)
+    VALUES (N'Facilities', N'Facilities', N'FAC', 1, N'{"name":"Facilities","shortform":"FAC","active":true}');
+GO
+IF NOT EXISTS (SELECT 1 FROM dbo.ams_departments WHERE record_key = N'Admin')
+    INSERT INTO dbo.ams_departments (record_key, name, shortform, active, data_json)
+    VALUES (N'Admin', N'Admin', N'ADM', 1, N'{"name":"Admin","shortform":"ADM","active":true}');
+GO
+IF NOT EXISTS (SELECT 1 FROM dbo.ams_departments WHERE record_key = N'Logistics')
+    INSERT INTO dbo.ams_departments (record_key, name, shortform, active, data_json)
+    VALUES (N'Logistics', N'Logistics', N'LOG', 1, N'{"name":"Logistics","shortform":"LOG","active":true}');
+GO
+IF NOT EXISTS (SELECT 1 FROM dbo.ams_departments WHERE record_key = N'Finance')
+    INSERT INTO dbo.ams_departments (record_key, name, shortform, active, data_json)
+    VALUES (N'Finance', N'Finance', N'FIN', 1, N'{"name":"Finance","shortform":"FIN","active":true}');
+GO
+IF NOT EXISTS (SELECT 1 FROM dbo.ams_departments WHERE record_key = N'HR')
+    INSERT INTO dbo.ams_departments (record_key, name, shortform, active, data_json)
+    VALUES (N'HR', N'HR', N'HR', 1, N'{"name":"HR","shortform":"HR","active":true}');
+GO
+
+/* ---- Designations (Employee Master suggestions) ----------------------------- */
+IF NOT EXISTS (SELECT 1 FROM dbo.ams_designations WHERE record_key = N'Managing Director')
+    INSERT INTO dbo.ams_designations (record_key, name, active, data_json)
+    VALUES (N'Managing Director', N'Managing Director', 1, N'{"name":"Managing Director","active":true}');
+GO
+IF NOT EXISTS (SELECT 1 FROM dbo.ams_designations WHERE record_key = N'General Manager')
+    INSERT INTO dbo.ams_designations (record_key, name, active, data_json)
+    VALUES (N'General Manager', N'General Manager', 1, N'{"name":"General Manager","active":true}');
+GO
+IF NOT EXISTS (SELECT 1 FROM dbo.ams_designations WHERE record_key = N'Department Manager')
+    INSERT INTO dbo.ams_designations (record_key, name, active, data_json)
+    VALUES (N'Department Manager', N'Department Manager', 1, N'{"name":"Department Manager","active":true}');
+GO
+IF NOT EXISTS (SELECT 1 FROM dbo.ams_designations WHERE record_key = N'Supervisor')
+    INSERT INTO dbo.ams_designations (record_key, name, active, data_json)
+    VALUES (N'Supervisor', N'Supervisor', 1, N'{"name":"Supervisor","active":true}');
+GO
+IF NOT EXISTS (SELECT 1 FROM dbo.ams_designations WHERE record_key = N'Engineer')
+    INSERT INTO dbo.ams_designations (record_key, name, active, data_json)
+    VALUES (N'Engineer', N'Engineer', 1, N'{"name":"Engineer","active":true}');
+GO
+IF NOT EXISTS (SELECT 1 FROM dbo.ams_designations WHERE record_key = N'Technician')
+    INSERT INTO dbo.ams_designations (record_key, name, active, data_json)
+    VALUES (N'Technician', N'Technician', 1, N'{"name":"Technician","active":true}');
+GO
+IF NOT EXISTS (SELECT 1 FROM dbo.ams_designations WHERE record_key = N'Support Engineer')
+    INSERT INTO dbo.ams_designations (record_key, name, active, data_json)
+    VALUES (N'Support Engineer', N'Support Engineer', 1, N'{"name":"Support Engineer","active":true}');
+GO
+IF NOT EXISTS (SELECT 1 FROM dbo.ams_designations WHERE record_key = N'Accountant')
+    INSERT INTO dbo.ams_designations (record_key, name, active, data_json)
+    VALUES (N'Accountant', N'Accountant', 1, N'{"name":"Accountant","active":true}');
+GO
+IF NOT EXISTS (SELECT 1 FROM dbo.ams_designations WHERE record_key = N'HR Executive')
+    INSERT INTO dbo.ams_designations (record_key, name, active, data_json)
+    VALUES (N'HR Executive', N'HR Executive', 1, N'{"name":"HR Executive","active":true}');
+GO
+IF NOT EXISTS (SELECT 1 FROM dbo.ams_designations WHERE record_key = N'Machine Operator')
+    INSERT INTO dbo.ams_designations (record_key, name, active, data_json)
+    VALUES (N'Machine Operator', N'Machine Operator', 1, N'{"name":"Machine Operator","active":true}');
+GO
+IF NOT EXISTS (SELECT 1 FROM dbo.ams_designations WHERE record_key = N'Security Guard')
+    INSERT INTO dbo.ams_designations (record_key, name, active, data_json)
+    VALUES (N'Security Guard', N'Security Guard', 1, N'{"name":"Security Guard","active":true}');
+GO
+
+/* ---- Portal preferences (Settings: name, font, page size, toasts) ----------- */
+IF NOT EXISTS (SELECT 1 FROM dbo.ams_documents WHERE record_key = N'portalPrefs')
+    INSERT INTO dbo.ams_documents (record_key, data_json)
+    VALUES (N'portalPrefs', N'{"portalName":"Asset Manager","fontSize":"md","pageSize":20,"toastEnabled":true}');
+GO
+
 /* ---- Print Terms ------------------------------------------------------------ */
 IF NOT EXISTS (SELECT 1 FROM dbo.ams_print_terms WHERE record_key = N'PT-001')
     INSERT INTO dbo.ams_print_terms (record_key, term_id, rule_text, used_on, sort_order, active, data_json)

@@ -426,7 +426,7 @@ function simHistoryEventType(action) {
     if (action === "Returned") return { label: "Return", cls: "badge-grey" };
     if (action === "Blocked") return { label: "Block", cls: "badge-red" };
     if (action === "Retired") return { label: "Retire", cls: "badge-red" };
-    if (action === "Added to Inventory") return { label: "Added", cls: "badge-green" };
+    if (action === "Added to Inventory" || action.indexOf("Added to Inventory (Import") === 0) return { label: "New Entry", cls: "badge-green" };
     return { label: "Other", cls: "badge-grey" };
 }
 
@@ -675,15 +675,9 @@ let SIM_QUICKADD_EMP_TARGET = null;
 
 function amsSimOpenAddEmployeeModal(targetSelectId) {
     SIM_QUICKADD_EMP_TARGET = targetSelectId;
-    const deptUnion = (typeof DEPARTMENTS !== "undefined" ? DEPARTMENTS : []).map(d => ({ name: d.name, short: d.short }));
-    (typeof AMS_DUMMY_DEPARTMENTS !== "undefined" ? AMS_DUMMY_DEPARTMENTS : []).forEach(d => {
-        if (!deptUnion.some(x => x.name.toLowerCase() === d.name.toLowerCase())) deptUnion.push({ name: d.name, short: d.shortform });
-    });
+    const deptUnion = (typeof AMS_DUMMY_DEPARTMENTS !== "undefined" ? AMS_DUMMY_DEPARTMENTS : []).map(d => ({ name: d.name, short: d.shortform || d.short }));
     deptUnion.sort((a, b) => amsSortAlpha(a.name, b.name));
-    const desigUnion = (typeof DESIGNATIONS !== "undefined" ? DESIGNATIONS.slice() : []);
-    (typeof AMS_DESIGNATION_OPTIONS !== "undefined" ? AMS_DESIGNATION_OPTIONS : []).forEach(d => {
-        if (!desigUnion.some(x => String(x).toLowerCase() === d.name.toLowerCase())) desigUnion.push(d.name);
-    });
+    const desigUnion = (typeof AMS_DESIGNATION_OPTIONS !== "undefined" ? AMS_DESIGNATION_OPTIONS : []).map(d => d.name).filter(Boolean);
     desigUnion.sort(amsSortAlpha);
     document.getElementById("qaEmpDept").innerHTML = deptUnion.map(d => `<option value="${amsEsc(d.name)}">${amsEsc(d.name)}</option>`).join("");
     document.getElementById("qaEmpDesigList").innerHTML = desigUnion.map(d => `<option value="${amsEsc(d)}"></option>`).join("");

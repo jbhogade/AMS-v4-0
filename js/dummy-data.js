@@ -141,6 +141,7 @@ function amsApiDelete(path) { return amsApiFetch(path, { method: "DELETE" }); }
 /* ---- runtime copies of the DB documents (loaded from the API at startup) ---- */
 let AMS_ROLE_ACCESS_DEFAULTS = {};
 let AMS_REPORT_HEADER_PREFS  = {};
+let AMS_PORTAL_PREFS         = {};
 
 /* ---- collection registry: DB key -> the in-memory global that holds it ------ */
 const AMS_COLLECTIONS = {
@@ -178,6 +179,7 @@ const AMS_DOC_COLLECTIONS = {
     company:     () => AMS_DUMMY_COMPANY_DETAILS,
     roleAccess:  () => AMS_ROLE_ACCESS_DEFAULTS,
     reportPrefs: () => AMS_REPORT_HEADER_PREFS,
+    portalPrefs: () => AMS_PORTAL_PREFS,
 };
 
 let AMS_DB_LOADING = null;   /* idempotent load promise */
@@ -355,6 +357,7 @@ async function amsDbLoadAllAttempt() {
     }
     if (typeof amsMigrateCompanyFromLocal === "function") await amsMigrateCompanyFromLocal();
     if (typeof amsMigrateReportPrefsFromLocal === "function") await amsMigrateReportPrefsFromLocal();
+    if (typeof amsMigratePortalPrefsFromLocal === "function") await amsMigratePortalPrefsFromLocal();
     await amsYieldToBrowser();
     if (typeof amsNormalizeEmployeeExitStatus === "function") {
         try { amsNormalizeEmployeeExitStatus(); } catch (e) { /* ignore */ }
@@ -1496,50 +1499,33 @@ const AMS_DESIGNATION_OPTIONS = [];
 
 
 /* =============================================================================
-   5a-2) UNIFIED DEPARTMENT / DESIGNATION LOOKUP HELPERS
+   5a-2) DEPARTMENT / DESIGNATION LOOKUP HELPERS
    -----------------------------------------------------------------------------
-   Departments & designations live in TWO parallel sources:
-     - DEPARTMENTS / DESIGNATIONS  : hardcoded seeds used by the Employee form
-                                     dropdowns, AMS Employee ID shortforms and
-                                     the bulk-import reference check
-     - AMS_DUMMY_DEPARTMENTS / AMS_DESIGNATION_OPTIONS : DB-backed arrays used
-                                     by the Department/Designation Masters and
-                                     the asset/report dropdowns
-   These helpers keep BOTH in sync and persist to SQL Server, so a department
-   or designation created ANYWHERE (Employee form, bulk import, Import Report
-   quick-add) shows up in the Masters and survives navigation.
+   SQL is the source of truth (ams_departments / ams_designations). Runtime
+   arrays AMS_DUMMY_DEPARTMENTS and AMS_DESIGNATION_OPTIONS are filled from
+   /api/collections. Seeded on run/rerun by AMS-v4-0.sql and EnsureSeedLookupsAsync.
    ===========================================================================*/
 
-/* Is this department known in EITHER master source? */
 function amsDeptKnown(name) {
     const n = (name || "").trim().toLowerCase();
     if (!n) return false;
-    if (DEPARTMENTS.some(d => d.name.toLowerCase() === n)) return true;
     return AMS_DUMMY_DEPARTMENTS.some(d => d.name.toLowerCase() === n);
 }
 
-/* Is this designation known in EITHER master source? (blank is always ok) */
 function amsDesigKnown(name) {
     const n = (name || "").trim().toLowerCase();
     if (!n) return true;
-    if (DESIGNATIONS.some(d => d.toLowerCase() === n)) return true;
     return AMS_DESIGNATION_OPTIONS.some(d => (d.name || "").toLowerCase() === n);
 }
 
-/* Ensures a department exists in BOTH masters (+ persists to SQL). Returns the
-   shortform in use (derived from the masters, or the caller's value, or a best
-   guess from the name). No-op if the department is already present. */
 function amsEnsureDepartment(name, shortform) {
     const trimmedName = (name || "").trim();
     if (!trimmedName) return "";
     const trimmedShort = (shortform || "").trim().toUpperCase();
     const dbRec = AMS_DUMMY_DEPARTMENTS.find(d => d.name.toLowerCase() === trimmedName.toLowerCase());
-    const seedRec = DEPARTMENTS.find(d => d.name.toLowerCase() === trimmedName.toLowerCase());
     const short = trimmedShort
-        || (dbRec && dbRec.shortform)
-        || (seedRec && seedRec.short)
+        || (dbRec && (dbRec.shortform || dbRec.short))
         || (trimmedName.replace(/[^a-zA-Z]/g, "").slice(0, 3) || "NEW").toUpperCase();
-    if (!seedRec) DEPARTMENTS.push({ name: trimmedName, short });
     if (!dbRec) {
         AMS_DUMMY_DEPARTMENTS.push({ name: trimmedName, shortform: short, active: true });
         amsDbSaveAsync("departments");
@@ -1547,14 +1533,9 @@ function amsEnsureDepartment(name, shortform) {
     return short;
 }
 
-/* Ensures a designation exists in BOTH masters (+ persists to SQL). Returns
-   true if it was newly added to the DB-backed master. */
 function amsEnsureDesignation(name) {
     const trimmedName = (name || "").trim();
     if (!trimmedName) return false;
-    if (!DESIGNATIONS.some(d => d.toLowerCase() === trimmedName.toLowerCase())) {
-        DESIGNATIONS.push(trimmedName);
-    }
     if (AMS_DESIGNATION_OPTIONS.some(d => (d.name || "").toLowerCase() === trimmedName.toLowerCase())) return false;
     AMS_DESIGNATION_OPTIONS.push({ name: trimmedName, active: true });
     amsDbSaveAsync("designations");
@@ -1620,17 +1601,7 @@ function amsSiteShort(siteName) {
 
 /* shortform segment for a Department (e.g. "IT" -> "IT") */
 function amsDeptShort(deptName) {
-    if (!AMS_DEPT_SHORT_MAP) {
-        AMS_DEPT_SHORT_MAP = amsNameShortMap(AMS_DUMMY_DEPARTMENTS);
-        (typeof DEPARTMENTS !== "undefined" ? DEPARTMENTS : []).forEach(d => {
-            if (!d || !d.name) return;
-            const short = d.shortform || d.short || "";
-            if (!short) return;
-            if (!AMS_DEPT_SHORT_MAP[d.name]) AMS_DEPT_SHORT_MAP[d.name] = short;
-            const lower = String(d.name).trim().toLowerCase();
-            if (!AMS_DEPT_SHORT_MAP[lower]) AMS_DEPT_SHORT_MAP[lower] = short;
-        });
-    }
+    if (!AMS_DEPT_SHORT_MAP) AMS_DEPT_SHORT_MAP = amsNameShortMap(AMS_DUMMY_DEPARTMENTS);
     return amsLookupShort(AMS_DEPT_SHORT_MAP, deptName);
 }
 
@@ -1748,24 +1719,11 @@ const DUMMY_MOBILES = [];
    ===========================================================================*/
 
 /* Consumable Category Master - DB-backed (consumableCategories collection).
-   Previously a hardcoded string list; now records with a description, managed
-   from System Admin > Consumable Category Master. */
-const AMS_DUMMY_CONSUMABLE_CATEGORIES = [
-    { name: "Printer Supplies", description: "", active: true },
-    { name: "Cables",           description: "", active: true },
-    { name: "Peripherals",      description: "", active: true },
-    { name: "Stationery",       description: "", active: true },
-    { name: "IT Accessories",   description: "", active: true },
-];
+   Seeded in SQL (AMS-v4-0.sql / EnsureSeedLookupsAsync); loaded via /api/collections. */
+const AMS_DUMMY_CONSUMABLE_CATEGORIES = [];
 
 /* Unit of Measure Master - DB-backed (consumableUnits collection). */
-const AMS_DUMMY_CONSUMABLE_UNITS = [
-    { name: "Nos",   description: "Number of pieces", active: true },
-    { name: "Box",   description: "", active: true },
-    { name: "Pack",  description: "", active: true },
-    { name: "Ream",  description: "", active: true },
-    { name: "Meter", description: "", active: true },
-];
+const AMS_DUMMY_CONSUMABLE_UNITS = [];
 
 function amsGetActiveConsumableCategoryNames() {
     return amsSortedStrings(AMS_DUMMY_CONSUMABLE_CATEGORIES.filter(c => c.active).map(c => c.name));
@@ -1802,13 +1760,8 @@ const AMS_DUMMY_CONSUMABLE_LOG = [];
    ===========================================================================*/
 
 /* Spare Part Category Master - DB-backed (sparePartCategories collection).
-   Previously a hardcoded string list; now records managed from System Admin >
-   Spare Part Category Master. */
-const AMS_DUMMY_SPAREPART_CATEGORIES = [
-    { name: "Internal Component", description: "", active: true },
-    { name: "Toner / Ink",        description: "", active: true },
-    { name: "Mechanical Part",    description: "", active: true },
-];
+   Seeded in SQL; loaded via /api/collections. */
+const AMS_DUMMY_SPAREPART_CATEGORIES = [];
 
 function amsGetActiveSparePartCategoryNames() {
     return amsSortedStrings(AMS_DUMMY_SPAREPART_CATEGORIES.filter(c => c.active).map(c => c.name));
@@ -1839,27 +1792,12 @@ const AMS_DUMMY_SPAREPART_LOG = [];
 
 const AMS_SIM_STATUS_OPTIONS = ["In Store", "Issued", "Blocked", "Retired"];
 
-/* SIM Operator Master - DB-backed (simOperators collection). Previously a
-   hardcoded string list (AMS_SIM_OPERATOR_OPTIONS) that could not be extended;
-   now each operator is a record with details and can be added / edited /
-   deactivated from the SIM Operator Master (System Admin > SIM Operator Master).
-   The in-memory defaults below match the original hardcoded list so the form
-   works even before the API is reachable; the DB is the source of truth. */
-const AMS_DUMMY_SIM_OPERATORS = [
-    { name: "Jio",           helpline: "198", website: "https://www.jio.com",  active: true },
-    { name: "Airtel",        helpline: "198", website: "https://www.airtel.in", active: true },
-    { name: "Vodafone Idea", helpline: "199", website: "https://www.myvi.in",  active: true },
-    { name: "BSNL",          helpline: "1503", website: "https://www.bsnl.co.in", active: true },
-    { name: "MTNL",          helpline: "1503", website: "https://www.mtnl.co.in", active: true },
-];
+/* SIM Operator Master - DB-backed (simOperators collection). Seeded in SQL. */
+const AMS_DUMMY_SIM_OPERATORS = [];
 
 /* SIM Plan Master - DB-backed (simPlans collection). Feeds the Plan datalist on
-   the SIM Card form. */
-const AMS_DUMMY_SIM_PLANS = [
-    { name: "Prepaid",       planType: "Prepaid",  description: "", active: true },
-    { name: "Postpaid",      planType: "Postpaid", description: "", active: true },
-    { name: "Corporate Plan",planType: "Corporate",description: "", active: true },
-];
+   the SIM Card form. Seeded in SQL. */
+const AMS_DUMMY_SIM_PLANS = [];
 
 const AMS_DUMMY_SIM_CARDS = [];
 
@@ -2166,15 +2104,8 @@ function amsUnlinkMobileSim(mobile, returnSim) {
 let AMS_VENDOR_SEQ = 12;
 
 /* Vendor Category Master - DB-backed (vendorCategories collection). Feeds the
-   "Supplies" multi-select on the Vendor Master form. Previously a hardcoded
-   string list; now managed from System Admin > Vendor Category Master. */
-const AMS_DUMMY_VENDOR_CATEGORIES = [
-    { name: "Assets",       description: "Supplies assets / capital equipment", active: true },
-    { name: "Consumables",  description: "Supplies consumable items",           active: true },
-    { name: "Spare Parts",  description: "Supplies spare / repair parts",       active: true },
-    { name: "Services",     description: "Provides services (AMC, repair, etc.)", active: true },
-    { name: "All",          description: "General supplier - multiple categories", active: true },
-];
+   "Supplies" multi-select on the Vendor Master form. Seeded in SQL. */
+const AMS_DUMMY_VENDOR_CATEGORIES = [];
 
 function amsGetActiveVendorCategoryNames() {
     return amsSortedStrings(AMS_DUMMY_VENDOR_CATEGORIES.filter(c => c.active).map(c => c.name));
@@ -2481,25 +2412,9 @@ function amsWireVendorQuickAdds() {
 
 /* =============================================================================
    9) EMPLOYEE MASTER  (people, departments, hierarchy & assignments)
+   Departments / designations are SQL-backed (AMS_DUMMY_DEPARTMENTS /
+   AMS_DESIGNATION_OPTIONS). Seeded on run/rerun.
    ===========================================================================*/
-
-/* ---- Departments and their short-forms (used inside the AMS Employee ID) --- */
-const DEPARTMENTS = [
-    { name: "Production", short: "PRD" },
-    { name: "IT",         short: "IT"  },
-    { name: "Facilities", short: "FAC" },
-    { name: "Admin",      short: "ADM" },
-    { name: "Logistics",  short: "LOG" },
-    { name: "Finance",    short: "FIN" },
-    { name: "HR",         short: "HR"  }
-];
-
-/* ---- Suggested designations (shown in the Add/Edit form as suggestions) ---- */
-const DESIGNATIONS = [
-    "Managing Director", "General Manager", "Department Manager",
-    "Supervisor", "Engineer", "Technician", "Support Engineer",
-    "Accountant", "HR Executive", "Machine Operator", "Security Guard"
-];
 
 /* Hidden AMS IDs (employee AMS ID, AMS Asset ID) are knowledge-only for
    Supreme Root. Other roles always see company / display IDs. */
@@ -2538,8 +2453,10 @@ const DUMMY_EMPLOYEES = [];
 
 /* Returns the short-form for a department name (falls back to GEN) */
 function getDeptShort(departmentName) {
-    const dept = DEPARTMENTS.find(d => d.name === departmentName);
-    return dept ? dept.short : "GEN";
+    const fromMap = amsDeptShort(departmentName);
+    if (fromMap) return fromMap;
+    const dept = AMS_DUMMY_DEPARTMENTS.find(d => d.name === departmentName);
+    return dept ? (dept.shortform || dept.short || "GEN") : "GEN";
 }
 
 /* Returns the employee's COMPANY-ISSUED (display) ID - e.g. "00339" - never the
@@ -2928,24 +2845,24 @@ function exitEmployee(amsId, exitDate, remarks, facilitiesDisabled, exitReason, 
     DUMMY_ASSETS.forEach(a => {
         if (a.assignedTo !== amsId) return;
         const disp = amsExitDispositionOf(holdingDispositions, "asset", a.id, amsId);
-        if (disp.action === "give") amsMarkHoldingGivenOnExit(a, emp, returnDate, disp.toEmp, emp.exitReason, "asset");
-        else amsMarkHoldingReturnedOnExit(a, emp, returnDate, returnNote, "asset");
+        if (disp.action === "give") amsMarkHoldingGivenOnExit(a, emp, returnDate, disp.toEmp, emp.exitReason, "asset", disp.accessories);
+        else amsMarkHoldingReturnedOnExit(a, emp, returnDate, returnNote, "asset", disp.accessories);
     });
     DUMMY_MOBILES.forEach(a => {
         if (a.assignedTo !== amsId) return;
         const disp = amsExitDispositionOf(holdingDispositions, "mobile", a.id, amsId);
         if (disp.action === "give") {
-            amsMarkHoldingGivenOnExit(a, emp, returnDate, disp.toEmp, emp.exitReason, "mobile");
+            amsMarkHoldingGivenOnExit(a, emp, returnDate, disp.toEmp, emp.exitReason, "mobile", disp.accessories);
         } else {
             if (typeof amsUnlinkMobileSim === "function") amsUnlinkMobileSim(a, false);
-            amsMarkHoldingReturnedOnExit(a, emp, returnDate, returnNote, "mobile");
+            amsMarkHoldingReturnedOnExit(a, emp, returnDate, returnNote, "mobile", disp.accessories);
         }
     });
     AMS_DUMMY_SIM_CARDS.forEach(s => {
         if (s.assignedTo !== amsId) return;
         const disp = amsExitDispositionOf(holdingDispositions, "sim", s.simId, amsId);
         if (disp.action === "give") {
-            amsMarkHoldingGivenOnExit(s, emp, returnDate, disp.toEmp, emp.exitReason, "sim");
+            amsMarkHoldingGivenOnExit(s, emp, returnDate, disp.toEmp, emp.exitReason, "sim", disp.accessories);
         } else {
             if (s.linkedMobileId && !s.personalMobile) {
                 const m = amsFindMobileByRef(s.linkedMobileId);
@@ -2953,7 +2870,7 @@ function exitEmployee(amsId, exitDate, remarks, facilitiesDisabled, exitReason, 
             }
             s.linkedMobileId = null;
             s.personalMobile = false;
-            amsMarkHoldingReturnedOnExit(s, emp, returnDate, returnNote, "sim");
+            amsMarkHoldingReturnedOnExit(s, emp, returnDate, returnNote, "sim", disp.accessories);
         }
     });
     amsDbSaveAsync("employees");
@@ -3015,9 +2932,18 @@ function amsHoldingHasExitReturnNote(item) {
         h && String(h.remarks || h.note || "").indexOf("User has exited") !== -1);
 }
 
-function amsMarkHoldingReturnedOnExit(item, emp, returnDate, note, kind) {
+function amsExitAccessoriesNote(item, accessories) {
+    const list = Array.isArray(accessories)
+        ? accessories
+        : (Array.isArray(item && item.accessories) ? item.accessories : []);
+    if (item && Array.isArray(accessories)) item.accessories = accessories.slice();
+    return amsAccessoriesText(list);
+}
+
+function amsMarkHoldingReturnedOnExit(item, emp, returnDate, note, kind, accessories) {
     if (!item || !emp || item.assignedTo !== emp.amsId) return false;
     const alreadyNoted = amsHoldingHasExitReturnNote(item);
+    const accNote = amsExitAccessoriesNote(item, accessories);
     if (!alreadyNoted) {
         const displayId = kind === "sim"
             ? (item.simId || "")
@@ -3030,6 +2956,7 @@ function amsMarkHoldingReturnedOnExit(item, emp, returnDate, note, kind) {
             empDept: emp ? (emp.department || emp.dept || "") : "",
             assetIdFull: displayId,
             statusLabel: "In Store",
+            accessories: accNote,
             remarks: note,
             note: note,
         });
@@ -3058,9 +2985,10 @@ function amsMarkHoldingReturnedOnExit(item, emp, returnDate, note, kind) {
     return true;
 }
 
-function amsMarkHoldingGivenOnExit(item, emp, exitDate, toEmp, exitReason, kind) {
+function amsMarkHoldingGivenOnExit(item, emp, exitDate, toEmp, exitReason, kind, accessories) {
     if (!item || !emp || !toEmp || item.assignedTo !== emp.amsId) return false;
     const note = amsExitGiveRemark(emp, exitDate, exitReason, toEmp);
+    const accNote = amsExitAccessoriesNote(item, accessories);
     const displayId = kind === "sim"
         ? (item.simId || "")
         : (typeof amsBaseDisplayId === "function" ? amsBaseDisplayId(item) : (item.id || ""));
@@ -3073,6 +3001,7 @@ function amsMarkHoldingGivenOnExit(item, emp, exitDate, toEmp, exitReason, kind)
         empDept: toEmp.department || toEmp.dept || "",
         assetIdFull: displayId,
         statusLabel: kind === "sim" ? "Issued" : "Assigned",
+        accessories: accNote,
         remarks: note,
         note: note,
     });
@@ -4193,8 +4122,8 @@ async function amsMigrateCompanyFromLocal() {
 }
 
 /* =============================================================================
-   11.5) PORTAL PREFERENCES  (Settings page - localStorage-backed so the choices
-         apply on every page, like theme/company/notifications)
+   11.5) PORTAL PREFERENCES  (Settings page - SQL document portalPrefs;
+         localStorage is a one-time migrate + per-browser cache until SQL loads)
    ===========================================================================*/
 
 const AMS_PORTAL_NAME_STORAGE_KEY = "ams_portal_name";
@@ -4203,47 +4132,123 @@ const AMS_PAGE_SIZE_STORAGE_KEY   = "ams_page_size";
 const AMS_TOAST_STORAGE_KEY       = "ams_toast_enabled";
 
 const AMS_FONT_SIZE_OPTIONS = ["sm", "md", "lg"];   /* sm=14, md=16 (default), lg=18 */
+const AMS_PORTAL_PREFS_DEFAULTS = {
+    portalName: "Asset Manager",
+    fontSize: "md",
+    pageSize: 20,
+    toastEnabled: true,
+};
+
+function amsPersistPortalPrefs() {
+    amsDbSaveDocAsync("portalPrefs");
+}
 
 function amsGetPortalName() {
-    try { return localStorage.getItem(AMS_PORTAL_NAME_STORAGE_KEY) || "Asset Manager"; }
-    catch (e) { return "Asset Manager"; }
+    const fromDb = (AMS_PORTAL_PREFS && AMS_PORTAL_PREFS.portalName) ? String(AMS_PORTAL_PREFS.portalName).trim() : "";
+    if (fromDb) return fromDb;
+    try { return localStorage.getItem(AMS_PORTAL_NAME_STORAGE_KEY) || AMS_PORTAL_PREFS_DEFAULTS.portalName; }
+    catch (e) { return AMS_PORTAL_PREFS_DEFAULTS.portalName; }
 }
 function amsSavePortalName(name) {
-    try { localStorage.setItem(AMS_PORTAL_NAME_STORAGE_KEY, name); } catch (e) { /* storage full */ }
+    const next = (name || "").trim() || AMS_PORTAL_PREFS_DEFAULTS.portalName;
+    AMS_PORTAL_PREFS.portalName = next;
+    try { localStorage.setItem(AMS_PORTAL_NAME_STORAGE_KEY, next); } catch (e) { /* storage full */ }
+    amsPersistPortalPrefs();
 }
 
 function amsGetFontSize() {
+    const fromDb = AMS_PORTAL_PREFS && AMS_PORTAL_PREFS.fontSize;
+    if (AMS_FONT_SIZE_OPTIONS.indexOf(fromDb) > -1) return fromDb;
     try {
         const v = localStorage.getItem(AMS_FONT_SIZE_STORAGE_KEY);
-        return AMS_FONT_SIZE_OPTIONS.indexOf(v) > -1 ? v : "md";
-    } catch (e) { return "md"; }
+        return AMS_FONT_SIZE_OPTIONS.indexOf(v) > -1 ? v : AMS_PORTAL_PREFS_DEFAULTS.fontSize;
+    } catch (e) { return AMS_PORTAL_PREFS_DEFAULTS.fontSize; }
 }
 function amsSaveFontSize(size) {
-    try { localStorage.setItem(AMS_FONT_SIZE_STORAGE_KEY, size); } catch (e) { /* storage full */ }
+    const next = AMS_FONT_SIZE_OPTIONS.indexOf(size) > -1 ? size : AMS_PORTAL_PREFS_DEFAULTS.fontSize;
+    AMS_PORTAL_PREFS.fontSize = next;
+    try { localStorage.setItem(AMS_FONT_SIZE_STORAGE_KEY, next); } catch (e) { /* storage full */ }
+    amsPersistPortalPrefs();
 }
 
 function amsGetDefaultPageSize() {
+    const fromDb = AMS_PORTAL_PREFS && AMS_PORTAL_PREFS.pageSize;
+    const nDb = parseInt(fromDb, 10);
+    if ([10, 20, 50, 100].indexOf(nDb) > -1) return nDb;
     try {
         const n = parseInt(localStorage.getItem(AMS_PAGE_SIZE_STORAGE_KEY), 10);
-        return [10, 20, 50, 100].indexOf(n) > -1 ? n : 20;
-    } catch (e) { return 20; }
+        return [10, 20, 50, 100].indexOf(n) > -1 ? n : AMS_PORTAL_PREFS_DEFAULTS.pageSize;
+    } catch (e) { return AMS_PORTAL_PREFS_DEFAULTS.pageSize; }
 }
 function amsSaveDefaultPageSize(n) {
-    try { localStorage.setItem(AMS_PAGE_SIZE_STORAGE_KEY, String(n)); } catch (e) { /* storage full */ }
+    const next = [10, 20, 50, 100].indexOf(n) > -1 ? n : AMS_PORTAL_PREFS_DEFAULTS.pageSize;
+    AMS_PORTAL_PREFS.pageSize = next;
+    try { localStorage.setItem(AMS_PAGE_SIZE_STORAGE_KEY, String(next)); } catch (e) { /* storage full */ }
+    amsPersistPortalPrefs();
 }
 
 function amsGetToastEnabled() {
+    if (AMS_PORTAL_PREFS && typeof AMS_PORTAL_PREFS.toastEnabled === "boolean") return AMS_PORTAL_PREFS.toastEnabled;
     try { return localStorage.getItem(AMS_TOAST_STORAGE_KEY) !== "false"; }
-    catch (e) { return true; }
+    catch (e) { return AMS_PORTAL_PREFS_DEFAULTS.toastEnabled; }
 }
 function amsSaveToastEnabled(enabled) {
+    AMS_PORTAL_PREFS.toastEnabled = !!enabled;
     try { localStorage.setItem(AMS_TOAST_STORAGE_KEY, enabled ? "true" : "false"); } catch (e) { /* storage full */ }
+    amsPersistPortalPrefs();
 }
 
-/* Applies the saved non-theme preferences on every page (called from layout.js
-   initLayout). Font size uses an attribute + CSS in main.css. */
 function amsApplyPortalPrefs() {
     if (document.documentElement) document.documentElement.setAttribute("data-font-size", amsGetFontSize());
+}
+
+function amsPortalPrefsLookDefault() {
+    const p = AMS_PORTAL_PREFS || {};
+    const name = String(p.portalName || AMS_PORTAL_PREFS_DEFAULTS.portalName);
+    const font = p.fontSize || AMS_PORTAL_PREFS_DEFAULTS.fontSize;
+    const page = p.pageSize != null ? Number(p.pageSize) : AMS_PORTAL_PREFS_DEFAULTS.pageSize;
+    const toast = typeof p.toastEnabled === "boolean" ? p.toastEnabled : AMS_PORTAL_PREFS_DEFAULTS.toastEnabled;
+    return name === AMS_PORTAL_PREFS_DEFAULTS.portalName
+        && font === AMS_PORTAL_PREFS_DEFAULTS.fontSize
+        && page === AMS_PORTAL_PREFS_DEFAULTS.pageSize
+        && toast === AMS_PORTAL_PREFS_DEFAULTS.toastEnabled;
+}
+
+async function amsMigratePortalPrefsFromLocal() {
+    try {
+        const localName = localStorage.getItem(AMS_PORTAL_NAME_STORAGE_KEY);
+        const localFont = localStorage.getItem(AMS_FONT_SIZE_STORAGE_KEY);
+        const localPage = localStorage.getItem(AMS_PAGE_SIZE_STORAGE_KEY);
+        const localToast = localStorage.getItem(AMS_TOAST_STORAGE_KEY);
+        const localDiffers = (localName && localName !== AMS_PORTAL_PREFS_DEFAULTS.portalName)
+            || (AMS_FONT_SIZE_OPTIONS.indexOf(localFont) > -1 && localFont !== AMS_PORTAL_PREFS_DEFAULTS.fontSize)
+            || ([10, 50, 100].indexOf(parseInt(localPage, 10)) > -1)
+            || localToast === "false";
+        const dbEmpty = !AMS_PORTAL_PREFS || !Object.keys(AMS_PORTAL_PREFS).length;
+        if (localDiffers && (dbEmpty || amsPortalPrefsLookDefault())) {
+            if (localName) AMS_PORTAL_PREFS.portalName = localName;
+            if (AMS_FONT_SIZE_OPTIONS.indexOf(localFont) > -1) AMS_PORTAL_PREFS.fontSize = localFont;
+            const n = parseInt(localPage, 10);
+            if ([10, 20, 50, 100].indexOf(n) > -1) AMS_PORTAL_PREFS.pageSize = n;
+            if (localToast === "true" || localToast === "false") AMS_PORTAL_PREFS.toastEnabled = localToast === "true";
+            try { await amsDbSaveDoc("portalPrefs"); }
+            catch (e) { return; }
+            if (amsWritesBlocked()) return;
+        }
+        if (AMS_PORTAL_PREFS && AMS_PORTAL_PREFS.portalName) {
+            try { localStorage.setItem(AMS_PORTAL_NAME_STORAGE_KEY, AMS_PORTAL_PREFS.portalName); } catch (e) { /* ignore */ }
+        }
+        if (AMS_PORTAL_PREFS && AMS_PORTAL_PREFS.fontSize) {
+            try { localStorage.setItem(AMS_FONT_SIZE_STORAGE_KEY, AMS_PORTAL_PREFS.fontSize); } catch (e) { /* ignore */ }
+        }
+        if (AMS_PORTAL_PREFS && AMS_PORTAL_PREFS.pageSize != null) {
+            try { localStorage.setItem(AMS_PAGE_SIZE_STORAGE_KEY, String(AMS_PORTAL_PREFS.pageSize)); } catch (e) { /* ignore */ }
+        }
+        if (AMS_PORTAL_PREFS && typeof AMS_PORTAL_PREFS.toastEnabled === "boolean") {
+            try { localStorage.setItem(AMS_TOAST_STORAGE_KEY, AMS_PORTAL_PREFS.toastEnabled ? "true" : "false"); } catch (e) { /* ignore */ }
+        }
+        amsApplyPortalPrefs();
+    } catch (e) { /* ignore corrupt local cache */ }
 }
 
 /* =============================================================================
@@ -4293,8 +4298,7 @@ async function amsMigrateReportPrefsFromLocal() {
    12) EXIT RECORDS  (snapshot of employee exits, for printable Handover Forms)
    ===========================================================================*/
 
-/* PLANNED DB TABLE: "ExitRecords". Until then an in-memory array (fresh clone
-   per page load, same as every other array here). */
+/* Exit snapshots persist in dbo.ams_exit_records (exitRecords collection). */
 const AMS_DUMMY_EXIT_RECORDS = [];
 
 

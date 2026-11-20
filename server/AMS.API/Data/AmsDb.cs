@@ -1557,6 +1557,11 @@ public class AmsDb
         });
         defs.Add(new TableDef
         {
+            Key = "portalPrefs", Table = "ams_documents", IsDocument = true, FixedKey = "portalPrefs",
+            Columns = { },
+        });
+        defs.Add(new TableDef
+        {
             Key = "accessRights", Table = "ams_documents", IsDocument = true, FixedKey = "accessRights",
             Columns = { },
         });
@@ -1609,8 +1614,8 @@ public class AmsDb
     }
 
     /* =========================================================================
-       LOOKUP SEEDS  (the 6 masters that were previously hardcoded in the UI)
-       Inserted only when the target table is empty (mirrors AMS-v4-0.sql).
+       LOOKUP SEEDS  (masters previously hardcoded in the UI, plus portalPrefs)
+       Inserted only when the target table / document key is empty (mirrors AMS-v4-0.sql).
        ========================================================================= */
 
     private static readonly (string Key, string Json)[] SeedLookups =
@@ -1653,6 +1658,29 @@ public class AmsDb
             {""name"":""Services"",""description"":""Provides services (AMC, repair, etc.)"",""active"":true},
             {""name"":""All"",""description"":""General supplier - multiple categories"",""active"":true}
         ]"),
+        ("departments", @"[
+            {""name"":""Production"",""shortform"":""PRD"",""active"":true},
+            {""name"":""IT"",""shortform"":""IT"",""active"":true},
+            {""name"":""Facilities"",""shortform"":""FAC"",""active"":true},
+            {""name"":""Admin"",""shortform"":""ADM"",""active"":true},
+            {""name"":""Logistics"",""shortform"":""LOG"",""active"":true},
+            {""name"":""Finance"",""shortform"":""FIN"",""active"":true},
+            {""name"":""HR"",""shortform"":""HR"",""active"":true}
+        ]"),
+        ("designations", @"[
+            {""name"":""Managing Director"",""active"":true},
+            {""name"":""General Manager"",""active"":true},
+            {""name"":""Department Manager"",""active"":true},
+            {""name"":""Supervisor"",""active"":true},
+            {""name"":""Engineer"",""active"":true},
+            {""name"":""Technician"",""active"":true},
+            {""name"":""Support Engineer"",""active"":true},
+            {""name"":""Accountant"",""active"":true},
+            {""name"":""HR Executive"",""active"":true},
+            {""name"":""Machine Operator"",""active"":true},
+            {""name"":""Security Guard"",""active"":true}
+        ]"),
+        ("portalPrefs", @"{""portalName"":""Asset Manager"",""fontSize"":""md"",""pageSize"":20,""toastEnabled"":true}"),
         ("printTerms", @"[
             {""termId"":""PT-001"",""text"":""The employee acknowledges receipt of the above asset(s) in the condition noted, unless otherwise stated."",""usedOn"":""Asset Issue Form"",""sortOrder"":10,""active"":true},
             {""termId"":""PT-002"",""text"":""The asset(s) remain company property and must be returned upon request, transfer, or exit."",""usedOn"":""Asset Issue Form"",""sortOrder"":20,""active"":true},
@@ -1685,8 +1713,18 @@ public class AmsDb
         {
             var def = GetTableDef(key);
             if (def is null) continue;
-            var count = (int?)await ExecuteScalarAsync(conn,
-                $"SELECT COUNT(1) FROM dbo.{def.Table}") ?? 0;
+            int count;
+            if (def.IsDocument)
+            {
+                count = (int?)await ExecuteScalarAsync(conn,
+                    $"SELECT COUNT(1) FROM dbo.{def.Table} WHERE record_key = @k",
+                    ("@k", def.FixedKey!)) ?? 0;
+            }
+            else
+            {
+                count = (int?)await ExecuteScalarAsync(conn,
+                    $"SELECT COUNT(1) FROM dbo.{def.Table}") ?? 0;
+            }
             if (count > 0) continue;
             await SaveCollectionAsync(key, json);
         }

@@ -389,6 +389,7 @@ function initLayout(currentPage) {
             amsLayoutSetDataBanner(null);
             if (typeof amsYieldToBrowser === "function") await amsYieldToBrowser();
             if (typeof amsEnsureSessionUserProfile === "function") amsEnsureSessionUserProfile();
+            if (typeof amsApplyPortalPrefs === "function") amsApplyPortalPrefs();
             amsLayoutRedirectIfDenied(currentPage);
             renderSidebar(currentPage);
             setActiveNav(currentPage);

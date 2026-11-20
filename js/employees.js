@@ -931,23 +931,13 @@ function renderEmpStats() {
     document.getElementById("stat-assigned").textContent = s.assignedAssets;
 }
 
-/* Fills the department / manager / designation dropdowns.
-   Departments & designations come from BOTH the hardcoded seeds (DEPARTMENTS /
-   DESIGNATIONS) AND the DB-backed masters (AMS_DUMMY_DEPARTMENTS /
-   AMS_DESIGNATION_OPTIONS), so lookups added in either place show up here. */
 function allDeptOptions() {
-    const out = DEPARTMENTS.map(d => ({ name: d.name, short: d.short }));
-    AMS_DUMMY_DEPARTMENTS.forEach(d => {
-        if (!out.some(x => x.name.toLowerCase() === d.name.toLowerCase())) out.push({ name: d.name, short: d.shortform });
-    });
+    const out = AMS_DUMMY_DEPARTMENTS.map(d => ({ name: d.name, short: d.shortform || d.short }));
     out.sort((a, b) => amsSortAlpha(a.name, b.name));
     return out;
 }
 function allDesigOptions() {
-    const out = DESIGNATIONS.slice();
-    AMS_DESIGNATION_OPTIONS.forEach(d => {
-        if (!out.some(x => x.toLowerCase() === d.name.toLowerCase())) out.push(d.name);
-    });
+    const out = AMS_DESIGNATION_OPTIONS.map(d => d.name).filter(Boolean);
     out.sort(amsSortAlpha);
     return out;
 }
@@ -1041,7 +1031,7 @@ function saveQuickAddDept() {
         alert("That department already exists.");
         return;
     }
-    amsEnsureDepartment(name, short); /* -> DEPARTMENTS + AMS_DUMMY_DEPARTMENTS */
+    amsEnsureDepartment(name, short);
     populateSelects();
     document.getElementById("f-dept").value = name;
     document.getElementById("qa-dept-name").value = "";
@@ -1063,7 +1053,7 @@ function saveQuickAddDesig() {
         alert("That designation already exists.");
         return;
     }
-    amsEnsureDesignation(name); /* -> DESIGNATIONS + AMS_DESIGNATION_OPTIONS */
+    amsEnsureDesignation(name);
     populateSelects();
     document.getElementById("f-desig").value = name;
     document.getElementById("qa-desig-name").value = "";
