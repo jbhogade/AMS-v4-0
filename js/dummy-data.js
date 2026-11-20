@@ -141,6 +141,7 @@ function amsApiDelete(path) { return amsApiFetch(path, { method: "DELETE" }); }
 /* ---- runtime copies of the DB documents (loaded from the API at startup) ---- */
 let AMS_ROLE_ACCESS_DEFAULTS = {};
 let AMS_REPORT_HEADER_PREFS  = {};
+let AMS_PORTAL_PREFS         = {};
 
 /* ---- collection registry: DB key -> the in-memory global that holds it ------ */
 const AMS_COLLECTIONS = {
@@ -178,6 +179,7 @@ const AMS_DOC_COLLECTIONS = {
     company:     () => AMS_DUMMY_COMPANY_DETAILS,
     roleAccess:  () => AMS_ROLE_ACCESS_DEFAULTS,
     reportPrefs: () => AMS_REPORT_HEADER_PREFS,
+    portalPrefs: () => AMS_PORTAL_PREFS,
 };
 
 let AMS_DB_LOADING = null;   /* idempotent load promise */
@@ -355,6 +357,7 @@ async function amsDbLoadAllAttempt() {
     }
     if (typeof amsMigrateCompanyFromLocal === "function") await amsMigrateCompanyFromLocal();
     if (typeof amsMigrateReportPrefsFromLocal === "function") await amsMigrateReportPrefsFromLocal();
+    if (typeof amsMigratePortalPrefsFromLocal === "function") await amsMigratePortalPrefsFromLocal();
     await amsYieldToBrowser();
     if (typeof amsNormalizeEmployeeExitStatus === "function") {
         try { amsNormalizeEmployeeExitStatus(); } catch (e) { /* ignore */ }
@@ -521,6 +524,67 @@ function amsAppendItemRemark(item, note) {
     item.remarks = existing ? `${existing} | ${note}` : note;
 }
 
+function amsIsLifecycleRemarkPart(part) {
+    const t = String(part || "").trim();
+    if (!t) return false;
+    if (t.indexOf("User has exited") !== -1) return true;
+    if (t.indexOf("Replacement for ") !== -1) return true;
+    if (t.indexOf("Returned with linked mobile") !== -1) return true;
+    if (t.indexOf("Returned with mobile swap") !== -1) return true;
+    if (t.indexOf("Given to ") !== -1 && t.indexOf("User has exited") !== -1) return true;
+    return false;
+}
+
+function amsSplitRemarkParts(text) {
+    const live = [];
+    const lifecycle = [];
+    String(text || "").split(" | ").forEach(part => {
+        const t = String(part || "").trim();
+        if (!t) return;
+        if (amsIsLifecycleRemarkPart(t)) lifecycle.push(t);
+        else live.push(t);
+    });
+    return { live: live.join(" | "), lifecycle };
+}
+
+function amsLiveRemarksOnly(text) {
+    return amsSplitRemarkParts(text).live;
+}
+
+function amsAppendLifecycleNote(item, note, kind) {
+    if (!item || !note) return;
+    const text = String(note).trim();
+    if (!text) return;
+    if (!Array.isArray(item.lifecycleNotes)) item.lifecycleNotes = [];
+    const already = item.lifecycleNotes.some(n => n && String(n.text || "") === text);
+    if (!already) {
+        item.lifecycleNotes.push({
+            date: new Date().toISOString().slice(0, 10),
+            kind: kind || "note",
+            text,
+        });
+    }
+}
+
+function amsItemLifecycleText(item) {
+    if (!item) return "";
+    const parts = [];
+    (Array.isArray(item.lifecycleNotes) ? item.lifecycleNotes : []).forEach(n => {
+        const t = n && (n.text || n.note);
+        if (t && parts.indexOf(t) === -1) parts.push(t);
+    });
+    if (item.exitNote && parts.indexOf(item.exitNote) === -1) parts.push(item.exitNote);
+    amsSplitRemarkParts(item.remarks).lifecycle.forEach(t => {
+        if (parts.indexOf(t) === -1) parts.push(t);
+    });
+    const replacement = amsItemReplacementRemarkText(item);
+    if (replacement && parts.indexOf(replacement) === -1
+        && !parts.some(p => p.indexOf("Replacement for ") !== -1)) {
+        parts.push(replacement);
+    }
+    return parts.join(" | ");
+}
+
 function amsReplacementRemark(oldItem, date, reason, extraNote) {
     const oldId = typeof amsBaseDisplayId === "function"
         ? (amsBaseDisplayId(oldItem) || "")
@@ -557,11 +621,12 @@ function amsItemReplacementRemarkText(item) {
 
 function amsItemPrintRemarksText(item) {
     if (!item) return "";
-    const existing = String(item.remarks || "").trim();
-    const replacement = amsItemReplacementRemarkText(item);
-    if (!replacement) return existing;
-    if (existing && existing.indexOf("Replacement for ") !== -1) return existing;
-    return existing ? `${existing} | ${replacement}` : replacement;
+    return amsLiveRemarksOnly(item.remarks);
+}
+
+function amsItemPrintLifecycleText(item) {
+    if (!item) return "";
+    return amsItemLifecycleText(item);
 }
 
 function amsFormatRemarksHtml(text) {
@@ -569,28 +634,39 @@ function amsFormatRemarksHtml(text) {
     return String(text).split(" | ").map(part => amsEsc(part)).join(" <strong>|</strong> ");
 }
 
+function amsStripLifecycleFromLiveRemarks(item) {
+    if (!item) return false;
+    const split = amsSplitRemarkParts(item.remarks);
+    let changed = false;
+    if (split.lifecycle.length) {
+        split.lifecycle.forEach(t => amsAppendLifecycleNote(item, t, t.indexOf("Replacement for ") !== -1 ? "replace" : (t.indexOf("User has exited") !== -1 ? "exit" : "return")));
+        const next = split.live;
+        if (String(item.remarks || "").trim() !== next) {
+            item.remarks = next;
+            changed = true;
+        }
+    }
+    if (item.replacesAssetId || item.replacesReason) {
+        const note = amsItemReplacementRemarkText(item);
+        if (note) amsAppendLifecycleNote(item, note, "replace");
+    }
+    return changed;
+}
+
 function amsBackfillReplacementRemarks() {
     const packs = [
-        typeof DUMMY_ASSETS !== "undefined" ? DUMMY_ASSETS : [],
-        typeof DUMMY_MOBILES !== "undefined" ? DUMMY_MOBILES : [],
+        { arr: typeof DUMMY_ASSETS !== "undefined" ? DUMMY_ASSETS : [], key: "assets" },
+        { arr: typeof DUMMY_MOBILES !== "undefined" ? DUMMY_MOBILES : [], key: "mobiles" },
+        { arr: typeof AMS_DUMMY_SIM_CARDS !== "undefined" ? AMS_DUMMY_SIM_CARDS : [], key: "simCards" },
     ];
-    let changedAssets = false;
-    let changedMobiles = false;
-    packs.forEach((arr, idx) => {
-        arr.forEach(item => {
-            if (!item || (!item.replacesAssetId && !item.replacesReason)) return;
-            const note = amsItemReplacementRemarkText(item);
-            if (!note) return;
-            const existing = String(item.remarks || "");
-            if (existing.indexOf("Replacement for ") !== -1) return;
-            amsAppendItemRemark(item, note);
-            if (idx === 0) changedAssets = true;
-            else changedMobiles = true;
+    packs.forEach(pack => {
+        let changed = false;
+        pack.arr.forEach(item => {
+            if (amsStripLifecycleFromLiveRemarks(item)) changed = true;
         });
+        if (changed) amsDbSaveAsync(pack.key);
     });
-    if (changedAssets) amsDbSaveAsync("assets");
-    if (changedMobiles) amsDbSaveAsync("mobiles");
-    return changedAssets || changedMobiles;
+    return false;
 }
 
 /* Normalises any imported / stored date to ISO yyyy-mm-dd for <input type="date">.
@@ -1423,50 +1499,33 @@ const AMS_DESIGNATION_OPTIONS = [];
 
 
 /* =============================================================================
-   5a-2) UNIFIED DEPARTMENT / DESIGNATION LOOKUP HELPERS
+   5a-2) DEPARTMENT / DESIGNATION LOOKUP HELPERS
    -----------------------------------------------------------------------------
-   Departments & designations live in TWO parallel sources:
-     - DEPARTMENTS / DESIGNATIONS  : hardcoded seeds used by the Employee form
-                                     dropdowns, AMS Employee ID shortforms and
-                                     the bulk-import reference check
-     - AMS_DUMMY_DEPARTMENTS / AMS_DESIGNATION_OPTIONS : DB-backed arrays used
-                                     by the Department/Designation Masters and
-                                     the asset/report dropdowns
-   These helpers keep BOTH in sync and persist to SQL Server, so a department
-   or designation created ANYWHERE (Employee form, bulk import, Import Report
-   quick-add) shows up in the Masters and survives navigation.
+   SQL is the source of truth (ams_departments / ams_designations). Runtime
+   arrays AMS_DUMMY_DEPARTMENTS and AMS_DESIGNATION_OPTIONS are filled from
+   /api/collections. Seeded on run/rerun by AMS-v4-0.sql and EnsureSeedLookupsAsync.
    ===========================================================================*/
 
-/* Is this department known in EITHER master source? */
 function amsDeptKnown(name) {
     const n = (name || "").trim().toLowerCase();
     if (!n) return false;
-    if (DEPARTMENTS.some(d => d.name.toLowerCase() === n)) return true;
     return AMS_DUMMY_DEPARTMENTS.some(d => d.name.toLowerCase() === n);
 }
 
-/* Is this designation known in EITHER master source? (blank is always ok) */
 function amsDesigKnown(name) {
     const n = (name || "").trim().toLowerCase();
     if (!n) return true;
-    if (DESIGNATIONS.some(d => d.toLowerCase() === n)) return true;
     return AMS_DESIGNATION_OPTIONS.some(d => (d.name || "").toLowerCase() === n);
 }
 
-/* Ensures a department exists in BOTH masters (+ persists to SQL). Returns the
-   shortform in use (derived from the masters, or the caller's value, or a best
-   guess from the name). No-op if the department is already present. */
 function amsEnsureDepartment(name, shortform) {
     const trimmedName = (name || "").trim();
     if (!trimmedName) return "";
     const trimmedShort = (shortform || "").trim().toUpperCase();
     const dbRec = AMS_DUMMY_DEPARTMENTS.find(d => d.name.toLowerCase() === trimmedName.toLowerCase());
-    const seedRec = DEPARTMENTS.find(d => d.name.toLowerCase() === trimmedName.toLowerCase());
     const short = trimmedShort
-        || (dbRec && dbRec.shortform)
-        || (seedRec && seedRec.short)
+        || (dbRec && (dbRec.shortform || dbRec.short))
         || (trimmedName.replace(/[^a-zA-Z]/g, "").slice(0, 3) || "NEW").toUpperCase();
-    if (!seedRec) DEPARTMENTS.push({ name: trimmedName, short });
     if (!dbRec) {
         AMS_DUMMY_DEPARTMENTS.push({ name: trimmedName, shortform: short, active: true });
         amsDbSaveAsync("departments");
@@ -1474,14 +1533,9 @@ function amsEnsureDepartment(name, shortform) {
     return short;
 }
 
-/* Ensures a designation exists in BOTH masters (+ persists to SQL). Returns
-   true if it was newly added to the DB-backed master. */
 function amsEnsureDesignation(name) {
     const trimmedName = (name || "").trim();
     if (!trimmedName) return false;
-    if (!DESIGNATIONS.some(d => d.toLowerCase() === trimmedName.toLowerCase())) {
-        DESIGNATIONS.push(trimmedName);
-    }
     if (AMS_DESIGNATION_OPTIONS.some(d => (d.name || "").toLowerCase() === trimmedName.toLowerCase())) return false;
     AMS_DESIGNATION_OPTIONS.push({ name: trimmedName, active: true });
     amsDbSaveAsync("designations");
@@ -1547,17 +1601,7 @@ function amsSiteShort(siteName) {
 
 /* shortform segment for a Department (e.g. "IT" -> "IT") */
 function amsDeptShort(deptName) {
-    if (!AMS_DEPT_SHORT_MAP) {
-        AMS_DEPT_SHORT_MAP = amsNameShortMap(AMS_DUMMY_DEPARTMENTS);
-        (typeof DEPARTMENTS !== "undefined" ? DEPARTMENTS : []).forEach(d => {
-            if (!d || !d.name) return;
-            const short = d.shortform || d.short || "";
-            if (!short) return;
-            if (!AMS_DEPT_SHORT_MAP[d.name]) AMS_DEPT_SHORT_MAP[d.name] = short;
-            const lower = String(d.name).trim().toLowerCase();
-            if (!AMS_DEPT_SHORT_MAP[lower]) AMS_DEPT_SHORT_MAP[lower] = short;
-        });
-    }
+    if (!AMS_DEPT_SHORT_MAP) AMS_DEPT_SHORT_MAP = amsNameShortMap(AMS_DUMMY_DEPARTMENTS);
     return amsLookupShort(AMS_DEPT_SHORT_MAP, deptName);
 }
 
@@ -1675,24 +1719,11 @@ const DUMMY_MOBILES = [];
    ===========================================================================*/
 
 /* Consumable Category Master - DB-backed (consumableCategories collection).
-   Previously a hardcoded string list; now records with a description, managed
-   from System Admin > Consumable Category Master. */
-const AMS_DUMMY_CONSUMABLE_CATEGORIES = [
-    { name: "Printer Supplies", description: "", active: true },
-    { name: "Cables",           description: "", active: true },
-    { name: "Peripherals",      description: "", active: true },
-    { name: "Stationery",       description: "", active: true },
-    { name: "IT Accessories",   description: "", active: true },
-];
+   Seeded in SQL (AMS-v4-0.sql / EnsureSeedLookupsAsync); loaded via /api/collections. */
+const AMS_DUMMY_CONSUMABLE_CATEGORIES = [];
 
 /* Unit of Measure Master - DB-backed (consumableUnits collection). */
-const AMS_DUMMY_CONSUMABLE_UNITS = [
-    { name: "Nos",   description: "Number of pieces", active: true },
-    { name: "Box",   description: "", active: true },
-    { name: "Pack",  description: "", active: true },
-    { name: "Ream",  description: "", active: true },
-    { name: "Meter", description: "", active: true },
-];
+const AMS_DUMMY_CONSUMABLE_UNITS = [];
 
 function amsGetActiveConsumableCategoryNames() {
     return amsSortedStrings(AMS_DUMMY_CONSUMABLE_CATEGORIES.filter(c => c.active).map(c => c.name));
@@ -1729,13 +1760,8 @@ const AMS_DUMMY_CONSUMABLE_LOG = [];
    ===========================================================================*/
 
 /* Spare Part Category Master - DB-backed (sparePartCategories collection).
-   Previously a hardcoded string list; now records managed from System Admin >
-   Spare Part Category Master. */
-const AMS_DUMMY_SPAREPART_CATEGORIES = [
-    { name: "Internal Component", description: "", active: true },
-    { name: "Toner / Ink",        description: "", active: true },
-    { name: "Mechanical Part",    description: "", active: true },
-];
+   Seeded in SQL; loaded via /api/collections. */
+const AMS_DUMMY_SPAREPART_CATEGORIES = [];
 
 function amsGetActiveSparePartCategoryNames() {
     return amsSortedStrings(AMS_DUMMY_SPAREPART_CATEGORIES.filter(c => c.active).map(c => c.name));
@@ -1766,27 +1792,12 @@ const AMS_DUMMY_SPAREPART_LOG = [];
 
 const AMS_SIM_STATUS_OPTIONS = ["In Store", "Issued", "Blocked", "Retired"];
 
-/* SIM Operator Master - DB-backed (simOperators collection). Previously a
-   hardcoded string list (AMS_SIM_OPERATOR_OPTIONS) that could not be extended;
-   now each operator is a record with details and can be added / edited /
-   deactivated from the SIM Operator Master (System Admin > SIM Operator Master).
-   The in-memory defaults below match the original hardcoded list so the form
-   works even before the API is reachable; the DB is the source of truth. */
-const AMS_DUMMY_SIM_OPERATORS = [
-    { name: "Jio",           helpline: "198", website: "https://www.jio.com",  active: true },
-    { name: "Airtel",        helpline: "198", website: "https://www.airtel.in", active: true },
-    { name: "Vodafone Idea", helpline: "199", website: "https://www.myvi.in",  active: true },
-    { name: "BSNL",          helpline: "1503", website: "https://www.bsnl.co.in", active: true },
-    { name: "MTNL",          helpline: "1503", website: "https://www.mtnl.co.in", active: true },
-];
+/* SIM Operator Master - DB-backed (simOperators collection). Seeded in SQL. */
+const AMS_DUMMY_SIM_OPERATORS = [];
 
 /* SIM Plan Master - DB-backed (simPlans collection). Feeds the Plan datalist on
-   the SIM Card form. */
-const AMS_DUMMY_SIM_PLANS = [
-    { name: "Prepaid",       planType: "Prepaid",  description: "", active: true },
-    { name: "Postpaid",      planType: "Postpaid", description: "", active: true },
-    { name: "Corporate Plan",planType: "Corporate",description: "", active: true },
-];
+   the SIM Card form. Seeded in SQL. */
+const AMS_DUMMY_SIM_PLANS = [];
 
 const AMS_DUMMY_SIM_CARDS = [];
 
@@ -2093,15 +2104,8 @@ function amsUnlinkMobileSim(mobile, returnSim) {
 let AMS_VENDOR_SEQ = 12;
 
 /* Vendor Category Master - DB-backed (vendorCategories collection). Feeds the
-   "Supplies" multi-select on the Vendor Master form. Previously a hardcoded
-   string list; now managed from System Admin > Vendor Category Master. */
-const AMS_DUMMY_VENDOR_CATEGORIES = [
-    { name: "Assets",       description: "Supplies assets / capital equipment", active: true },
-    { name: "Consumables",  description: "Supplies consumable items",           active: true },
-    { name: "Spare Parts",  description: "Supplies spare / repair parts",       active: true },
-    { name: "Services",     description: "Provides services (AMC, repair, etc.)", active: true },
-    { name: "All",          description: "General supplier - multiple categories", active: true },
-];
+   "Supplies" multi-select on the Vendor Master form. Seeded in SQL. */
+const AMS_DUMMY_VENDOR_CATEGORIES = [];
 
 function amsGetActiveVendorCategoryNames() {
     return amsSortedStrings(AMS_DUMMY_VENDOR_CATEGORIES.filter(c => c.active).map(c => c.name));
@@ -2408,25 +2412,9 @@ function amsWireVendorQuickAdds() {
 
 /* =============================================================================
    9) EMPLOYEE MASTER  (people, departments, hierarchy & assignments)
+   Departments / designations are SQL-backed (AMS_DUMMY_DEPARTMENTS /
+   AMS_DESIGNATION_OPTIONS). Seeded on run/rerun.
    ===========================================================================*/
-
-/* ---- Departments and their short-forms (used inside the AMS Employee ID) --- */
-const DEPARTMENTS = [
-    { name: "Production", short: "PRD" },
-    { name: "IT",         short: "IT"  },
-    { name: "Facilities", short: "FAC" },
-    { name: "Admin",      short: "ADM" },
-    { name: "Logistics",  short: "LOG" },
-    { name: "Finance",    short: "FIN" },
-    { name: "HR",         short: "HR"  }
-];
-
-/* ---- Suggested designations (shown in the Add/Edit form as suggestions) ---- */
-const DESIGNATIONS = [
-    "Managing Director", "General Manager", "Department Manager",
-    "Supervisor", "Engineer", "Technician", "Support Engineer",
-    "Accountant", "HR Executive", "Machine Operator", "Security Guard"
-];
 
 /* Hidden AMS IDs (employee AMS ID, AMS Asset ID) are knowledge-only for
    Supreme Root. Other roles always see company / display IDs. */
@@ -2465,8 +2453,10 @@ const DUMMY_EMPLOYEES = [];
 
 /* Returns the short-form for a department name (falls back to GEN) */
 function getDeptShort(departmentName) {
-    const dept = DEPARTMENTS.find(d => d.name === departmentName);
-    return dept ? dept.short : "GEN";
+    const fromMap = amsDeptShort(departmentName);
+    if (fromMap) return fromMap;
+    const dept = AMS_DUMMY_DEPARTMENTS.find(d => d.name === departmentName);
+    return dept ? (dept.shortform || dept.short || "GEN") : "GEN";
 }
 
 /* Returns the employee's COMPANY-ISSUED (display) ID - e.g. "00339" - never the
@@ -2644,19 +2634,61 @@ function amsResolvePendingManagers() {
     return changed;
 }
 
-/* Marks an employee as exited: returns their assigned assets / mobiles / SIMs
-   to In Store (exit date = return date, Asset ID remark names the exit reason),
-   and snapshots holdings + assignment accessories + facilities into
-   AMS_DUMMY_EXIT_RECORDS so the printed Handover Form stays accurate even after
-   the assets have been released back to the store / the org chart has changed.
+function amsExitDispositionOf(dispositions, kind, key, exitingAmsId) {
+    const list = Array.isArray(dispositions) ? dispositions : [];
+    const found = list.find(d => d && d.kind === kind && String(d.key) === String(key));
+    const accessories = found && Array.isArray(found.accessories) ? found.accessories.slice() : null;
+    if (found && found.action === "give" && found.toAmsId && found.toAmsId !== exitingAmsId) {
+        const toEmp = findEmployee(found.toAmsId);
+        if (toEmp && toEmp.status === "Active") return { action: "give", toEmp, accessories };
+    }
+    return { action: "return", toEmp: null, accessories };
+}
 
-   exitReason         : selected Reason of Exit (Resignation, Retirement, etc.)
-   teamInchargeAmsId  : optional - the new Incharge/HOD who takes over the
-                        exiting employee's direct subordinates. Their managerAmsId
-                        is re-pointed to this person so the team's asset records
-                        continue under the new incharge, and the transfer is
-                        snapshotted for the printed Handover Form. */
-function exitEmployee(amsId, exitDate, remarks, facilitiesDisabled, exitReason, teamInchargeAmsId, facilitiesNotApplicable) {
+function amsExitGiveRemark(emp, exitDate, exitReason, toEmp) {
+    const name = emp ? getEmployeeFullName(emp) : "employee";
+    const toName = toEmp ? getEmployeeFullName(toEmp) : "another employee";
+    const reason = (exitReason || "").trim();
+    return reason
+        ? `User has exited (${name}, ${exitDate || ""}). Given to ${toName}. Reason: ${reason}`
+        : `User has exited (${name}, ${exitDate || ""}). Given to ${toName}.`;
+}
+
+function amsAnnotateExitSnapDisposition(snap, disp) {
+    if (!snap) return snap;
+    snap.exitDisposition = disp && disp.action === "give" ? "give" : "return";
+    if (disp && Array.isArray(disp.accessories)) {
+        snap.accessories = disp.accessories.slice();
+    } else if (!Array.isArray(snap.accessories)) {
+        snap.accessories = [];
+    }
+    if (disp && disp.action === "give" && disp.toEmp) {
+        snap.givenToAmsId = disp.toEmp.amsId;
+        snap.givenToName = getEmployeeFullName(disp.toEmp);
+        snap.givenToEmpId = disp.toEmp.empId || "";
+        snap.status = snap.simId ? "Issued" : "Assigned";
+    } else {
+        snap.givenToAmsId = "";
+        snap.givenToName = "";
+        snap.givenToEmpId = "";
+        snap.status = "In Store";
+    }
+    return snap;
+}
+
+/* Marks an employee as exited. Each direct holding defaults to Return (In Store);
+    Exit can instead give a holding to another active employee. Snapshots holdings
+    + assignment accessories + facilities into AMS_DUMMY_EXIT_RECORDS so the
+    printed Handover Form stays accurate after assets leave the exiting person.
+
+    exitReason         : selected Reason of Exit (Resignation, Retirement, etc.)
+    teamInchargeAmsId  : optional - the new Incharge/HOD who takes over the
+                         exiting employee's direct subordinates. Their managerAmsId
+                         is re-pointed to this person so the team's asset records
+                         continue under the new incharge, and the transfer is
+                         snapshotted for the printed Handover Form.
+    holdingDispositions: optional [{ key, kind, action: "return"|"give", toAmsId }] */
+function exitEmployee(amsId, exitDate, remarks, facilitiesDisabled, exitReason, teamInchargeAmsId, facilitiesNotApplicable, holdingDispositions) {
     const emp = findEmployee(amsId);
     if (!emp) return null;
     emp.status = "Exited";
@@ -2666,48 +2698,59 @@ function exitEmployee(amsId, exitDate, remarks, facilitiesDisabled, exitReason, 
 
     const returnDate = emp.exitDate;
     const returnNote = amsExitReturnRemark(emp, returnDate, emp.exitReason);
-    const withExitRemark = (existing) => {
-        const cur = (existing || "").trim();
-        return cur ? `${cur} | ${returnNote}` : returnNote;
-    };
 
-    /* Snapshot the direct assets / mobiles / SIMs held at exit (before returning them),
-       including accessories issued with each assignment so the Handover Form can
-       list them after the holdings have been released. */
+    /* Snapshot the direct assets / mobiles / SIMs held at exit (before returning
+       or giving them), including accessories so the Handover Form can list them. */
     const directAssetsHeld = DUMMY_ASSETS
         .filter(a => a.assignedTo === amsId)
-        .map(a => ({
-            id: a.id, assetId: a.id, type: a.type, makeModel: amsAssetMakeModel(a),
-            site: a.currentSite || a.site, currentSite: a.currentSite || a.site,
-            assignedDepartment: a.assignedDepartment,
-            remarks: withExitRemark(a.remarks), usageNote: a.usageNote,
-            assignedTo: a.assignedTo, displayId: a.displayId, isLegacyId: !!a.isLegacyId,
-            accessories: Array.isArray(a.accessories) ? a.accessories.slice() : [],
-            returnDate,
-        }));
+        .map(a => {
+            const disp = amsExitDispositionOf(holdingDispositions, "asset", a.id, amsId);
+            const note = disp.action === "give" ? amsExitGiveRemark(emp, returnDate, emp.exitReason, disp.toEmp) : returnNote;
+            return amsAnnotateExitSnapDisposition({
+                id: a.id, assetId: a.id, type: a.type, makeModel: amsAssetMakeModel(a),
+                site: a.currentSite || a.site, currentSite: a.currentSite || a.site,
+                assignedDepartment: a.assignedDepartment,
+                remarks: amsLiveRemarksOnly(a.remarks), usageNote: a.usageNote,
+                exitNote: note, lifecycleNotes: (Array.isArray(a.lifecycleNotes) ? a.lifecycleNotes.slice() : []),
+                assignedTo: a.assignedTo, displayId: a.displayId, isLegacyId: !!a.isLegacyId,
+                accessories: Array.isArray(a.accessories) ? a.accessories.slice() : [],
+                returnDate,
+            }, disp);
+        });
     const directMobilesHeld = DUMMY_MOBILES
         .filter(a => a.assignedTo === amsId)
-        .map(a => ({
-            id: a.id, displayId: a.displayId, isLegacyId: !!a.isLegacyId, type: a.type, make: a.make, model: a.model,
-            makeModel: amsAssetMakeModel(a),
-            imei1: a.imei1, imei2: a.imei2, batteryNo: a.batteryNo, chargerNo: a.chargerNo,
-            simMobileNo: a.simMobileNo || "0",
-            site: a.currentSite || a.site, currentSite: a.currentSite || a.site,
-            remarks: withExitRemark(a.remarks), status: a.status, assignedTo: a.assignedTo,
-            assignedToSubordinate: a.assignedToSubordinate, assignedSubText: a.assignedSubText,
-            accessories: Array.isArray(a.accessories) ? a.accessories.slice() : [],
-            returnDate,
-        }));
+        .map(a => {
+            const disp = amsExitDispositionOf(holdingDispositions, "mobile", a.id, amsId);
+            const note = disp.action === "give" ? amsExitGiveRemark(emp, returnDate, emp.exitReason, disp.toEmp) : returnNote;
+            return amsAnnotateExitSnapDisposition({
+                id: a.id, displayId: a.displayId, isLegacyId: !!a.isLegacyId, type: a.type, make: a.make, model: a.model,
+                makeModel: amsAssetMakeModel(a),
+                imei1: a.imei1, imei2: a.imei2, batteryNo: a.batteryNo, chargerNo: a.chargerNo,
+                simMobileNo: a.simMobileNo || "0",
+                site: a.currentSite || a.site, currentSite: a.currentSite || a.site,
+                remarks: amsLiveRemarksOnly(a.remarks), status: a.status, assignedTo: a.assignedTo,
+                exitNote: note, lifecycleNotes: (Array.isArray(a.lifecycleNotes) ? a.lifecycleNotes.slice() : []),
+                assignedToSubordinate: a.assignedToSubordinate, assignedSubText: a.assignedSubText,
+                accessories: Array.isArray(a.accessories) ? a.accessories.slice() : [],
+                returnDate,
+            }, disp);
+        });
     const directSimCardsHeld = AMS_DUMMY_SIM_CARDS
         .filter(s => s.assignedTo === amsId)
-        .map(s => ({
-            simId: s.simId, mobileNumber: s.mobileNumber, operator: s.operator,
-            plan: s.plan, status: s.status, assignedTo: s.assignedTo,
-            assignedToSubordinate: s.assignedToSubordinate, assignedSubText: s.assignedSubText,
-            linkedMobileId: s.linkedMobileId || null, personalMobile: !!s.personalMobile,
-            accessories: Array.isArray(s.accessories) ? s.accessories.slice() : [],
-            remarks: withExitRemark(s.remarks), returnDate,
-        }));
+        .map(s => {
+            const disp = amsExitDispositionOf(holdingDispositions, "sim", s.simId, amsId);
+            const note = disp.action === "give" ? amsExitGiveRemark(emp, returnDate, emp.exitReason, disp.toEmp) : returnNote;
+            return amsAnnotateExitSnapDisposition({
+                simId: s.simId, mobileNumber: s.mobileNumber, operator: s.operator,
+                plan: s.plan, status: s.status, assignedTo: s.assignedTo,
+                assignedToSubordinate: s.assignedToSubordinate, assignedSubText: s.assignedSubText,
+                linkedMobileId: s.linkedMobileId || null, personalMobile: !!s.personalMobile,
+                accessories: Array.isArray(s.accessories) ? s.accessories.slice() : [],
+                remarks: amsLiveRemarksOnly(s.remarks),
+                exitNote: note, lifecycleNotes: (Array.isArray(s.lifecycleNotes) ? s.lifecycleNotes.slice() : []),
+                returnDate,
+            }, disp);
+        });
 
     const disabled = Array.isArray(facilitiesDisabled) ? facilitiesDisabled.map(String) : [];
     const notApplicable = Array.isArray(facilitiesNotApplicable) ? facilitiesNotApplicable.map(String) : [];
@@ -2797,28 +2840,37 @@ function exitEmployee(amsId, exitDate, remarks, facilitiesDisabled, exitReason, 
         subordinateAssetsTransferred,
     });
 
-    /* Return every holding assigned to the exiting employee: In Store, history
-       dated with the exit date, and an Asset ID remark naming the exit reason.
-       Team / subordinate holdings are not returned here - they stay with the
-       new incharge after the transfer above. */
+    /* Return (In Store) or give each holding. Team / subordinate holdings stay
+       with the new incharge after the transfer above. */
     DUMMY_ASSETS.forEach(a => {
-        if (a.assignedTo === amsId) amsMarkHoldingReturnedOnExit(a, emp, returnDate, returnNote, "asset");
+        if (a.assignedTo !== amsId) return;
+        const disp = amsExitDispositionOf(holdingDispositions, "asset", a.id, amsId);
+        if (disp.action === "give") amsMarkHoldingGivenOnExit(a, emp, returnDate, disp.toEmp, emp.exitReason, "asset", disp.accessories);
+        else amsMarkHoldingReturnedOnExit(a, emp, returnDate, returnNote, "asset", disp.accessories);
     });
     DUMMY_MOBILES.forEach(a => {
-        if (a.assignedTo === amsId) {
+        if (a.assignedTo !== amsId) return;
+        const disp = amsExitDispositionOf(holdingDispositions, "mobile", a.id, amsId);
+        if (disp.action === "give") {
+            amsMarkHoldingGivenOnExit(a, emp, returnDate, disp.toEmp, emp.exitReason, "mobile", disp.accessories);
+        } else {
             if (typeof amsUnlinkMobileSim === "function") amsUnlinkMobileSim(a, false);
-            amsMarkHoldingReturnedOnExit(a, emp, returnDate, returnNote, "mobile");
+            amsMarkHoldingReturnedOnExit(a, emp, returnDate, returnNote, "mobile", disp.accessories);
         }
     });
     AMS_DUMMY_SIM_CARDS.forEach(s => {
-        if (s.assignedTo === amsId) {
+        if (s.assignedTo !== amsId) return;
+        const disp = amsExitDispositionOf(holdingDispositions, "sim", s.simId, amsId);
+        if (disp.action === "give") {
+            amsMarkHoldingGivenOnExit(s, emp, returnDate, disp.toEmp, emp.exitReason, "sim", disp.accessories);
+        } else {
             if (s.linkedMobileId && !s.personalMobile) {
                 const m = amsFindMobileByRef(s.linkedMobileId);
                 if (m && String(m.simMobileNo || "0") === String(s.mobileNumber || "")) m.simMobileNo = "0";
             }
             s.linkedMobileId = null;
             s.personalMobile = false;
-            amsMarkHoldingReturnedOnExit(s, emp, returnDate, returnNote, "sim");
+            amsMarkHoldingReturnedOnExit(s, emp, returnDate, returnNote, "sim", disp.accessories);
         }
     });
     amsDbSaveAsync("employees");
@@ -2872,14 +2924,26 @@ function amsExitReturnRemark(emp, exitDate, exitReason) {
 
 function amsHoldingHasExitReturnNote(item) {
     if (!item) return false;
+    if (item.exitNote && String(item.exitNote).indexOf("User has exited") !== -1) return true;
+    if ((Array.isArray(item.lifecycleNotes) ? item.lifecycleNotes : []).some(n =>
+        n && String(n.text || n.note || "").indexOf("User has exited") !== -1)) return true;
     if (String(item.remarks || "").indexOf("User has exited") !== -1) return true;
     return (Array.isArray(item.history) ? item.history : []).some(h =>
         h && String(h.remarks || h.note || "").indexOf("User has exited") !== -1);
 }
 
-function amsMarkHoldingReturnedOnExit(item, emp, returnDate, note, kind) {
+function amsExitAccessoriesNote(item, accessories) {
+    const list = Array.isArray(accessories)
+        ? accessories
+        : (Array.isArray(item && item.accessories) ? item.accessories : []);
+    if (item && Array.isArray(accessories)) item.accessories = accessories.slice();
+    return amsAccessoriesText(list);
+}
+
+function amsMarkHoldingReturnedOnExit(item, emp, returnDate, note, kind, accessories) {
     if (!item || !emp || item.assignedTo !== emp.amsId) return false;
     const alreadyNoted = amsHoldingHasExitReturnNote(item);
+    const accNote = amsExitAccessoriesNote(item, accessories);
     if (!alreadyNoted) {
         const displayId = kind === "sim"
             ? (item.simId || "")
@@ -2892,11 +2956,12 @@ function amsMarkHoldingReturnedOnExit(item, emp, returnDate, note, kind) {
             empDept: emp ? (emp.department || emp.dept || "") : "",
             assetIdFull: displayId,
             statusLabel: "In Store",
+            accessories: accNote,
             remarks: note,
             note: note,
         });
-        const existing = (item.remarks || "").trim();
-        item.remarks = existing ? `${existing} | ${note}` : note;
+        amsAppendLifecycleNote(item, note, "exit-return");
+        item.exitNote = note;
         item.returnDate = returnDate;
     } else if (!item.returnDate) {
         item.returnDate = returnDate;
@@ -2920,6 +2985,45 @@ function amsMarkHoldingReturnedOnExit(item, emp, returnDate, note, kind) {
     return true;
 }
 
+function amsMarkHoldingGivenOnExit(item, emp, exitDate, toEmp, exitReason, kind, accessories) {
+    if (!item || !emp || !toEmp || item.assignedTo !== emp.amsId) return false;
+    const note = amsExitGiveRemark(emp, exitDate, exitReason, toEmp);
+    const accNote = amsExitAccessoriesNote(item, accessories);
+    const displayId = kind === "sim"
+        ? (item.simId || "")
+        : (typeof amsBaseDisplayId === "function" ? amsBaseDisplayId(item) : (item.id || ""));
+    const histKind = kind === "sim" ? "sim" : (kind === "mobile" ? "mobile" : "asset");
+    amsPushItemHistory(item, histKind, {
+        date: exitDate,
+        action: "Reassigned",
+        empId: toEmp.empId || "",
+        empName: getEmployeeFullName(toEmp),
+        empDept: toEmp.department || toEmp.dept || "",
+        assetIdFull: displayId,
+        statusLabel: kind === "sim" ? "Issued" : "Assigned",
+        accessories: accNote,
+        remarks: note,
+        note: note,
+    });
+    amsAppendLifecycleNote(item, note, "exit-give");
+    item.exitNote = note;
+    item.assignedTo = toEmp.amsId;
+    item.assignedDate = exitDate;
+    item.assignedToSubordinate = null;
+    item.assignedSubText = null;
+    if (kind === "sim") {
+        item.status = "Issued";
+    } else {
+        item.assignedDepartment = null;
+        item.assignedDeptText = null;
+        item.usageNote = null;
+        item.dept = toEmp.department || toEmp.dept || "";
+        item.status = "Assigned";
+        if (typeof amsComputeFullId === "function") item.id = amsComputeFullId(item);
+    }
+    return true;
+}
+
 function amsFindLiveHoldingForExitSnap(snap, kind) {
     if (!snap) return null;
     if (kind === "sim") {
@@ -2933,7 +3037,7 @@ function amsFindLiveHoldingForExitSnap(snap, kind) {
     ) || null;
 }
 
-function amsEnrichExitSnapshotItem(snap, live, returnDate, withExitRemark) {
+function amsEnrichExitSnapshotItem(snap, live, returnDate, exitNote) {
     if (!snap) return false;
     let changed = false;
     if ((!Array.isArray(snap.accessories) || !snap.accessories.length)
@@ -2944,9 +3048,17 @@ function amsEnrichExitSnapshotItem(snap, live, returnDate, withExitRemark) {
         snap.accessories = [];
         changed = true;
     }
-    const nextRemarks = withExitRemark(snap.remarks);
-    if (snap.remarks !== nextRemarks) {
-        snap.remarks = nextRemarks;
+    const liveRemarks = amsLiveRemarksOnly(snap.remarks);
+    if (String(snap.remarks || "").trim() !== liveRemarks) {
+        snap.remarks = liveRemarks;
+        changed = true;
+    }
+    if (exitNote && !snap.exitNote) {
+        snap.exitNote = exitNote;
+        changed = true;
+    }
+    if (!Array.isArray(snap.lifecycleNotes)) {
+        snap.lifecycleNotes = live && Array.isArray(live.lifecycleNotes) ? live.lifecycleNotes.slice() : [];
         changed = true;
     }
     if (!snap.returnDate) {
@@ -2968,11 +3080,6 @@ function amsRepairExitedEmployeeHoldings() {
         const returnDate = emp.exitDate || new Date().toISOString().slice(0, 10);
         const rec = typeof getExitRecord === "function" ? getExitRecord(amsId) : null;
         const returnNote = amsExitReturnRemark(emp, returnDate, (emp.exitReason || (rec && rec.exitReason) || ""));
-        const withExitRemark = (existing) => {
-            const cur = (existing || "").trim();
-            if (cur.indexOf("User has exited") !== -1) return cur;
-            return cur ? `${cur} | ${returnNote}` : returnNote;
-        };
 
         const process = (list, kind) => {
             (list || []).forEach(item => {
@@ -3002,13 +3109,13 @@ function amsRepairExitedEmployeeHoldings() {
                 return live;
             };
             (rec.directAssetsHeld || []).forEach(snap => {
-                if (amsEnrichExitSnapshotItem(snap, liveIfStillTheirs(snap, "asset"), returnDate, withExitRemark)) changed = true;
+                if (amsEnrichExitSnapshotItem(snap, liveIfStillTheirs(snap, "asset"), returnDate, returnNote)) changed = true;
             });
             (rec.directMobilesHeld || []).forEach(snap => {
-                if (amsEnrichExitSnapshotItem(snap, liveIfStillTheirs(snap, "mobile"), returnDate, withExitRemark)) changed = true;
+                if (amsEnrichExitSnapshotItem(snap, liveIfStillTheirs(snap, "mobile"), returnDate, returnNote)) changed = true;
             });
             (rec.directSimCardsHeld || []).forEach(snap => {
-                if (amsEnrichExitSnapshotItem(snap, liveIfStillTheirs(snap, "sim"), returnDate, withExitRemark)) changed = true;
+                if (amsEnrichExitSnapshotItem(snap, liveIfStillTheirs(snap, "sim"), returnDate, returnNote)) changed = true;
             });
         }
     });
@@ -3538,6 +3645,33 @@ function amsBuildPrintSimCardsSectionHtml(directList, subList, opts) {
     return html;
 }
 
+function amsBuildPrintGivenHoldingsHtml(list, kind) {
+    const rows = (list || []).filter(x => x && x.exitDisposition === "give");
+    if (!rows.length) return "";
+    const title = kind === "sim" ? "SIM Cards Given to Other Employee" : "Mobiles Given to Other Employee";
+    const idOf = x => kind === "sim" ? (x.simId || "-") : (typeof amsPrintAssetId === "function" ? amsPrintAssetId(x) : (x.id || "-"));
+    const typeOf = x => kind === "sim"
+        ? [x.operator, x.plan].filter(Boolean).join(" / ") || "SIM Card"
+        : ((x.type || "Mobile") + (x.makeModel ? " (" + x.makeModel + ")" : ""));
+    return `
+        <div class="pf-section-bar pf-bar-accent">${title}</div>
+        <table class="pf-asset-table">
+            <thead>
+                <tr><th style="width:30px;">#</th><th>${kind === "sim" ? "SIM ID" : "Mobile ID"}</th><th>Type</th><th>Given To</th><th>Status</th></tr>
+            </thead>
+            <tbody>
+                ${rows.map((x, i) => `
+                    <tr>
+                        <td>${i + 1}</td>
+                        <td class="mono">${amsEsc(idOf(x))}</td>
+                        <td>${amsEsc(typeOf(x))}</td>
+                        <td>${amsEsc(x.givenToName || "-")}${x.givenToEmpId ? " (" + amsEsc(x.givenToEmpId) + ")" : ""}</td>
+                        <td>${amsEsc(x.status || (kind === "sim" ? "Issued" : "Assigned"))}</td>
+                    </tr>`).join("")}
+            </tbody>
+        </table>`;
+}
+
 function amsBuildPrintMobileSimHtml(amsId, opts) {
     const exitRecord = opts && opts.exitRecord;
     const includeDirect = !(opts && opts.includeDirect === false);
@@ -3548,13 +3682,17 @@ function amsBuildPrintMobileSimHtml(amsId, opts) {
     const sims = exitRecord
         ? { direct: exitRecord.directSimCardsHeld || [], subordinate: exitRecord.subordinateSimCardsHeld || [] }
         : amsCollectPrintSimsForEmp(amsId);
-    const mobileDirect = includeDirect ? mobiles.direct : [];
+    const mobileGiven = includeDirect ? mobiles.direct.filter(m => m && m.exitDisposition === "give") : [];
+    const simGiven = includeDirect ? sims.direct.filter(s => s && s.exitDisposition === "give") : [];
+    const mobileDirect = includeDirect ? mobiles.direct.filter(m => !m || m.exitDisposition !== "give") : [];
     const mobileTeam = includeTeam ? mobiles.subordinate : [];
-    const simDirect = includeDirect ? sims.direct : [];
+    const simDirect = includeDirect ? sims.direct.filter(s => !s || s.exitDisposition !== "give") : [];
     const simTeam = includeTeam ? sims.subordinate : [];
     return {
         html: amsBuildPrintMobilesSectionHtml(mobileDirect, mobileTeam, opts)
-            + amsBuildPrintSimCardsSectionHtml(simDirect, simTeam, opts),
+            + amsBuildPrintGivenHoldingsHtml(mobileGiven, "mobile")
+            + amsBuildPrintSimCardsSectionHtml(simDirect, simTeam, opts)
+            + amsBuildPrintGivenHoldingsHtml(simGiven, "sim"),
         mobileDirect: mobileDirect.length,
         mobileTeam: mobileTeam.length,
         simDirect: simDirect.length,
@@ -3832,6 +3970,7 @@ function amsEnsureSessionUserProfile() {
         displayName: sess.displayName || sess.name || sess.username,
         linkedEmployee: sess.linkedEmployee || "",
         email: sess.email || "",
+        site: sess.site || "",
         remarks: "",
         active: true,
         allowedPages: null,
@@ -3858,6 +3997,7 @@ function amsMergeLoginUsers(list) {
             if (u.displayName && !existing.displayName) existing.displayName = u.displayName;
             if (u.email && !existing.email) existing.email = u.email;
             if (u.linkedEmployee && !existing.linkedEmployee) existing.linkedEmployee = u.linkedEmployee;
+            if (u.site !== undefined && u.site !== null) existing.site = u.site;
             if (existing.active === undefined) existing.active = u.active !== false;
         } else {
             AMS_DUMMY_USERS.push({
@@ -3866,6 +4006,7 @@ function amsMergeLoginUsers(list) {
                 displayName: u.displayName || u.username,
                 linkedEmployee: u.linkedEmployee || "",
                 email: u.email || "",
+                site: u.site || "",
                 remarks: u.remarks || "",
                 active: u.active !== false,
                 allowedPages: null,
@@ -3981,8 +4122,8 @@ async function amsMigrateCompanyFromLocal() {
 }
 
 /* =============================================================================
-   11.5) PORTAL PREFERENCES  (Settings page - localStorage-backed so the choices
-         apply on every page, like theme/company/notifications)
+   11.5) PORTAL PREFERENCES  (Settings page - SQL document portalPrefs;
+         localStorage is a one-time migrate + per-browser cache until SQL loads)
    ===========================================================================*/
 
 const AMS_PORTAL_NAME_STORAGE_KEY = "ams_portal_name";
@@ -3991,47 +4132,123 @@ const AMS_PAGE_SIZE_STORAGE_KEY   = "ams_page_size";
 const AMS_TOAST_STORAGE_KEY       = "ams_toast_enabled";
 
 const AMS_FONT_SIZE_OPTIONS = ["sm", "md", "lg"];   /* sm=14, md=16 (default), lg=18 */
+const AMS_PORTAL_PREFS_DEFAULTS = {
+    portalName: "Asset Manager",
+    fontSize: "md",
+    pageSize: 20,
+    toastEnabled: true,
+};
+
+function amsPersistPortalPrefs() {
+    amsDbSaveDocAsync("portalPrefs");
+}
 
 function amsGetPortalName() {
-    try { return localStorage.getItem(AMS_PORTAL_NAME_STORAGE_KEY) || "Asset Manager"; }
-    catch (e) { return "Asset Manager"; }
+    const fromDb = (AMS_PORTAL_PREFS && AMS_PORTAL_PREFS.portalName) ? String(AMS_PORTAL_PREFS.portalName).trim() : "";
+    if (fromDb) return fromDb;
+    try { return localStorage.getItem(AMS_PORTAL_NAME_STORAGE_KEY) || AMS_PORTAL_PREFS_DEFAULTS.portalName; }
+    catch (e) { return AMS_PORTAL_PREFS_DEFAULTS.portalName; }
 }
 function amsSavePortalName(name) {
-    try { localStorage.setItem(AMS_PORTAL_NAME_STORAGE_KEY, name); } catch (e) { /* storage full */ }
+    const next = (name || "").trim() || AMS_PORTAL_PREFS_DEFAULTS.portalName;
+    AMS_PORTAL_PREFS.portalName = next;
+    try { localStorage.setItem(AMS_PORTAL_NAME_STORAGE_KEY, next); } catch (e) { /* storage full */ }
+    amsPersistPortalPrefs();
 }
 
 function amsGetFontSize() {
+    const fromDb = AMS_PORTAL_PREFS && AMS_PORTAL_PREFS.fontSize;
+    if (AMS_FONT_SIZE_OPTIONS.indexOf(fromDb) > -1) return fromDb;
     try {
         const v = localStorage.getItem(AMS_FONT_SIZE_STORAGE_KEY);
-        return AMS_FONT_SIZE_OPTIONS.indexOf(v) > -1 ? v : "md";
-    } catch (e) { return "md"; }
+        return AMS_FONT_SIZE_OPTIONS.indexOf(v) > -1 ? v : AMS_PORTAL_PREFS_DEFAULTS.fontSize;
+    } catch (e) { return AMS_PORTAL_PREFS_DEFAULTS.fontSize; }
 }
 function amsSaveFontSize(size) {
-    try { localStorage.setItem(AMS_FONT_SIZE_STORAGE_KEY, size); } catch (e) { /* storage full */ }
+    const next = AMS_FONT_SIZE_OPTIONS.indexOf(size) > -1 ? size : AMS_PORTAL_PREFS_DEFAULTS.fontSize;
+    AMS_PORTAL_PREFS.fontSize = next;
+    try { localStorage.setItem(AMS_FONT_SIZE_STORAGE_KEY, next); } catch (e) { /* storage full */ }
+    amsPersistPortalPrefs();
 }
 
 function amsGetDefaultPageSize() {
+    const fromDb = AMS_PORTAL_PREFS && AMS_PORTAL_PREFS.pageSize;
+    const nDb = parseInt(fromDb, 10);
+    if ([10, 20, 50, 100].indexOf(nDb) > -1) return nDb;
     try {
         const n = parseInt(localStorage.getItem(AMS_PAGE_SIZE_STORAGE_KEY), 10);
-        return [10, 20, 50, 100].indexOf(n) > -1 ? n : 20;
-    } catch (e) { return 20; }
+        return [10, 20, 50, 100].indexOf(n) > -1 ? n : AMS_PORTAL_PREFS_DEFAULTS.pageSize;
+    } catch (e) { return AMS_PORTAL_PREFS_DEFAULTS.pageSize; }
 }
 function amsSaveDefaultPageSize(n) {
-    try { localStorage.setItem(AMS_PAGE_SIZE_STORAGE_KEY, String(n)); } catch (e) { /* storage full */ }
+    const next = [10, 20, 50, 100].indexOf(n) > -1 ? n : AMS_PORTAL_PREFS_DEFAULTS.pageSize;
+    AMS_PORTAL_PREFS.pageSize = next;
+    try { localStorage.setItem(AMS_PAGE_SIZE_STORAGE_KEY, String(next)); } catch (e) { /* storage full */ }
+    amsPersistPortalPrefs();
 }
 
 function amsGetToastEnabled() {
+    if (AMS_PORTAL_PREFS && typeof AMS_PORTAL_PREFS.toastEnabled === "boolean") return AMS_PORTAL_PREFS.toastEnabled;
     try { return localStorage.getItem(AMS_TOAST_STORAGE_KEY) !== "false"; }
-    catch (e) { return true; }
+    catch (e) { return AMS_PORTAL_PREFS_DEFAULTS.toastEnabled; }
 }
 function amsSaveToastEnabled(enabled) {
+    AMS_PORTAL_PREFS.toastEnabled = !!enabled;
     try { localStorage.setItem(AMS_TOAST_STORAGE_KEY, enabled ? "true" : "false"); } catch (e) { /* storage full */ }
+    amsPersistPortalPrefs();
 }
 
-/* Applies the saved non-theme preferences on every page (called from layout.js
-   initLayout). Font size uses an attribute + CSS in main.css. */
 function amsApplyPortalPrefs() {
     if (document.documentElement) document.documentElement.setAttribute("data-font-size", amsGetFontSize());
+}
+
+function amsPortalPrefsLookDefault() {
+    const p = AMS_PORTAL_PREFS || {};
+    const name = String(p.portalName || AMS_PORTAL_PREFS_DEFAULTS.portalName);
+    const font = p.fontSize || AMS_PORTAL_PREFS_DEFAULTS.fontSize;
+    const page = p.pageSize != null ? Number(p.pageSize) : AMS_PORTAL_PREFS_DEFAULTS.pageSize;
+    const toast = typeof p.toastEnabled === "boolean" ? p.toastEnabled : AMS_PORTAL_PREFS_DEFAULTS.toastEnabled;
+    return name === AMS_PORTAL_PREFS_DEFAULTS.portalName
+        && font === AMS_PORTAL_PREFS_DEFAULTS.fontSize
+        && page === AMS_PORTAL_PREFS_DEFAULTS.pageSize
+        && toast === AMS_PORTAL_PREFS_DEFAULTS.toastEnabled;
+}
+
+async function amsMigratePortalPrefsFromLocal() {
+    try {
+        const localName = localStorage.getItem(AMS_PORTAL_NAME_STORAGE_KEY);
+        const localFont = localStorage.getItem(AMS_FONT_SIZE_STORAGE_KEY);
+        const localPage = localStorage.getItem(AMS_PAGE_SIZE_STORAGE_KEY);
+        const localToast = localStorage.getItem(AMS_TOAST_STORAGE_KEY);
+        const localDiffers = (localName && localName !== AMS_PORTAL_PREFS_DEFAULTS.portalName)
+            || (AMS_FONT_SIZE_OPTIONS.indexOf(localFont) > -1 && localFont !== AMS_PORTAL_PREFS_DEFAULTS.fontSize)
+            || ([10, 50, 100].indexOf(parseInt(localPage, 10)) > -1)
+            || localToast === "false";
+        const dbEmpty = !AMS_PORTAL_PREFS || !Object.keys(AMS_PORTAL_PREFS).length;
+        if (localDiffers && (dbEmpty || amsPortalPrefsLookDefault())) {
+            if (localName) AMS_PORTAL_PREFS.portalName = localName;
+            if (AMS_FONT_SIZE_OPTIONS.indexOf(localFont) > -1) AMS_PORTAL_PREFS.fontSize = localFont;
+            const n = parseInt(localPage, 10);
+            if ([10, 20, 50, 100].indexOf(n) > -1) AMS_PORTAL_PREFS.pageSize = n;
+            if (localToast === "true" || localToast === "false") AMS_PORTAL_PREFS.toastEnabled = localToast === "true";
+            try { await amsDbSaveDoc("portalPrefs"); }
+            catch (e) { return; }
+            if (amsWritesBlocked()) return;
+        }
+        if (AMS_PORTAL_PREFS && AMS_PORTAL_PREFS.portalName) {
+            try { localStorage.setItem(AMS_PORTAL_NAME_STORAGE_KEY, AMS_PORTAL_PREFS.portalName); } catch (e) { /* ignore */ }
+        }
+        if (AMS_PORTAL_PREFS && AMS_PORTAL_PREFS.fontSize) {
+            try { localStorage.setItem(AMS_FONT_SIZE_STORAGE_KEY, AMS_PORTAL_PREFS.fontSize); } catch (e) { /* ignore */ }
+        }
+        if (AMS_PORTAL_PREFS && AMS_PORTAL_PREFS.pageSize != null) {
+            try { localStorage.setItem(AMS_PAGE_SIZE_STORAGE_KEY, String(AMS_PORTAL_PREFS.pageSize)); } catch (e) { /* ignore */ }
+        }
+        if (AMS_PORTAL_PREFS && typeof AMS_PORTAL_PREFS.toastEnabled === "boolean") {
+            try { localStorage.setItem(AMS_TOAST_STORAGE_KEY, AMS_PORTAL_PREFS.toastEnabled ? "true" : "false"); } catch (e) { /* ignore */ }
+        }
+        amsApplyPortalPrefs();
+    } catch (e) { /* ignore corrupt local cache */ }
 }
 
 /* =============================================================================
@@ -4081,8 +4298,7 @@ async function amsMigrateReportPrefsFromLocal() {
    12) EXIT RECORDS  (snapshot of employee exits, for printable Handover Forms)
    ===========================================================================*/
 
-/* PLANNED DB TABLE: "ExitRecords". Until then an in-memory array (fresh clone
-   per page load, same as every other array here). */
+/* Exit snapshots persist in dbo.ams_exit_records (exitRecords collection). */
 const AMS_DUMMY_EXIT_RECORDS = [];
 
 

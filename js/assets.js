@@ -537,17 +537,9 @@ let AST_QUICKADD_EMP_TARGET = null; /* which select ("assignDirectEmp" / "assign
 
 function amsOpenAddEmployeeModal(targetSelectId) {
     AST_QUICKADD_EMP_TARGET = targetSelectId;
-    /* Fill the department + designation pickers (union of hardcoded seeds + the
-       DB-backed masters, so lookups added in either place are offered here) */
-    const deptUnion = DEPARTMENTS.map(d => ({ name: d.name, short: d.short }));
-    AMS_DUMMY_DEPARTMENTS.forEach(d => {
-        if (!deptUnion.some(x => x.name.toLowerCase() === d.name.toLowerCase())) deptUnion.push({ name: d.name, short: d.shortform });
-    });
+    const deptUnion = AMS_DUMMY_DEPARTMENTS.map(d => ({ name: d.name, short: d.shortform || d.short }));
     deptUnion.sort((a, b) => amsSortAlpha(a.name, b.name));
-    const desigUnion = DESIGNATIONS.slice();
-    AMS_DESIGNATION_OPTIONS.forEach(d => {
-        if (!desigUnion.some(x => x.toLowerCase() === d.name.toLowerCase())) desigUnion.push(d.name);
-    });
+    const desigUnion = AMS_DESIGNATION_OPTIONS.map(d => d.name).filter(Boolean);
     desigUnion.sort(amsSortAlpha);
     document.getElementById("qaEmpDept").innerHTML = deptUnion.map(d => `<option value="${amsEsc(d.name)}">${amsEsc(d.name)}</option>`).join("");
     document.getElementById("qaEmpDesigList").innerHTML = desigUnion.map(d => `<option value="${amsEsc(d)}"></option>`).join("");
@@ -1170,7 +1162,7 @@ function amsSubmitReplaceForm(e) {
     newAsset.replacesReason = replacesReason;
     newAsset.replacesNote = replacesNote;
     newAsset.replacesPurchaseDate = old.purchaseDate || "";
-    amsAppendItemRemark(newAsset, amsReplacementRemark(old, issueDate, replacesReason, replacesNote));
+    amsAppendLifecycleNote(newAsset, amsReplacementRemark(old, issueDate, replacesReason, replacesNote), "replace");
     newAsset.id = amsComputeFullId(newAsset);
 
     newAsset.assignedDate = issueDate;
@@ -1209,6 +1201,7 @@ function amsHistoryEventType(action) {
     if (action === "Assignment updated") return { label: "Asset Edit", cls: "badge-amber" };
     if (action === "Assigned - New") return { label: "Assign", cls: "badge-green" };
     if (action === "Returned") return { label: "Return", cls: "badge-grey" };
+    if (action === "Added to Inventory" || action.indexOf("Added to Inventory (Import") === 0) return { label: "New Entry", cls: "badge-green" };
     if (action.indexOf("Replaced by") === 0 || action.indexOf("Replacement") !== -1) return { label: "Replace", cls: "badge-transfer" };
     if (action === "Retired / Scrapped") return { label: "Retire", cls: "badge-red" };
     if (action === "Not Working") return { label: "Fault", cls: "badge-red" };
@@ -1277,12 +1270,11 @@ function amsGenerateAssetFormNo() {
     return `AIF-${String(seq).padStart(6, "0")}`;
 }
 
-/* Builds the "Remarks / Notes" section body: each item's stored Remarks plus
-   replacement reason/date/old ID when this item replaced another. */
+/* Builds the "Remarks / Notes" section body: live remarks only. */
 function amsBuildRemarksLinesHtml(assetsList) {
     const lines = [];
     assetsList.forEach(oa => {
-        const text = typeof amsItemPrintRemarksText === "function" ? amsItemPrintRemarksText(oa) : (oa.remarks || "");
+        const text = typeof amsItemPrintRemarksText === "function" ? amsItemPrintRemarksText(oa) : (typeof amsLiveRemarksOnly === "function" ? amsLiveRemarksOnly(oa.remarks) : (oa.remarks || ""));
         if (text) lines.push(`<div><strong>${amsEsc(typeof amsPrintRemarkId === "function" ? amsPrintRemarkId(oa) : amsPrintAssetId(oa))} - Remarks (on record):</strong> ${typeof amsFormatRemarksHtml === "function" ? amsFormatRemarksHtml(text) : amsEsc(text)}</div>`);
     });
     if (!lines.length) lines.push(`<div class="pf-notes-empty">No remarks recorded against the asset(s) in the system.</div>`);

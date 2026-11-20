@@ -176,6 +176,16 @@ function initSettings() {
     initNotificationsTab();
     renderNotificationCounts();
     initDataTab();
+    if (typeof amsDbEnsureLoaded === "function") {
+        amsDbEnsureLoaded().then(() => {
+            if (typeof amsApplyPortalPrefs === "function") amsApplyPortalPrefs();
+            renderFontSize();
+            loadGeneralTab();
+            const toastToggle = document.getElementById("settingsToastEnabled");
+            if (toastToggle) toastToggle.checked = amsGetToastEnabled();
+            renderNotificationCounts();
+        }).catch(() => {});
+    }
 }
 
 document.addEventListener("DOMContentLoaded", initSettings);

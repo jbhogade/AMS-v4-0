@@ -89,7 +89,8 @@
                 contactNo: result.contactNo,
                 address: result.address,
                 dob: result.dob,
-                gender: result.gender
+                gender: result.gender,
+                site: result.site
             });
             /* A fresh login should start from the account's real role, not a
                stale role-simulator override left over from earlier testing. */

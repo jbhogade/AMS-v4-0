@@ -778,6 +778,8 @@ public class AmsDb
                 ALTER TABLE dbo.ams_users ADD dob NVARCHAR(20) NULL;
             IF COL_LENGTH(N'dbo.ams_users', N'gender') IS NULL
                 ALTER TABLE dbo.ams_users ADD gender NVARCHAR(20) NULL;
+            IF COL_LENGTH(N'dbo.ams_users', N'site') IS NULL
+                ALTER TABLE dbo.ams_users ADD site NVARCHAR(200) NULL;
             IF OBJECT_ID(N'dbo.ams_user_profiles', N'U') IS NOT NULL
                 AND COL_LENGTH(N'dbo.ams_user_profiles', N'email') IS NULL
                 ALTER TABLE dbo.ams_user_profiles ADD email NVARCHAR(200) NULL;
@@ -793,6 +795,9 @@ public class AmsDb
             IF OBJECT_ID(N'dbo.ams_user_profiles', N'U') IS NOT NULL
                 AND COL_LENGTH(N'dbo.ams_user_profiles', N'gender') IS NULL
                 ALTER TABLE dbo.ams_user_profiles ADD gender NVARCHAR(20) NULL;
+            IF OBJECT_ID(N'dbo.ams_user_profiles', N'U') IS NOT NULL
+                AND COL_LENGTH(N'dbo.ams_user_profiles', N'site') IS NULL
+                ALTER TABLE dbo.ams_user_profiles ADD site NVARCHAR(200) NULL;
             IF OBJECT_ID(N'dbo.ams_assets', N'U') IS NOT NULL
                 AND COL_LENGTH(N'dbo.ams_assets', N'status') IS NULL
                 ALTER TABLE dbo.ams_assets ADD status NVARCHAR(100) NULL;
@@ -1552,6 +1557,11 @@ public class AmsDb
         });
         defs.Add(new TableDef
         {
+            Key = "portalPrefs", Table = "ams_documents", IsDocument = true, FixedKey = "portalPrefs",
+            Columns = { },
+        });
+        defs.Add(new TableDef
+        {
             Key = "accessRights", Table = "ams_documents", IsDocument = true, FixedKey = "accessRights",
             Columns = { },
         });
@@ -1604,8 +1614,8 @@ public class AmsDb
     }
 
     /* =========================================================================
-       LOOKUP SEEDS  (the 6 masters that were previously hardcoded in the UI)
-       Inserted only when the target table is empty (mirrors AMS-v4-0.sql).
+       LOOKUP SEEDS  (masters previously hardcoded in the UI, plus portalPrefs)
+       Inserted only when the target table / document key is empty (mirrors AMS-v4-0.sql).
        ========================================================================= */
 
     private static readonly (string Key, string Json)[] SeedLookups =
@@ -1648,6 +1658,29 @@ public class AmsDb
             {""name"":""Services"",""description"":""Provides services (AMC, repair, etc.)"",""active"":true},
             {""name"":""All"",""description"":""General supplier - multiple categories"",""active"":true}
         ]"),
+        ("departments", @"[
+            {""name"":""Production"",""shortform"":""PRD"",""active"":true},
+            {""name"":""IT"",""shortform"":""IT"",""active"":true},
+            {""name"":""Facilities"",""shortform"":""FAC"",""active"":true},
+            {""name"":""Admin"",""shortform"":""ADM"",""active"":true},
+            {""name"":""Logistics"",""shortform"":""LOG"",""active"":true},
+            {""name"":""Finance"",""shortform"":""FIN"",""active"":true},
+            {""name"":""HR"",""shortform"":""HR"",""active"":true}
+        ]"),
+        ("designations", @"[
+            {""name"":""Managing Director"",""active"":true},
+            {""name"":""General Manager"",""active"":true},
+            {""name"":""Department Manager"",""active"":true},
+            {""name"":""Supervisor"",""active"":true},
+            {""name"":""Engineer"",""active"":true},
+            {""name"":""Technician"",""active"":true},
+            {""name"":""Support Engineer"",""active"":true},
+            {""name"":""Accountant"",""active"":true},
+            {""name"":""HR Executive"",""active"":true},
+            {""name"":""Machine Operator"",""active"":true},
+            {""name"":""Security Guard"",""active"":true}
+        ]"),
+        ("portalPrefs", @"{""portalName"":""Asset Manager"",""fontSize"":""md"",""pageSize"":20,""toastEnabled"":true}"),
         ("printTerms", @"[
             {""termId"":""PT-001"",""text"":""The employee acknowledges receipt of the above asset(s) in the condition noted, unless otherwise stated."",""usedOn"":""Asset Issue Form"",""sortOrder"":10,""active"":true},
             {""termId"":""PT-002"",""text"":""The asset(s) remain company property and must be returned upon request, transfer, or exit."",""usedOn"":""Asset Issue Form"",""sortOrder"":20,""active"":true},
@@ -1680,8 +1713,18 @@ public class AmsDb
         {
             var def = GetTableDef(key);
             if (def is null) continue;
-            var count = (int?)await ExecuteScalarAsync(conn,
-                $"SELECT COUNT(1) FROM dbo.{def.Table}") ?? 0;
+            int count;
+            if (def.IsDocument)
+            {
+                count = (int?)await ExecuteScalarAsync(conn,
+                    $"SELECT COUNT(1) FROM dbo.{def.Table} WHERE record_key = @k",
+                    ("@k", def.FixedKey!)) ?? 0;
+            }
+            else
+            {
+                count = (int?)await ExecuteScalarAsync(conn,
+                    $"SELECT COUNT(1) FROM dbo.{def.Table}") ?? 0;
+            }
             if (count > 0) continue;
             await SaveCollectionAsync(key, json);
         }
@@ -1937,7 +1980,7 @@ public class AmsDb
         await conn.OpenAsync();
         var cmd = new SqlCommand(@"
             SELECT username, password_hash, password_salt, role, linked_employee, email, remarks, active,
-                   display_name, contact_no, address, dob, gender
+                   display_name, contact_no, address, dob, gender, site
             FROM dbo.ams_users WHERE username = @u;", conn);
         cmd.Parameters.AddWithValue("@u", username);
         await using var reader = await cmd.ExecuteReaderAsync();
@@ -1957,6 +2000,7 @@ public class AmsDb
             Address = reader.IsDBNull(10) ? null : reader.GetString(10),
             Dob = reader.IsDBNull(11) ? null : reader.GetString(11),
             Gender = reader.IsDBNull(12) ? null : reader.GetString(12),
+            Site = reader.IsDBNull(13) ? null : reader.GetString(13),
         };
     }
 
@@ -1978,7 +2022,7 @@ public class AmsDb
         await conn.OpenAsync();
         var cmd = new SqlCommand(@"
             SELECT username, password_hash, password_salt, role, linked_employee, email, remarks, active,
-                   display_name, contact_no, address, dob, gender
+                   display_name, contact_no, address, dob, gender, site
             FROM dbo.ams_users ORDER BY username;", conn);
         await using var reader = await cmd.ExecuteReaderAsync();
         while (await reader.ReadAsync())
@@ -1998,21 +2042,22 @@ public class AmsDb
                 Address = reader.IsDBNull(10) ? null : reader.GetString(10),
                 Dob = reader.IsDBNull(11) ? null : reader.GetString(11),
                 Gender = reader.IsDBNull(12) ? null : reader.GetString(12),
+                Site = reader.IsDBNull(13) ? null : reader.GetString(13),
             });
         }
         return users;
     }
 
     public async Task CreateUserAsync(string username, string password, string role,
-        string? linkedEmployee, string? email, string? remarks, bool active)
+        string? linkedEmployee, string? email, string? remarks, bool active, string? site)
     {
         await using var conn = new SqlConnection(GetDbConnectionString());
         await conn.OpenAsync();
         var salt = HashUtils.NewSalt();
         var hash = HashUtils.HashPassword(password, salt);
         var cmd = new SqlCommand(@"
-            INSERT INTO dbo.ams_users (username, password_hash, password_salt, role, linked_employee, email, remarks, active, display_name)
-            VALUES (@u, @h, @s, @r, @le, @e, @m, @a, @le);", conn);
+            INSERT INTO dbo.ams_users (username, password_hash, password_salt, role, linked_employee, email, remarks, active, display_name, site)
+            VALUES (@u, @h, @s, @r, @le, @e, @m, @a, @le, @site);", conn);
         cmd.Parameters.AddWithValue("@u", username);
         cmd.Parameters.AddWithValue("@h", hash);
         cmd.Parameters.AddWithValue("@s", salt);
@@ -2021,12 +2066,14 @@ public class AmsDb
         cmd.Parameters.AddWithValue("@e", (object?)email ?? DBNull.Value);
         cmd.Parameters.AddWithValue("@m", (object?)remarks ?? DBNull.Value);
         cmd.Parameters.AddWithValue("@a", active);
+        cmd.Parameters.AddWithValue("@site", (object?)site ?? DBNull.Value);
         await cmd.ExecuteNonQueryAsync();
     }
 
     public async Task UpdateUserAsync(string username, string? newPassword, string? role,
         string? linkedEmployee, string? email, string? remarks, bool? active,
-        string? displayName, string? contactNo, string? address, string? dob, string? gender)
+        string? displayName, string? contactNo, string? address, string? dob, string? gender,
+        string? site = null)
     {
         await using var conn = new SqlConnection(GetDbConnectionString());
         await conn.OpenAsync();
@@ -2067,6 +2114,11 @@ public class AmsDb
         cmd.Parameters.Add("@d", SqlDbType.NVarChar, 20).Value = (object?)dob ?? DBNull.Value;
         sql.Add("gender = @g");
         cmd.Parameters.Add("@g", SqlDbType.NVarChar, 20).Value = (object?)gender ?? DBNull.Value;
+        if (site is not null)
+        {
+            sql.Add("site = @site");
+            cmd.Parameters.Add("@site", SqlDbType.NVarChar, 200).Value = (object)site;
+        }
 
         if (!string.IsNullOrWhiteSpace(newPassword))
         {
@@ -2241,6 +2293,7 @@ public class AmsUser
     public string? Address { get; set; }
     public string? Dob { get; set; }
     public string? Gender { get; set; }
+    public string? Site { get; set; }
 }
 
 /// <summary>PBKDF2 password hashing (SHA-256, 100k iterations).</summary>

@@ -28,7 +28,7 @@
 
     <link rel="stylesheet" href="../css/themes.css?v=gt2">
     <link rel="stylesheet" href="../css/main.css?v=gt2">
-    <link rel="stylesheet" href="../css/employees.css">
+     <link rel="stylesheet" href="../css/employees.css?v=ex5">
 </head>
 <body>
     <div class="app">
@@ -361,7 +361,7 @@
                 <button class="modal-close" data-close>&times;</button>
             </div>
             <div class="modal-body">
-                <div class="alert alert-danger">This will mark the employee as <strong>Exited</strong> and release all held assets back to the store.</div>
+                <div class="alert alert-danger">This will mark the employee as <strong>Exited</strong>. Each holding defaults to <strong>Return</strong> (In Store). You can give any holding to another employee instead.</div>
 
                 <div class="detail-grid">
                     <div class="detail-item">
@@ -395,18 +395,19 @@
                     </div>
                 </div>
 
-                <!-- Assets / mobiles / SIM cards to be returned -->
-                <div class="form-section">Assets / Mobiles / SIM Cards to be Returned</div>
+                <!-- Assets / mobiles / SIM cards: Return (pinned) or give to another employee -->
+                <div class="form-section">Assets / Mobiles / SIM Cards</div>
+                <p class="ams-hint" style="margin-top:-8px;margin-bottom:8px;">Return (In Store) is selected by default and does not need another employee. Accessories issued with each item are listed and ticked so they can be collected. Choose Give to other employee only when handing a holding to someone else.</p>
                 <ul class="facility-checklist" id="exit-asset-list"></ul>
 
                 <!-- Subordinate / team assets - pick the new Incharge / HOD so the
                      team's asset records continue under them -->
                 <div id="exit-team-wrap">
                     <div class="form-section">Subordinate / Team Assets (continued record)</div>
-                    <p class="ams-hint" style="margin-top:-8px;margin-bottom:8px;">These employees report to the exiting person. Choose who takes over as their new Incharge / HOD &mdash; their asset records continue under that person.</p>
+                    <p class="ams-hint" style="margin-top:-8px;margin-bottom:8px;">Optional. These employees report to the exiting person. Leave blank to keep their current reporting line, or choose a new Incharge / HOD so their records continue under that person.</p>
                     <ul class="facility-checklist" id="exit-team-list"></ul>
                     <div class="field mt-16">
-                        <label>Transfer Subordinate / Team Assets To (New Incharge / HOD) <span class="req">*</span></label>
+                        <label>Transfer Subordinate / Team Assets To (New Incharge / HOD)</label>
                         <select class="select" id="exit-incharge"></select>
                     </div>
                 </div>
@@ -508,15 +509,15 @@
     </div>
 
     <!-- Scripts -->
-    <script defer src="../js/dummy-data.js?v=ld2"></script>
+    <script defer src="../js/dummy-data.js?v=sql1"></script>
     <script defer src="../js/theme.js?v=gt2"></script>
     <script defer src="../js/app.js"></script>
-    <script defer src="../js/layout.js?v=ld2"></script>
+    <script defer src="../js/layout.js?v=sql1"></script>
     <script defer src="../js/sortable.js"></script>
     <script defer src="../js/xlsx-helpers.js"></script>
     <script defer src="../js/print-docs.js?v=gp1"></script>
-    <script defer src="../js/employees.js?v=ld1"></script>
-    <script defer src="../js/print-forms.js?v=gp1"></script>
+    <script defer src="../js/employees.js?v=sql1"></script>
+    <script defer src="../js/print-forms.js?v=ex2"></script>
 
     <script>
         document.addEventListener("DOMContentLoaded", function () {

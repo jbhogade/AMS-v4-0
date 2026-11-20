@@ -79,6 +79,7 @@ function amsClassifyEvent(action) {
     if (a === "Assign" || a === "Assigned - New") return "Assign";
     if (a === "Return" || a === "Returned") return "Return";
     if (a.startsWith("Replaced by") || a.startsWith("Added to Inventory (Replacement")) return "Replace";
+    if (a === "Added to Inventory" || a.startsWith("Added to Inventory (Import")) return "New Entry";
     if (a === "Retired / Scrapped") return "Retire";
     if (a === "Not Working") return "Fault";
     return "Other";

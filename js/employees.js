@@ -12,7 +12,7 @@
 #     2. Edit           - update employee fields
 #     3. Assign Asset   - give an unassigned asset to this employee
 #     4. Reassign Asset - move one of his assets to another employee
-#     5. Exit           - off-boarding with facility check-off + asset return
+#     5. Exit           - off-boarding: Return (In Store) or give to other employee
 #     6. Reactivate     - restore an exited employee to Active (keeps Exit Report + log)
 #     7. Assign Report  - prints / opens the professional Asset Issue Form
 #     8. Exit Report    - prints / opens the Asset Handover / Return Form
@@ -542,35 +542,103 @@ function openExitModal(amsId) {
     document.getElementById("exit-meta").textContent = emp.designation + " - " + emp.department;
     document.getElementById("exit-date").value = new Date().toISOString().slice(0, 10);
 
-    /* Assets / mobiles / SIM cards owned must be returned - one checkbox each */
+    /* Each holding defaults to Return (In Store). Give to other employee is always offered. */
     const assets = getEmployeeAssets(amsId);
     const mobiles = typeof getEmployeeMobiles === "function" ? getEmployeeMobiles(amsId) : [];
     const sims = typeof getEmployeeSimCards === "function" ? getEmployeeSimCards(amsId) : [];
     const holdingRows = [];
+    const holdingAccessories = (item) =>
+        (Array.isArray(item && item.accessories) ? item.accessories : [])
+            .map(name => String(name || "").trim())
+            .filter(Boolean);
     assets.forEach(a => {
         const id = (typeof amsPrintRemarkId === "function" ? amsPrintRemarkId(a) : a.id) || a.id;
         const mm = (typeof amsAssetMakeModel === "function" ? amsAssetMakeModel(a) : a.makeModel) || a.type || "";
-        holdingRows.push({ id, label: mm ? `${id} - ${mm}` : id });
+        holdingRows.push({ key: a.id, kind: "asset", label: mm ? `${id} - ${mm}` : id, accessories: holdingAccessories(a) });
     });
     mobiles.forEach(a => {
         const id = (typeof amsPrintRemarkId === "function" ? amsPrintRemarkId(a) : a.id) || a.id;
         const mm = (typeof amsAssetMakeModel === "function" ? amsAssetMakeModel(a) : a.makeModel) || a.type || "Mobile";
-        holdingRows.push({ id, label: `Mobile ${id}${mm ? " - " + mm : ""}` });
+        holdingRows.push({ key: a.id, kind: "mobile", label: `Mobile ${id}${mm ? " - " + mm : ""}`, accessories: holdingAccessories(a) });
     });
     sims.forEach(s => {
         const id = s.simId || "";
         const bits = [s.mobileNumber, s.operator, s.plan].filter(Boolean);
-        holdingRows.push({ id, label: `SIM ${id}${bits.length ? " - " + bits.join(" · ") : ""}` });
+        holdingRows.push({ key: id, kind: "sim", label: `SIM ${id}${bits.length ? " - " + bits.join(" · ") : ""}`, accessories: holdingAccessories(s) });
     });
+    const empOptions = amsSortEmployeesByName(DUMMY_EMPLOYEES
+        .filter(e => e.status === "Active" && e.amsId !== amsId))
+        .map(e => `<option value="${escapeHtml(e.amsId)}">${escapeHtml(getEmployeeFullName(e))} (${escapeHtml(e.department)})</option>`)
+        .join("");
     const assetList = document.getElementById("exit-asset-list");
     assetList.innerHTML = holdingRows.length
-        ? holdingRows.map(row => `
-            <li>
-                <input type="checkbox" checked>
+        ? holdingRows.map((row, idx) => {
+            const group = `exit-disp-${idx}`;
+            const accHtml = (row.accessories && row.accessories.length)
+                ? `<div class="exit-holding-acc">
+                        <div class="exit-holding-acc-title">Accessories issued (take with the item)</div>
+                        <ul class="exit-holding-acc-list">
+                            ${row.accessories.map(name => `
+                                <li>
+                                    <label class="exit-holding-choice">
+                                        <input type="checkbox" data-exit-acc value="${escapeHtml(name)}" checked>
+                                        ${escapeHtml(name)}
+                                    </label>
+                                </li>`).join("")}
+                        </ul>
+                    </div>`
+                : `<div class="exit-holding-acc exit-holding-acc-empty">No accessories issued with this item.</div>`;
+            return `
+            <li class="exit-holding-row" data-hold-key="${escapeHtml(row.key)}" data-hold-kind="${row.kind}">
                 <span class="fac-label">${escapeHtml(row.label)}</span>
-                <span class="fac-state on">To Return</span>
-            </li>`).join("")
+                <div class="exit-holding-disp">
+                    <label class="exit-holding-choice">
+                        <input type="radio" name="${group}" data-exit-disp value="return" checked>
+                        Return (In Store)
+                    </label>
+                    <label class="exit-holding-choice">
+                        <input type="radio" name="${group}" data-exit-disp value="give">
+                        Give to other employee
+                    </label>
+                    <select class="select" data-exit-target disabled>
+                        <option value="">Select employee...</option>
+                        ${empOptions}
+                    </select>
+                </div>
+                <div class="exit-holding-chips">
+                    <span class="fac-state na" data-exit-chip-return>Return</span>
+                    <span class="fac-state on" data-exit-chip-store>In Store</span>
+                    <span class="fac-state on" data-exit-chip-give style="display:none;">Give</span>
+                </div>
+                ${accHtml}
+            </li>`;
+        }).join("")
         : `<li><span class="fac-label">No assets, mobiles, or SIM cards held by this employee.</span></li>`;
+    const syncExitHoldingRow = function (li) {
+        if (!li) return;
+        const action = amsExitHoldingAction(li);
+        const giving = action === "give";
+        const target = li.querySelector("[data-exit-target]");
+        const chipReturn = li.querySelector("[data-exit-chip-return]");
+        const chipStore = li.querySelector("[data-exit-chip-store]");
+        const chipGive = li.querySelector("[data-exit-chip-give]");
+        if (target) {
+            target.disabled = !giving;
+            target.style.display = giving ? "" : "none";
+            if (!giving) target.value = "";
+        }
+        if (chipReturn) chipReturn.style.display = giving ? "none" : "";
+        if (chipStore) chipStore.style.display = giving ? "none" : "";
+        if (chipGive) chipGive.style.display = giving ? "" : "none";
+    };
+    assetList.onchange = function (e) {
+        syncExitHoldingRow(e.target.closest("li.exit-holding-row"));
+    };
+    assetList.querySelectorAll("li.exit-holding-row").forEach(li => {
+        const ret = li.querySelector('input[data-exit-disp][value="return"]');
+        if (ret) ret.checked = true;
+        syncExitHoldingRow(li);
+    });
 
     /* Facilities start unchecked so the user marks revoke or N/A themselves. */
     const facList = document.getElementById("exit-facility-list");
@@ -603,8 +671,8 @@ function openExitModal(amsId) {
         }
     };
 
-    /* Subordinate / team holdings - list who reports to this person and force a
-       choice of the new Incharge / HOD so the team's records continue */
+    /* Subordinate / team holdings - list who reports to this person. New
+       Incharge / HOD is optional; skip it to leave reporting lines unchanged. */
     const empHoldingCount = (subAmsId) =>
         getEmployeeAssets(subAmsId).length
         + (typeof getEmployeeMobiles === "function" ? getEmployeeMobiles(subAmsId).length : 0)
@@ -631,11 +699,8 @@ function openExitModal(amsId) {
             .filter(e => e.status === "Active" && e.amsId !== amsId))
             .map(e => `<option value="${e.amsId}">${escapeHtml(getEmployeeFullName(e))} - ${escapeHtml(e.designation)} (${escapeHtml(e.department)})</option>`)
             .join("");
-        /* Default to this person's own manager, if they are still active */
-        const currentManager = emp.managerAmsId ? findEmployee(emp.managerAmsId) : null;
-        const defaultVal = (currentManager && currentManager.status === "Active" && currentManager.amsId !== amsId) ? currentManager.amsId : "";
-        inchargeSel.innerHTML = `<option value="">Select new Incharge / HOD...</option>` + options;
-        inchargeSel.value = defaultVal;
+        inchargeSel.innerHTML = `<option value="">(Optional) Select new Incharge / HOD...</option>` + options;
+        inchargeSel.value = "";
     }
 
     document.getElementById("exit-reason").value = "";
@@ -645,22 +710,40 @@ function openExitModal(amsId) {
     showModal("modal-exit");
 }
 
+function amsExitHoldingAction(li) {
+    if (!li) return "return";
+    const checked = li.querySelector("input[data-exit-disp]:checked");
+    if (checked && checked.value === "give") return "give";
+    const dispEl = li.querySelector("[data-exit-disp]");
+    if (dispEl && dispEl.tagName === "SELECT" && dispEl.value === "give") return "give";
+    return "return";
+}
+
 function confirmExit() {
     const emp = findEmployee(currentEmployeeAmsId);
     if (!emp) return;
 
     const exitReason = document.getElementById("exit-reason").value;
-    /* If this person has direct subordinates holding assets/mobiles/SIMs, the
-       new Incharge / HOD must be chosen so the team's records continue */
-    const empHoldingCount = (subAmsId) =>
-        getEmployeeAssets(subAmsId).length
-        + (typeof getEmployeeMobiles === "function" ? getEmployeeMobiles(subAmsId).length : 0)
-        + (typeof getEmployeeSimCards === "function" ? getEmployeeSimCards(subAmsId).length : 0);
-    const subWithAssets = getSubordinates(currentEmployeeAmsId)
-        .filter(s => empHoldingCount(s.amsId) > 0);
-    const teamIncharge = subWithAssets.length ? document.getElementById("exit-incharge").value : "";
-    if (subWithAssets.length && !teamIncharge) {
-        alert("This employee has " + subWithAssets.length + " direct subordinate(s) holding assets, mobiles, or SIM cards. Please select the New Incharge / HOD to take over the team's holdings.");
+    const teamIncharge = (document.getElementById("exit-incharge") || {}).value || "";
+
+    const holdingDispositions = [];
+    let giveMissing = false;
+    document.querySelectorAll("#exit-asset-list li.exit-holding-row").forEach(li => {
+        const key = li.getAttribute("data-hold-key") || "";
+        const kind = li.getAttribute("data-hold-kind") || "asset";
+        const action = amsExitHoldingAction(li);
+        const targetEl = li.querySelector("[data-exit-target]");
+        const toAmsId = action === "give" ? ((targetEl && targetEl.value) || "") : "";
+        if (action === "give" && !toAmsId) giveMissing = true;
+        const accessories = [];
+        li.querySelectorAll("input[data-exit-acc]:checked").forEach(cb => {
+            const name = String(cb.value || "").trim();
+            if (name) accessories.push(name);
+        });
+        holdingDispositions.push({ key, kind, action, toAmsId, accessories });
+    });
+    if (giveMissing) {
+        alert("Select the employee who will receive each holding marked Give to other employee. Return (In Store) does not need another employee.");
         return;
     }
 
@@ -682,12 +765,19 @@ function confirmExit() {
         disabledFacilities,
         exitReason,
         teamIncharge,
-        naFacilities
+        naFacilities,
+        holdingDispositions
     );
 
+    const givenCount = holdingDispositions.filter(d => d.action === "give").length;
+    const returnedCount = holdingDispositions.filter(d => d.action !== "give").length;
     const logPieces = ["Facilities disabled: " + (disabledFacilities.join(", ") || "none")];
     if (naFacilities.length) logPieces.push("N/A: " + naFacilities.join(", "));
     if (exitReason) logPieces.push("Reason: " + exitReason);
+    if (holdingDispositions.length) {
+        logPieces.push("Returned: " + returnedCount);
+        if (givenCount) logPieces.push("Given to other employee: " + givenCount);
+    }
     if (teamIncharge) {
         const ic = findEmployee(teamIncharge);
         if (ic) logPieces.push("Team transferred to: " + getEmployeeFullName(ic));
@@ -841,23 +931,13 @@ function renderEmpStats() {
     document.getElementById("stat-assigned").textContent = s.assignedAssets;
 }
 
-/* Fills the department / manager / designation dropdowns.
-   Departments & designations come from BOTH the hardcoded seeds (DEPARTMENTS /
-   DESIGNATIONS) AND the DB-backed masters (AMS_DUMMY_DEPARTMENTS /
-   AMS_DESIGNATION_OPTIONS), so lookups added in either place show up here. */
 function allDeptOptions() {
-    const out = DEPARTMENTS.map(d => ({ name: d.name, short: d.short }));
-    AMS_DUMMY_DEPARTMENTS.forEach(d => {
-        if (!out.some(x => x.name.toLowerCase() === d.name.toLowerCase())) out.push({ name: d.name, short: d.shortform });
-    });
+    const out = AMS_DUMMY_DEPARTMENTS.map(d => ({ name: d.name, short: d.shortform || d.short }));
     out.sort((a, b) => amsSortAlpha(a.name, b.name));
     return out;
 }
 function allDesigOptions() {
-    const out = DESIGNATIONS.slice();
-    AMS_DESIGNATION_OPTIONS.forEach(d => {
-        if (!out.some(x => x.toLowerCase() === d.name.toLowerCase())) out.push(d.name);
-    });
+    const out = AMS_DESIGNATION_OPTIONS.map(d => d.name).filter(Boolean);
     out.sort(amsSortAlpha);
     return out;
 }
@@ -951,7 +1031,7 @@ function saveQuickAddDept() {
         alert("That department already exists.");
         return;
     }
-    amsEnsureDepartment(name, short); /* -> DEPARTMENTS + AMS_DUMMY_DEPARTMENTS */
+    amsEnsureDepartment(name, short);
     populateSelects();
     document.getElementById("f-dept").value = name;
     document.getElementById("qa-dept-name").value = "";
@@ -973,7 +1053,7 @@ function saveQuickAddDesig() {
         alert("That designation already exists.");
         return;
     }
-    amsEnsureDesignation(name); /* -> DESIGNATIONS + AMS_DESIGNATION_OPTIONS */
+    amsEnsureDesignation(name);
     populateSelects();
     document.getElementById("f-desig").value = name;
     document.getElementById("qa-desig-name").value = "";
