@@ -119,6 +119,25 @@
 
 .form-hint { font-size: 11px; color: var(--text-muted); margin-top: 4px; }
 
+.ams-stock-item-label {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin: 0 0 12px;
+    line-height: 1.35;
+}
+
+.form-field.ams-item-emphasis label {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+.form-field.ams-item-emphasis input {
+    font-size: 16px;
+    font-weight: 700;
+}
+
 /* ---- VIEWING AS role simulator bar ------------------------------------------- */
 .viewing-as-bar {
     display: flex;

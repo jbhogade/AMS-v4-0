@@ -42,7 +42,7 @@ window.AMS_MASTER_CONFIG = {
     },
     importMatchKeys: ["name", "assetType", "site"],
     fields: [
-        { key: "name", label: "Part Name", required: true },
+        { key: "name", label: "Part Name", required: true, emphasize: true },
         { key: "assetType", label: "Compatible Asset Type", required: true, type: "select",
             optionsFrom: () => AMS_DUMMY_ASSET_TYPES.filter(t => t.active).map(t => t.name),
             quickAdd: { fields: [
@@ -74,7 +74,7 @@ window.AMS_MASTER_CONFIG = {
                     AMS_DUMMY_SITES.push({ name: v.name, shortform: v.shortform.toUpperCase(), address: "", active: true });
                     return v.name;
                 } } },
-        { key: "qty", label: "Current Stock Quantity", required: true, type: "number", min: 0 },
+        { key: "qty", label: "Current Stock Quantity", required: true, type: "number", min: 0, emphasize: true },
         { key: "reorderLevel", label: "Reorder Level", required: true, type: "number", min: 0 },
         { key: "restockDate", label: "Last Restocked Date", type: "date" },
         { key: "warrantyDate", label: "Warranty End Date", type: "date" },
@@ -185,6 +185,7 @@ function amsOpenUsedModal(item) {
         + (compatible.length ? `<optgroup label="Compatible (${amsEsc(item.assetType)})">${compatible.map(assetOptionHtml).join("")}</optgroup>` : "")
         + (others.length ? `<optgroup label="Other Assets">${others.map(assetOptionHtml).join("")}</optgroup>` : "");
 
+    document.getElementById("usedIssuedToOther").value = "";
     document.getElementById("usedQty").value = "";
     document.getElementById("usedDate").value = new Date().toISOString().slice(0, 10);
     document.getElementById("usedRemarks").value = "";
@@ -196,6 +197,7 @@ function amsConfirmUsed() {
     const date = document.getElementById("usedDate").value;
     const empId = document.getElementById("usedEmployee").value;
     const dept = document.getElementById("usedDepartment").value;
+    const issuedToOther = document.getElementById("usedIssuedToOther").value.trim();
     const assetBaseId = document.getElementById("usedForAsset").value;
     const remarks = document.getElementById("usedRemarks").value.trim();
 
@@ -206,8 +208,7 @@ function amsConfirmUsed() {
     if (qty > Number(item.qty)) { alert(`Only ${item.qty} in stock - cannot mark ${qty} as used.`); return; }
     item.qty = Number(item.qty) - qty;
 
-    /* Employee (if selected) takes precedence for display; falls back to
-       Department-only use; both are independently optional. */
+    /* Employee, Department, and Issued To (Other) are independently optional. */
     const emp = empId ? findEmployee(empId) : null;
     const usedByParts = [];
     if (emp) usedByParts.push(`${getEmployeeFullName(emp)} (${emp.department})`);
@@ -220,7 +221,7 @@ function amsConfirmUsed() {
 
     AMS_DUMMY_SPAREPART_LOG.unshift({
         date, partId: item.partId, name: item.name, site: item.site,
-        type: "Used", qty, by: usedByParts.join(", "), remarks,
+        type: "Used", qty, by: usedByParts.join(", "), issuedToOther, remarks,
         assetBaseId: assetBaseId || "", assetIdSnapshot: linkedAsset ? linkedAsset.id : "",
     });
 
@@ -239,20 +240,22 @@ function amsOpenStockReport(item, type) {
         `${type === "Restocked" ? "Restock Report" : "Assign / Used Report"} - ${item.name} (${item.site})`;
     const entries = AMS_DUMMY_SPAREPART_LOG.filter(l => l.type === type && l.partId === item.partId);
     const showAssetCol = type === "Used";
+    const showOther = type === "Used";
 
     const rows = entries.length
         ? entries.map(l => `<tr>
             <td class="mono">${amsFormatDate(l.date)}</td>
             <td class="mono">${l.qty}</td>
             <td>${amsEsc(l.by) || "-"}</td>
+            ${showOther ? `<td>${amsEsc(l.issuedToOther) || "-"}</td>` : ""}
             ${showAssetCol ? `<td class="mono">${amsEsc(l.assetIdSnapshot) || "-"}</td>` : ""}
             <td>${amsEsc(l.remarks) || "-"}</td>
         </tr>`).join("")
-        : `<tr><td colspan="${showAssetCol ? 5 : 4}" style="color:var(--text-muted)">No ${type === "Restocked" ? "restock" : "usage"} records yet for this spare part</td></tr>`;
+        : `<tr><td colspan="${4 + (showOther ? 1 : 0) + (showAssetCol ? 1 : 0)}" style="color:var(--text-muted)">No ${type === "Restocked" ? "restock" : "usage"} records yet for this spare part</td></tr>`;
 
     document.getElementById("stockReportBody").innerHTML = `
         <table class="table">
-            <thead><tr><th>Date</th><th>Qty</th><th>${type === "Restocked" ? "Vendor" : "Used By"}</th>${showAssetCol ? "<th>Used For Asset</th>" : ""}<th>Remarks</th></tr></thead>
+            <thead><tr><th>Date</th><th>Qty</th><th>${type === "Restocked" ? "Vendor" : "Used By"}</th>${showOther ? "<th>Issued To (Other)</th>" : ""}${showAssetCol ? "<th>Used For Asset</th>" : ""}<th>Remarks</th></tr></thead>
             <tbody>${rows}</tbody>
         </table>`;
     document.getElementById("modalStockReport").classList.add("open");

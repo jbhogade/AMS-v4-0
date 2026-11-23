@@ -154,6 +154,7 @@ function renderAssetTable() {
             <th></th>
         </tr></thead>
         <tbody>${rows.join("") || `<tr><td colspan="9" class="empty-note" style="text-align:center;padding:28px;">No assets found</td></tr>`}</tbody>`;
+    if (typeof amsRefreshFreezePanes === "function") amsRefreshFreezePanes();
 
     const footer = document.getElementById("assetTableFooter");
     if (footer) {

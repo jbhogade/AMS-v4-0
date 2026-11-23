@@ -32,7 +32,12 @@ function amsApplyLogAccessGate() {
 
     document.getElementById("btnLogClear").style.display = role === "Supreme Root" ? "inline-block" : "none";
 
-    if (allowed) renderLogTable();
+    if (allowed) {
+        renderLogTable();
+        requestAnimationFrame(() => {
+            if (typeof amsRefreshFreezePanes === "function") amsRefreshFreezePanes();
+        });
+    }
 }
 /*-------------- End of the code ------------------------------------------------*/
 
@@ -117,6 +122,7 @@ function renderLogTable() {
                 <td>${amsEsc(e.message)}</td>
             </tr>`).join("") : `<tr><td colspan="5" style="color:var(--text-muted)">No activity recorded yet, or none match these filters</td></tr>`}</tbody>`;
     if (typeof amsFilterRestoreFocus === "function") amsFilterRestoreFocus("logTable");
+    if (typeof amsRefreshFreezePanes === "function") amsRefreshFreezePanes();
 }
 /*-------------- End of the code ------------------------------------------------*/
 

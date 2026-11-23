@@ -95,6 +95,137 @@ function setActiveNav(pageId) {
     });
 }
 
+function amsFreezeIsElevatedRole() {
+    const role = (typeof amsGetViewingAsRole === "function") ? amsGetViewingAsRole() : "";
+    return role === "Super Root" || role === "Supreme Root";
+}
+
+function amsFreezeHeaderText(th) {
+    return String(th ? th.textContent : "")
+        .replace(/[\u2191\u2193\u2195]/g, "")
+        .replace(/\s+/g, " ")
+        .trim();
+}
+
+function amsFreezeIsHidden(cell) {
+    if (!cell) return true;
+    if (cell.style.display === "none") return true;
+    return window.getComputedStyle(cell).display === "none";
+}
+
+function amsFreezeIsNameHeader(text) {
+    const t = String(text || "").toLowerCase();
+    return t === "name" || t === "employee" || t === "employee name" || t === "item";
+}
+
+function amsFreezeIsActionsHeader(th) {
+    const t = amsFreezeHeaderText(th).toLowerCase();
+    return t === "" || t === "actions" || t === "action";
+}
+
+function amsFreezeLeftCount(headCells) {
+    const visible = [];
+    headCells.forEach((th, idx) => {
+        if (!amsFreezeIsHidden(th)) visible.push({ th, idx, text: amsFreezeHeaderText(th) });
+    });
+    if (visible.length < 3) return 0;
+    const nameHit = visible.find(c => amsFreezeIsNameHeader(c.text));
+    const namePos = nameHit ? visible.indexOf(nameHit) : -1;
+    if (amsFreezeIsElevatedRole() && nameHit && namePos >= 0 && namePos <= 2) {
+        return namePos + 1;
+    }
+    return Math.min(2, visible.length - 1);
+}
+
+function amsClearFreezeClasses(table) {
+    table.classList.remove("ams-freeze");
+    table.querySelectorAll(".ams-freeze-left, .ams-freeze-right, .ams-freeze-edge").forEach(el => {
+        el.classList.remove("ams-freeze-left", "ams-freeze-right", "ams-freeze-edge");
+        el.style.left = "";
+        el.style.top = "";
+    });
+}
+
+function amsApplyFreezeColumns(table) {
+    if (!table || !table.tHead) return;
+    const wrap = table.closest(".table-wrap");
+    if (!wrap || wrap.closest(".modal, .modal-overlay, .modal-body, details, .card-compact")) return;
+    if (wrap.offsetWidth < 8 || wrap.offsetHeight < 8) return;
+    const headRow = table.tHead.querySelector("tr:not(.col-filter-row)");
+    if (!headRow) return;
+    const headCells = [...headRow.children];
+    if (headCells.length < 4) {
+        amsClearFreezeClasses(table);
+        wrap.classList.remove("ams-freeze-wrap");
+        wrap.style.maxHeight = "";
+        return;
+    }
+
+    wrap.classList.add("ams-freeze-wrap");
+    const footer = wrap.parentElement ? wrap.parentElement.querySelector(".asset-table-footer") : null;
+    const bottomGap = (footer ? footer.offsetHeight : 0) + 20;
+    const wrapTop = wrap.getBoundingClientRect().top;
+    wrap.style.maxHeight = Math.max(180, Math.floor(window.innerHeight - wrapTop - bottomGap)) + "px";
+
+    amsClearFreezeClasses(table);
+    table.classList.add("ams-freeze");
+
+    const leftCount = amsFreezeLeftCount(headCells);
+    const leftIdx = [];
+    for (let i = 0; i < headCells.length && leftIdx.length < leftCount; i++) {
+        if (!amsFreezeIsHidden(headCells[i])) leftIdx.push(i);
+    }
+    const lastIdx = headCells.length - 1;
+    const freezeRight = amsFreezeIsActionsHeader(headCells[lastIdx]);
+    const rows = [...table.querySelectorAll("tr")];
+    rows.forEach(tr => {
+        const cells = [...tr.children];
+        if (cells.length === 1 && cells[0].hasAttribute("colspan")) return;
+        if (cells.length !== headCells.length) return;
+        leftIdx.forEach((idx, n) => {
+            const cell = cells[idx];
+            if (!cell || amsFreezeIsHidden(cell)) return;
+            cell.classList.add("ams-freeze-left");
+            if (n === leftIdx.length - 1) cell.classList.add("ams-freeze-edge");
+        });
+        if (freezeRight) {
+            const last = cells[lastIdx];
+            if (last) last.classList.add("ams-freeze-right");
+        }
+    });
+
+    let left = 0;
+    leftIdx.forEach(idx => {
+        const th = headCells[idx];
+        const width = th.getBoundingClientRect().width;
+        rows.forEach(tr => {
+            const cell = tr.children[idx];
+            if (cell && cell.classList.contains("ams-freeze-left")) cell.style.left = left + "px";
+        });
+        left += width;
+    });
+
+    const headRows = [...table.tHead.querySelectorAll("tr")];
+    let top = 0;
+    headRows.forEach(tr => {
+        [...tr.children].forEach(cell => { cell.style.top = top + "px"; });
+        top += tr.getBoundingClientRect().height;
+    });
+}
+
+let AMS_FREEZE_LOCK = false;
+function amsRefreshFreezePanes() {
+    if (AMS_FREEZE_LOCK) return;
+    AMS_FREEZE_LOCK = true;
+    try {
+        document.querySelectorAll(".card > .table-wrap > table").forEach(table => {
+            amsApplyFreezeColumns(table);
+        });
+    } finally {
+        AMS_FREEZE_LOCK = false;
+    }
+}
+
 /* ---- Initialise shared page behaviour (call on every page) ------------------ */
 function initApp() {
     /* Sidebar toggle button (hamburger) */
@@ -108,6 +239,13 @@ function initApp() {
     /* Set current year in the sidebar footer */
     const yearEl = document.getElementById("current-year");
     if (yearEl) yearEl.textContent = new Date().getFullYear();
+
+    amsRefreshFreezePanes();
+    setTimeout(amsRefreshFreezePanes, 80);
+    window.addEventListener("resize", () => {
+        if (amsRefreshFreezePanes._r) cancelAnimationFrame(amsRefreshFreezePanes._r);
+        amsRefreshFreezePanes._r = requestAnimationFrame(amsRefreshFreezePanes);
+    });
 }
 
 /*------------------------------------------------------------------------------

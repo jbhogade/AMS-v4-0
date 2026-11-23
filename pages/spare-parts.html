@@ -25,8 +25,8 @@
     <title>Spare Parts | Asset Management System</title>
 
     <link rel="stylesheet" href="../css/themes.css?v=gt2">
-    <link rel="stylesheet" href="../css/main.css?v=gt2">
-    <link rel="stylesheet" href="../css/master-table.css">
+    <link rel="stylesheet" href="../css/main.css?v=fz2">
+    <link rel="stylesheet" href="../css/master-table.css?v=ito1">
     <link rel="stylesheet" href="../css/embed-mode.css">
 </head>
 <body>
@@ -102,7 +102,7 @@
                 <button class="modal-close" data-close="modalRestock">&times;</button>
             </div>
             <div class="modal-body">
-                <p class="form-hint" id="restockItemLabel" style="margin-bottom:12px;"></p>
+                 <p class="ams-stock-item-label" id="restockItemLabel"></p>
                 <div class="field field-full">
                     <label>Quantity Added <span class="req">*</span></label>
                     <input type="number" id="restockQty" class="input" min="1" placeholder="e.g. 10">
@@ -141,19 +141,24 @@
                 <button class="modal-close" data-close="modalUsed">&times;</button>
             </div>
             <div class="modal-body">
-                <p class="form-hint" id="usedItemLabel" style="margin-bottom:12px;"></p>
-                <div class="field field-full">
-                    <label>Employee</label>
-                    <select id="usedEmployee" class="select"></select>
-                    <div class="form-hint">Optional - the employee the part was assigned to</div>
-                </div>
-                <div class="field field-full">
-                    <label>Department</label>
-                    <select id="usedDepartment" class="select"></select>
-                    <div class="form-hint">Optional - use when issued at department level</div>
-                </div>
-                <div class="field field-full">
-                    <label>Used For Asset</label>
+                 <p class="ams-stock-item-label" id="usedItemLabel"></p>
+                 <div class="field field-full">
+                     <label>Employee</label>
+                     <select id="usedEmployee" class="select"></select>
+                     <div class="form-hint">Optional - the employee the part was assigned to</div>
+                 </div>
+                 <div class="field field-full">
+                     <label>Department</label>
+                     <select id="usedDepartment" class="select"></select>
+                     <div class="form-hint">Optional - use when issued at department level</div>
+                 </div>
+                 <div class="field field-full">
+                     <label>Issued To (Other)</label>
+                     <input type="text" id="usedIssuedToOther" class="input" placeholder="e.g. Store Room 2, contractor name">
+                     <div class="form-hint">Optional - place or person other than Employee and Department</div>
+                 </div>
+                 <div class="field field-full">
+                     <label>Used For Asset</label>
                     <select id="usedForAsset" class="select"></select>
                     <div class="form-hint">Optional - compatible assets for this part type are listed first</div>
                 </div>
@@ -199,12 +204,12 @@
 
     <script defer src="../js/dummy-data.js?v=sql1"></script>
     <script defer src="../js/theme.js?v=gt2"></script>
-    <script defer src="../js/app.js?v=gp8"></script>
+    <script defer src="../js/app.js?v=fz2"></script>
     <script defer src="../js/layout.js?v=sql1"></script>
     <script defer src="../js/sortable.js"></script>
     <script defer src="../js/xlsx-helpers.js"></script>
-    <script defer src="../js/master-table.js?v=ld1"></script>
-    <script defer src="../js/spare-parts.js"></script>
+    <script defer src="../js/master-table.js?v=fz2"></script>
+    <script defer src="../js/spare-parts.js?v=ito1"></script>
     <script>
         document.addEventListener("DOMContentLoaded", function () {
             amsPopulateVendorSelects();

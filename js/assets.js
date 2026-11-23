@@ -190,6 +190,7 @@ function renderAssetTable() {
         </tr>${amsFilterHeadRow("assetTable", filterKeys)}</thead>
         <tbody>${rows.join("") || `<tr><td colspan="9" class="empty-note" style="text-align:center;padding:28px;">No assets found</td></tr>`}</tbody>`;
     if (typeof amsFilterRestoreFocus === "function") amsFilterRestoreFocus("assetTable");
+    if (typeof amsRefreshFreezePanes === "function") amsRefreshFreezePanes();
 
     const footer = document.getElementById("assetTableFooter");
     if (footer) {

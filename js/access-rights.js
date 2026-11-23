@@ -88,6 +88,7 @@ function renderAccessTable() {
         ${typeof amsFilterHeadRow === "function" ? amsFilterHeadRow("accessTable", ["username", "role", "access", ""]) : ""}</thead>
         <tbody>${rows || `<tr><td colspan="4" style="color:var(--text-muted)">No users found</td></tr>`}</tbody>`;
     if (typeof amsFilterRestoreFocus === "function") amsFilterRestoreFocus("accessTable");
+    if (typeof amsRefreshFreezePanes === "function") amsRefreshFreezePanes();
 }
 /*-------------- End of the code ------------------------------------------------*/
 

@@ -30,6 +30,9 @@ function amsWireReportTabs() {
             document.querySelectorAll(".report-panel").forEach(p => p.classList.remove("active"));
             tab.classList.add("active");
             document.getElementById(`panel-${tab.getAttribute("data-report")}`).classList.add("active");
+            requestAnimationFrame(() => {
+                if (typeof amsRefreshFreezePanes === "function") amsRefreshFreezePanes();
+            });
         });
     });
 }
@@ -151,6 +154,7 @@ function amsRenderAssetLifecycleReport() {
         </tr>${amsFilterHeadRow("alTable", ["date", "type", "action", "asset", "assetType", "empName", "empDept", "status"])}</thead>
         <tbody>${rows}</tbody>`;
     if (typeof amsFilterRestoreFocus === "function") amsFilterRestoreFocus("alTable");
+    if (typeof amsRefreshFreezePanes === "function") amsRefreshFreezePanes();
 }
 /*-------------- End of the code ------------------------------------------------*/
 
@@ -228,6 +232,7 @@ function amsRenderIssueHandoverTable(tableId, reportType, searchId, siteId, from
         </tr>${amsFilterHeadRow(tableId, ["empCode", "empName", "status", "dept", "assetId", "assetType", "site"])}</thead>
         <tbody>${rows || `<tr><td colspan="7" style="color:var(--text-secondary)">No ${wantExited ? "exited" : "active"} employees with currently held assets match these filters</td></tr>`}</tbody>`;
     if (typeof amsFilterRestoreFocus === "function") amsFilterRestoreFocus(tableId);
+    if (typeof amsRefreshFreezePanes === "function") amsRefreshFreezePanes();
 }
 /*-------------- End of the code ------------------------------------------------*/
 
@@ -244,6 +249,7 @@ function amsRenderStockLogReport(logArray, type, siteId, fromId, toId, tableId) 
     entries = [...entries].sort((a, b) => String(b.date).localeCompare(String(a.date)));
 
     const showAsset = type === "Used" && entries.some(l => "assetIdSnapshot" in l);
+    const showOther = type === "Used";
     amsSortRegisterRenderer(tableId, () => amsRenderStockLogReport(logArray, type, siteId, fromId, toId, tableId));
     const getters = {
         date: l => l.date,
@@ -251,21 +257,24 @@ function amsRenderStockLogReport(logArray, type, siteId, fromId, toId, tableId) 
         site: l => l.site,
         qty: l => Number(l.qty) || 0,
         by: l => l.by || "",
+        issuedToOther: l => l.issuedToOther || "",
         asset: l => l.assetIdSnapshot || "",
         remarks: l => l.remarks || "",
     };
     entries = amsFilterRows(tableId, entries, getters);
     entries = amsSortRows(tableId, entries, getters);
 
+    const colCount = 6 + (showOther ? 1 : 0) + (showAsset ? 1 : 0);
     const rows = entries.length ? entries.map(l => `<tr>
         <td class="mono">${amsFormatDate(l.date)}</td>
         <td>${amsEsc(l.name)}</td>
         <td>${amsEsc(l.site)}</td>
         <td class="mono">${l.qty}</td>
         <td>${amsEsc(l.by) || "-"}</td>
+        ${showOther ? `<td>${amsEsc(l.issuedToOther) || "-"}</td>` : ""}
         ${showAsset ? `<td class="mono">${amsEsc(l.assetIdSnapshot) || "-"}</td>` : ""}
         <td>${amsEsc(l.remarks) || "-"}</td>
-    </tr>`).join("") : `<tr><td colspan="${showAsset ? 7 : 6}" style="color:var(--text-secondary)">No records match these filters</td></tr>`;
+    </tr>`).join("") : `<tr><td colspan="${colCount}" style="color:var(--text-secondary)">No records match these filters</td></tr>`;
 
     document.getElementById(tableId).innerHTML = `
         <thead><tr>
@@ -274,11 +283,13 @@ function amsRenderStockLogReport(logArray, type, siteId, fromId, toId, tableId) 
             ${amsSortableTh(tableId, "site", "Site")}
             ${amsSortableTh(tableId, "qty", "Qty")}
             ${amsSortableTh(tableId, "by", type === "Restocked" ? "Vendor" : "Used By")}
+            ${showOther ? amsSortableTh(tableId, "issuedToOther", "Issued To (Other)") : ""}
             ${showAsset ? amsSortableTh(tableId, "asset", "Used For Asset") : ""}
             ${amsSortableTh(tableId, "remarks", "Remarks")}
-        </tr>${amsFilterHeadRow(tableId, ["date", "item", "site", "qty", "by"].concat(showAsset ? ["asset"] : []).concat(["remarks"]))}</thead>
+        </tr>${amsFilterHeadRow(tableId, ["date", "item", "site", "qty", "by"].concat(showOther ? ["issuedToOther"] : []).concat(showAsset ? ["asset"] : []).concat(["remarks"]))}</thead>
         <tbody>${rows}</tbody>`;
     if (typeof amsFilterRestoreFocus === "function") amsFilterRestoreFocus(tableId);
+    if (typeof amsRefreshFreezePanes === "function") amsRefreshFreezePanes();
 }
 /*-------------- End of the code ------------------------------------------------*/
 
@@ -520,6 +531,7 @@ function amsRenderAssetDistributionReport() {
         </tr>${amsFilterHeadRow("distReportTable", ["empId", "name", "dept", "designation", "direct", "team", "total"])}</thead>
         <tbody>${body}</tbody>`;
     if (typeof amsFilterRestoreFocus === "function") amsFilterRestoreFocus("distReportTable");
+    if (typeof amsRefreshFreezePanes === "function") amsRefreshFreezePanes();
 }
 /*-------------- End of the code ------------------------------------------------*/
 
