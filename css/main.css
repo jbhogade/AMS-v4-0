@@ -689,10 +689,87 @@ body.sidebar-collapsed.sidebar-peek .sidebar-nav-label::after {
     overflow-x: auto;
 }
 
+.table-wrap.ams-freeze-wrap {
+    overflow: auto;
+    max-height: calc(100vh - 220px);
+    width: 100%;
+    position: relative;
+}
+
 .table {
     width: 100%;
     border-collapse: collapse;
     font-size: 13.5px;
+}
+
+.table.ams-freeze {
+    border-collapse: separate;
+    border-spacing: 0;
+    min-width: max-content;
+    width: max-content;
+}
+
+.table.ams-freeze th.ams-freeze-left,
+.table.ams-freeze td.ams-freeze-left,
+.table.ams-freeze th.ams-freeze-right,
+.table.ams-freeze td.ams-freeze-right {
+    position: sticky;
+    background: var(--bg-card);
+    background-clip: padding-box;
+}
+
+.table.ams-freeze thead th {
+    position: sticky;
+    top: 0;
+    z-index: 3;
+}
+
+.table.ams-freeze thead th.ams-freeze-left,
+.table.ams-freeze thead th.ams-freeze-right {
+    background: var(--bg-elevated);
+}
+
+.table.ams-freeze th.ams-freeze-left,
+.table.ams-freeze td.ams-freeze-left {
+    z-index: 2;
+}
+
+.table.ams-freeze thead th.ams-freeze-left {
+    z-index: 4;
+}
+
+.table.ams-freeze th.ams-freeze-left.ams-freeze-edge,
+.table.ams-freeze td.ams-freeze-left.ams-freeze-edge {
+    box-shadow: 1px 0 0 var(--border);
+}
+
+.table.ams-freeze th.ams-freeze-right,
+.table.ams-freeze td.ams-freeze-right {
+    right: 0;
+    z-index: 3;
+    box-shadow: -1px 0 0 var(--border);
+    min-width: 108px;
+}
+
+.table.ams-freeze thead th.ams-freeze-right {
+    z-index: 5;
+}
+
+.table.ams-freeze thead tr.col-filter-row th {
+    z-index: 3;
+}
+
+.table.ams-freeze thead tr.col-filter-row th.ams-freeze-left {
+    z-index: 4;
+}
+
+.table.ams-freeze thead tr.col-filter-row th.ams-freeze-right {
+    z-index: 5;
+}
+
+.table.ams-freeze tbody tr:hover td.ams-freeze-left,
+.table.ams-freeze tbody tr:hover td.ams-freeze-right {
+    background-color: var(--accent-soft);
 }
 
 .table thead th {

@@ -124,6 +124,7 @@ function renderEmployeeTable() {
                 </td>
             </tr>`;
         if (typeof amsFilterRestoreFocus === "function") amsFilterRestoreFocus("employeeTable");
+        if (typeof amsRefreshFreezePanes === "function") amsRefreshFreezePanes();
         return;
     }
 
@@ -135,6 +136,7 @@ function renderEmployeeTable() {
                 </td>
             </tr>`;
         if (typeof amsFilterRestoreFocus === "function") amsFilterRestoreFocus("employeeTable");
+        if (typeof amsRefreshFreezePanes === "function") amsRefreshFreezePanes();
         return;
     }
 
@@ -142,9 +144,7 @@ function renderEmployeeTable() {
         const owned = amsOwnedEmployeeHoldingsCount(emp.amsId);
         const team = amsTeamEmployeeHoldingsCount(emp.amsId);
         const badge = badgeClassFor(emp.status);
-        const amsCell = amsVisible
-            ? `<td class="muted" title="Internal AMS ID (Supreme Root only)">${escapeHtml(emp.amsId)}</td>`
-            : "";
+        const amsCell = `<td class="muted"${amsVisible ? "" : ' style="display:none"'} title="Internal AMS ID (Supreme Root only)">${escapeHtml(emp.amsId)}</td>`;
 
         return `
             <tr>
@@ -171,6 +171,7 @@ function renderEmployeeTable() {
         `;
     }).join("");
     if (typeof amsFilterRestoreFocus === "function") amsFilterRestoreFocus("employeeTable");
+    if (typeof amsRefreshFreezePanes === "function") amsRefreshFreezePanes();
 }
 
 /* Builds the "Actions" dropdown for one employee row */

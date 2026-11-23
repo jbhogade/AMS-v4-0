@@ -345,6 +345,7 @@ async function amsRenderMasterTable() {
         <thead><tr>${headCells}${cfg.rowBadge ? `<th>${amsEsc(cfg.rowBadgeLabel || "Flag")}</th>` : ""}${cfg.usageCount ? amsSortableTh("masterTable", "__usage", "Used By") : ""}${amsSortableTh("masterTable", "__active", "Status")}<th></th></tr>${amsFilterHeadRow("masterTable", filterKeys)}</thead>
         <tbody>${rows || `<tr><td colspan="${visibleFields.length + extraColCount + 2}" style="color:var(--text-muted)">No records found</td></tr>`}</tbody>`;
     if (typeof amsFilterRestoreFocus === "function") amsFilterRestoreFocus("masterTable");
+    if (typeof amsRefreshFreezePanes === "function") amsRefreshFreezePanes();
 }
 
 /* ---- MODAL open/close ------------------------------------------------------- */
@@ -401,7 +402,7 @@ function amsMtBuildFormFields() {
         } else {
             control = `<input type="text" id="mt-${f.key}" ${f.maxLength ? `maxlength="${f.maxLength}"` : ""} ${f.upper ? 'style="text-transform:uppercase;"' : ""}>`;
         }
-        return `<div class="form-field"><label>${amsEsc(f.label)} ${f.required ? '<span class="req">*</span>' : ""}</label>${control}</div>`;
+        return `<div class="form-field${f.emphasize ? " ams-item-emphasis" : ""}"><label>${amsEsc(f.label)} ${f.required ? '<span class="req">*</span>' : ""}</label>${control}</div>`;
     }).join("") + `
         <label class="form-checkbox">
             <input type="checkbox" id="mt-active" checked> Active

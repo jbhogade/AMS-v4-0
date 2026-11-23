@@ -147,6 +147,7 @@ function renderSimTable() {
         </tr>${amsFilterHeadRow("simTable", ["simId", "mobile", "operator", "plan", "status", "assigned", "site", "usedIn", ""])}</thead>
         <tbody>${rows.join("") || `<tr><td colspan="9" class="empty-note" style="text-align:center;padding:28px;">No SIM cards found</td></tr>`}</tbody>`;
     if (typeof amsFilterRestoreFocus === "function") amsFilterRestoreFocus("simTable");
+    if (typeof amsRefreshFreezePanes === "function") amsRefreshFreezePanes();
 
     const footer = document.getElementById("simTableFooter");
     if (footer) {

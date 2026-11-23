@@ -200,6 +200,7 @@ function distRenderTable() {
         </tr>${amsFilterHeadRow("distTable", ["empId", "name", "dept", "designation", "direct", "team", "total", "records", ""])}</thead>
         <tbody>${body}</tbody>`;
     if (typeof amsFilterRestoreFocus === "function") amsFilterRestoreFocus("distTable");
+    if (typeof amsRefreshFreezePanes === "function") amsRefreshFreezePanes();
 
     const shownTotal = sorted.reduce((n, r) => n + r.total, 0);
     const shownRecords = sorted.reduce((n, r) => n + r.recordCount, 0);
