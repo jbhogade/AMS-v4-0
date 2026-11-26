@@ -222,7 +222,8 @@ public class AuthController : ControllerBase
 
     private string CreateToken(AmsUser user)
     {
-        var jwtKey = _config["Jwt:Key"] ?? "AmsTestDbLoginSigningKey_2026_ChangeMeInProduction_0123456789ABCDEF";
+        var jwtKey = _config["Jwt:Key"];
+        if (string.IsNullOrWhiteSpace(jwtKey)) jwtKey = AmsSecurity.DefaultJwtKey;
         var issuer = _config["Jwt:Issuer"] ?? "AMS-API";
         var audience = _config["Jwt:Audience"] ?? "AMS-App";
         var expiryMinutes = int.TryParse(_config["Jwt:ExpiryMinutes"], out var m) ? m : 480;

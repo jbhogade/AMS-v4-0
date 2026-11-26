@@ -30,15 +30,19 @@ def is_valid_user_role(role):
     return bool(role) and role in KNOWN_USER_ROLES
 
 
-REPAIR_TRUNCATED_ROLES_SQL = """
-IF OBJECT_ID(N'dbo.ams_users', N'U') IS NOT NULL
-BEGIN
-    UPDATE dbo.ams_users
-    SET role = N'Supreme Root'
-    WHERE username = N'jairaj.b'
-      AND role NOT IN (N'Standard User', N'Viewer (Read-Only)', N'Admin', N'Super Root', N'Supreme Root');
-END
+def _looks_like_real_secret(value):
+    """A real hash/salt is hex; AMS-v4-0.sql placeholders look like
+    ``<hash-set-by-api>``."""
+    if not value or str(value).startswith("<"):
+        return False
+    try:
+        bytes.fromhex(str(value))
+        return True
+    except ValueError:
+        return False
 
+
+REPAIR_TRUNCATED_ROLES_SQL = """
 IF OBJECT_ID(N'dbo.ams_users', N'U') IS NOT NULL
    AND OBJECT_ID(N'dbo.ams_user_profiles', N'U') IS NOT NULL
 BEGIN
@@ -1048,7 +1052,7 @@ IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = N'IX_ams_activity_log_time
 SEED_USERS = [
     {
         "username": "operator.sys",
-        "password": "Sr#Ops@2026",
+        "password": os.environ.get("AMS_SEED_OPERATOR_PASSWORD", "Sr#Ops@2026"),
         "role": "Supreme Root",
         "email": "operator.sys@ams.local",
         "remarks": "Portal account (looks like a low-level operator login, but holds Supreme Root rights).",
@@ -1056,7 +1060,7 @@ SEED_USERS = [
     },
     {
         "username": "testadmin",
-        "password": "Admin@#$12345",
+        "password": os.environ.get("AMS_SEED_ADMIN_PASSWORD", "Admin@#$12345"),
         "role": "Super Root",
         "email": "testadmin@ams.local",
         "remarks": "Super Root account for creating other users (cannot create Supreme Root).",
@@ -1425,14 +1429,20 @@ class AmsDb:
         conn = pyodbc.connect(self.conn_string)
         try:
             for seed in SEED_USERS:
-                exists = self.scalar(
+                existing_hash = self.scalar(
                     conn,
-                    "SELECT COUNT(1) FROM dbo.ams_users WHERE username = ?",
+                    "SELECT password_hash FROM dbo.ams_users WHERE username = ?",
                     [seed["username"]],
-                ) or 0
+                )
+                # Never reset an existing account's password/role/active flag on
+                # startup: an admin may have changed or deactivated it, and
+                # rewriting it would restore a known password after every
+                # restart. Only placeholder rows (from AMS-v4-0.sql) are fixed.
+                if existing_hash is not None and _looks_like_real_secret(existing_hash):
+                    continue
                 salt = crypto.new_salt()
                 digest = crypto.hash_password(seed["password"], salt)
-                if exists > 0:
+                if existing_hash is not None:
                     self.exec(
                         conn,
                         "UPDATE dbo.ams_users SET password_hash = ?, password_salt = ?, role = ?, active = 1 WHERE username = ?",

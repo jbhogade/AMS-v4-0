@@ -18,9 +18,21 @@ builder.Services.AddResponseCompression(options => options.EnableForHttps = true
 
 builder.Services.AddSingleton<AmsDb>();
 
-var jwtKey = builder.Configuration["Jwt:Key"] ?? "AmsTestDbLoginSigningKey_2026_ChangeMeInProduction_0123456789ABCDEF";
+var jwtKey = builder.Configuration["Jwt:Key"];
+var usingDefaultJwtKey = string.IsNullOrWhiteSpace(jwtKey) || jwtKey == AmsSecurity.DefaultJwtKey;
+if (string.IsNullOrWhiteSpace(jwtKey)) jwtKey = AmsSecurity.DefaultJwtKey;
 var issuer = builder.Configuration["Jwt:Issuer"] ?? "AMS-API";
 var audience = builder.Configuration["Jwt:Audience"] ?? "AMS-App";
+
+// The bundled signing key is public (it lives in source control), so a token
+// signed with it can be forged by anyone. Refuse to start in Production unless
+// a real key is configured.
+if (usingDefaultJwtKey && builder.Environment.IsProduction())
+{
+    throw new InvalidOperationException(
+        "Jwt:Key is not configured. Set a strong, unique Jwt:Key " +
+        "(for example the Jwt__Key environment variable) before running in Production.");
+}
 
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
@@ -46,6 +58,21 @@ builder.Services.Configure<Microsoft.AspNetCore.Server.Kestrel.Core.KestrelServe
 
 var app = builder.Build();
 
+if (usingDefaultJwtKey)
+{
+    app.Logger.LogWarning(
+        "Using the built-in development JWT signing key. Set Jwt:Key (env Jwt__Key) " +
+        "before any shared or production deployment.");
+}
+if (string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable(AmsSecurity.SeedOperatorPasswordEnv))
+    || string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable(AmsSecurity.SeedAdminPasswordEnv)))
+{
+    app.Logger.LogWarning(
+        "Seeded login accounts use the built-in development passwords. Set " +
+        "{OperatorEnv} and {AdminEnv} before any shared or production deployment.",
+        AmsSecurity.SeedOperatorPasswordEnv, AmsSecurity.SeedAdminPasswordEnv);
+}
+
 app.UseResponseCompression();
 
 // A down/unreachable SQL Server surfaces as a bare HTTP 500 today, which the
@@ -57,19 +84,23 @@ app.UseExceptionHandler(errorApp =>
     {
         var ex = context.Features.Get<IExceptionHandlerFeature>()?.Error;
         context.Response.ContentType = "application/json; charset=utf-8";
+        // Log the details server-side; never echo SQL/exception text to the
+        // client, since it can reveal server names and internal structure.
         if (ex is SqlException)
         {
+            app.Logger.LogError(ex, "Database request failed.");
             context.Response.StatusCode = StatusCodes.Status503ServiceUnavailable;
             await context.Response.WriteAsJsonAsync(new
             {
-                error = "Database unavailable. Check that SQL Server is running and run database/Setup-AMS-v4-0.bat, then restart the API. " + ex.Message,
+                error = "Database unavailable. Check that SQL Server is running and that the AMS database is initialized, then restart the API.",
             });
             return;
         }
+        app.Logger.LogError(ex, "Unhandled server error.");
         context.Response.StatusCode = StatusCodes.Status500InternalServerError;
         await context.Response.WriteAsJsonAsync(new
         {
-            error = ex?.Message ?? "Unexpected server error.",
+            error = "Unexpected server error.",
         });
     });
 });
@@ -96,6 +127,26 @@ using (var scope = app.Services.CreateScope())
 // AMS-v4-0 root (index.html, pages/, css/, js/, assets/). Serve that folder so
 // the API and the UI are same-origin (no CORS, one URL to open).
 var webRoot = Path.GetFullPath(Path.Combine(app.Environment.ContentRootPath, "..", ".."));
+
+// The backend source, SQL scripts, git metadata and dotfiles live beside the
+// web UI in the project root. Never expose them through the static file
+// middleware (appsettings.json alone would leak the JWT key and DB connection).
+app.Use(async (context, next) =>
+{
+    var path = context.Request.Path.Value ?? string.Empty;
+    var blocked =
+        path.StartsWith("/server", StringComparison.OrdinalIgnoreCase) ||
+        path.StartsWith("/database", StringComparison.OrdinalIgnoreCase) ||
+        path.StartsWith("/.git", StringComparison.OrdinalIgnoreCase) ||
+        (path.Length > 1 && path[1] == '.');
+    if (blocked)
+    {
+        context.Response.StatusCode = StatusCodes.Status404NotFound;
+        return;
+    }
+    await next();
+});
+
 if (Directory.Exists(webRoot))
 {
     AmsDb.EnsureBackupFolder(webRoot);
