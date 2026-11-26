@@ -1109,14 +1109,6 @@ public class AmsDb
         await conn.OpenAsync();
         await using var cmd = new SqlCommand(@"
             IF OBJECT_ID(N'dbo.ams_users', N'U') IS NOT NULL
-            BEGIN
-                UPDATE dbo.ams_users
-                SET role = N'Supreme Root'
-                WHERE username = N'jairaj.b'
-                  AND role NOT IN (N'Standard User', N'Viewer (Read-Only)', N'Admin', N'Super Root', N'Supreme Root');
-            END
-
-            IF OBJECT_ID(N'dbo.ams_users', N'U') IS NOT NULL
                AND OBJECT_ID(N'dbo.ams_user_profiles', N'U') IS NOT NULL
             BEGIN
                 UPDATE u
@@ -1166,14 +1158,38 @@ public class AmsDb
     public static bool IsValidUserRole(string? role) =>
         !string.IsNullOrWhiteSpace(role) && Array.IndexOf(KnownUserRoles, role) >= 0;
 
+    /// <summary>A real hash/salt is hex; the AMS-v4-0.sql seed placeholders use
+    /// angle-bracket markers such as <c>&lt;hash-set-by-api&gt;</c>.</summary>
+    private static bool LooksLikeRealSecret(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value) || value.StartsWith("<", StringComparison.Ordinal))
+            return false;
+        try
+        {
+            Convert.FromHexString(value);
+            return true;
+        }
+        catch (FormatException)
+        {
+            return false;
+        }
+    }
+
     private async Task EnsureSeedUserAsync()
     {
+        // Seed passwords can be supplied by environment variables so known
+        // development credentials are never reused for a shared deployment.
+        var operatorPassword = Environment.GetEnvironmentVariable(AmsSecurity.SeedOperatorPasswordEnv);
+        if (string.IsNullOrWhiteSpace(operatorPassword)) operatorPassword = AmsSecurity.DefaultSeedOperatorPassword;
+        var adminPassword = Environment.GetEnvironmentVariable(AmsSecurity.SeedAdminPasswordEnv);
+        if (string.IsNullOrWhiteSpace(adminPassword)) adminPassword = AmsSecurity.DefaultSeedAdminPassword;
+
         /* (username, password, role, email, remarks, displayName) */
         (string, string, string, string, string, string)[] seeds =
         {
-            ("operator.sys", "Sr#Ops@2026", "Supreme Root", "operator.sys@ams.local",
+            ("operator.sys", operatorPassword, "Supreme Root", "operator.sys@ams.local",
              "Portal account (looks like a low-level operator login, but holds Supreme Root rights).", "Operator"),
-            ("testadmin", "Admin@#$12345", "Super Root", "testadmin@ams.local",
+            ("testadmin", adminPassword, "Super Root", "testadmin@ams.local",
              "Super Root account for creating other users (cannot create Supreme Root).", "Test Admin"),
         };
 
@@ -1185,8 +1201,6 @@ public class AmsDb
             var rowExists = false;
             string? existingHash = null;
             string? existingSalt = null;
-            string? existingRole = null;
-            var existingActive = false;
 
             await using (var q = new SqlCommand(
                 "SELECT password_hash, password_salt, role, active FROM dbo.ams_users WHERE username = @u;", conn))
@@ -1198,31 +1212,17 @@ public class AmsDb
                     rowExists = true;
                     existingHash = r.IsDBNull(0) ? null : r.GetString(0);
                     existingSalt = r.IsDBNull(1) ? null : r.GetString(1);
-                    existingRole = r.IsDBNull(2) ? null : r.GetString(2);
-                    existingActive = !r.IsDBNull(3) && r.GetBoolean(3);
                 }
             }
 
-            if (rowExists && existingHash is not null && existingSalt is not null)
+            if (rowExists && LooksLikeRealSecret(existingHash) && LooksLikeRealSecret(existingSalt))
             {
-                /* Avoid two expensive PBKDF2 (100k iteration) hashes on every
-                   API start when the seeded row is already correct. A row
-                   inserted by AMS-v4-0.sql has a placeholder hash/salt, so the
-                   verification fails (or throws) and we fall through to
-                   re-hash it. */
-                var matches = false;
-                try
-                {
-                    var probe = new AmsUser { PasswordHash = existingHash, PasswordSalt = existingSalt };
-                    matches = string.Equals(existingRole, role, StringComparison.Ordinal)
-                        && existingActive
-                        && VerifyPassword(probe, password);
-                }
-                catch (FormatException)
-                {
-                    matches = false; // placeholder / malformed salt - re-hash below
-                }
-                if (matches) continue;
+                /* The account already has a usable password. Never rewrite its
+                   password, role or active flag on startup - an administrator
+                   may have changed or deactivated it, and doing so would also
+                   silently restore a known password after every restart. Only
+                   placeholder rows (from AMS-v4-0.sql) fall through below. */
+                continue;
             }
 
             var salt = HashUtils.NewSalt();

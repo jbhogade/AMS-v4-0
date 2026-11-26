@@ -33,11 +33,26 @@ if _load_env is not None:
     except Exception:
         pass
 
-SECRET_KEY = os.environ.get("AMS_DJANGO_SECRET_KEY", "ams-test-django-dev-secret-key-2026")
-
 DEBUG = os.environ.get("AMS_DEBUG", "1") == "1"
 
-ALLOWED_HOSTS = os.environ.get("AMS_ALLOWED_HOSTS", "*").split(",")
+# Insecure development fallbacks are only allowed while DEBUG is on. Running
+# with AMS_DEBUG=0 requires the real values to be supplied via the environment,
+# otherwise a shipped default secret key/signing key would be forgeable.
+SECRET_KEY = os.environ.get("AMS_DJANGO_SECRET_KEY", "")
+if not SECRET_KEY:
+    if not DEBUG:
+        raise RuntimeError(
+            "Set AMS_DJANGO_SECRET_KEY (see .env.example) before running with AMS_DEBUG=0."
+        )
+    SECRET_KEY = "ams-test-django-dev-secret-key-2026"
+
+_allowed_hosts = os.environ.get("AMS_ALLOWED_HOSTS", "")
+if _allowed_hosts:
+    ALLOWED_HOSTS = [h for h in _allowed_hosts.split(",") if h]
+elif DEBUG:
+    ALLOWED_HOSTS = ["*"]
+else:
+    ALLOWED_HOSTS = ["localhost", "127.0.0.1"]
 
 INSTALLED_APPS = [
     "ams",
@@ -104,10 +119,11 @@ DATABASES: dict[str, dict[str, Any]] = {
 }
 
 # ---- JWT (parity with AuthController.CreateToken) ---------------------------
-JWT_KEY = os.environ.get(
-    "AMS_JWT_KEY",
-    "AmsTestDbLoginSigningKey_2026_ChangeMeInProduction_0123456789ABCDEF",
-)
+JWT_KEY = os.environ.get("AMS_JWT_KEY", "")
+if not JWT_KEY:
+    if not DEBUG:
+        raise RuntimeError("Set AMS_JWT_KEY (see .env.example) before running with AMS_DEBUG=0.")
+    JWT_KEY = "AmsTestDbLoginSigningKey_2026_ChangeMeInProduction_0123456789ABCDEF"
 JWT_ISSUER = os.environ.get("AMS_JWT_ISSUER", "AMS-API")
 JWT_AUDIENCE = os.environ.get("AMS_JWT_AUDIENCE", "AMS-App")
 JWT_EXPIRY_MINUTES = int(os.environ.get("AMS_JWT_EXPIRY_MINUTES", "480"))
